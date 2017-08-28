@@ -1,0 +1,14 @@
+Package: cnvAnalzeR
+Version: 0.99.1
+Date: 2017-08-28
+Title: A comprehensive tool suite for CNV analysis
+Author: Vinicius Henrique da Silva and Ludwig Geistlinger
+Maintainer: Ludwig Geistlinger <Ludwig.Geistlinger@sph.cuny.edu>
+Depends: R(>= 3.4.0), GenomicRanges, RaggedExperiment
+Imports: AnnotationDbi, S4Vectors, SummarizedExperiment, edgeR
+Suggests: BiocStyle
+Description: CNV calling from SNP-chip genotype and next-generation 
+    sequencing data, CNV architecture, CNV-expression association, 
+    CNV-phenotype association, and CNV evolution 
+License: Artistic-2.0
+biocViews: Microarray, RNASeq, GeneExpression, DifferentialExpression, 
