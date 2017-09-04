@@ -3,7 +3,7 @@
 # author: Ludwig Geistlinger
 # date: 2017-08-12 22:31:59
 # 
-# descr: functionality for summarizing indivdual calls
+# descr: Functionality for summarizing individual calls
 #   across the population under study
 #   e.g. defining CNV regions from CNV calls
 # 
