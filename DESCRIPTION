@@ -5,7 +5,7 @@ Title: A comprehensive tool suite for CNV analysis
 Author: Vinicius Henrique da Silva and Ludwig Geistlinger
 Maintainer: Ludwig Geistlinger <Ludwig.Geistlinger@sph.cuny.edu>
 Depends: R(>= 3.4.0), GenomicRanges, RaggedExperiment
-Imports: AnnotationDbi, S4Vectors, SummarizedExperiment, edgeR
+Imports: AnnotationDbi, S4Vectors, SummarizedExperiment, edgeR, SNPRelate
 Suggests: BiocStyle
 Description: CNV calling from SNP-chip genotype and next-generation 
     sequencing data, CNV architecture, CNV-expression association, 
