@@ -11,6 +11,8 @@
 
 library(GenomicRanges)
 
+hello <- function() message("Hello")
+
 #
 # CNVRuler procedure that trims region margins based on regional density
 #
