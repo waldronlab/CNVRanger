@@ -13,7 +13,7 @@ library(GWASTools)
 library(doBy)
 
 ##### Parameters ####
-Ncor <- 20 ## Number of cores to be used
+Ncor <- 10 ## Number of cores to be used
 Inputset <- "/home/vhsilva/Projects/CNV_chicken/Inputs" ### Folder with inputs
 Plinkset <- "/home/vhsilva/Projects/CNV_chicken/PLINK/plink-1.07-x86_64" ### PLINK folder
 ResSet <- "/home/vhsilva/Projects/CNV_chicken/Results" ### Results folder
@@ -279,6 +279,7 @@ for(loPhe in 1:ncol(phenotypesdf)){ ### Subsequent items need to run independly 
   g1 <- read.gdsn(index.gdsn(genofile, "CNVgenotype"))
   g2 <- read.gdsn(index.gdsn(genofile, "CNVgenotype"))
   
+  chrx$V1 <- factor(chrx$V1, levels=unique(chrx$V1))
   chrx.split <- split(chrx, chrx$V1)
   #sapply(chrx.split[[lo]], class)
   
