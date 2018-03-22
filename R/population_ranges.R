@@ -9,13 +9,40 @@
 # 
 ############################################################
 
-library(GenomicRanges)
+# roxygen template
 
-hello <- function() message("Hello")
+#' Title
+#' 
+#' Description
+#'
+#' Details
+#'
+#' @param
+#'
+#' @return
+#'
+#' @author
+#' @seealso
+#'
+#' @examples
+#
+#' @export
 
-#
-# CNVRuler procedure that trims region margins based on regional density
-#
+
+#' Summarizing genomic ranges across a population
+#'
+#' CNVRuler procedure that trims region margins based on regional density
+#'
+#' @param grl A \code{\linkS4class{GRangesList}}.
+#' @param density Numeric. 
+#'
+#' @return A \code{\linkS4class{GRanges}} object containing the summarized
+#' genomic ranges. 
+#'
+#' @author Martin Morgan
+#' @seealso
+#' 
+#' @export
 populationRanges <- function(grl, density=0.1)
 {
     gr <- unlist(grl)
@@ -60,10 +87,36 @@ populationRanges <- function(grl, density=0.1)
 #
 # A typical reciprocal overlap threshold value is 0.5 for constructing CNVs
 
+# this clustering procedure is then invoked on each initial cluster, which are, 
+# according to the procedure outlined by Conrad et al., constructed by merging 
+# all calls with >= 1 bp overlap.
+populationRangesRO <- function(grl, ro.thresh=0.5, multi.assign=FALSE)
+{
+    gr <- unlist(grl)
+
+    # build initial clusters
+    init.clusters <- reduce(gr)
+    message(paste("TODO:", length(init.clusters)))
+
+    # cluster within each initial cluster
+    cl.per.iclust <- sapply(init.clusters, 
+        function(ic)
+        {
+            message(which(init.clusters == ic))
+            # get calls of cluster
+            ccalls <- subsetByOverlaps(gr, ic)
+            clusters <- .clusterCalls(ccalls, ro.thresh, multi.assign)
+            clusters <- range(extractList(ccalls, clusters))
+            clusters <- sort(unlist(clusters))  
+    })
+    ro.ranges <- unname(unlist(GRangesList(cl.per.iclust)))
+    return(ro.ranges)
+}
+
 
 # given a set individual calls, returns overlaps (hits) between them 
 # that satisfy the RO threshold
-getROHits <- function(calls, ro.thresh=0.5)
+.getROHits <- function(calls, ro.thresh=0.5)
 {
     # calculate pairwise ro
     hits <- findOverlaps(calls, drop.self=TRUE, drop.redundant=TRUE)
@@ -100,7 +153,7 @@ getROHits <- function(calls, ro.thresh=0.5)
 # decides whether a given hit can be merged to an already existing cluster
 # mergeability requires that all cluster members satisfy the pairwise RO 
 # threshold
-getMergeIndex <- function(hit, cluster, hits)
+.getMergeIndex <- function(hit, cluster, hits)
 {
     # (1) check whether query / subject of hit is part of cluster
     curr.qh <- queryHits(hit)
@@ -140,7 +193,7 @@ getMergeIndex <- function(hit, cluster, hits)
 # (in the most basic case a call A that has sufficient RO with a call B and 
 # a call C, but B and C do not have sufficient RO), this allows to optionally 
 # strip away such multi-assignments
-pruneMultiAssign <- function(clusters)
+.pruneMultiAssign <- function(clusters)
 {
     cid <- seq_along(clusters)
     times <- sapply(clusters, length)
@@ -157,9 +210,9 @@ pruneMultiAssign <- function(clusters)
 # the clustering itself then goes sequentially through the identified RO hits, 
 # touching each hit once, and checks whether this hit could be merged to 
 # already existing clusters
-clusterCalls <- function(calls, ro.thresh=0.5, multi.assign=FALSE)
+.clusterCalls <- function(calls, ro.thresh=0.5, multi.assign=FALSE)
 {
-    hits <- getROHits(calls, ro.thresh)        
+    hits <- .getROHits(calls, ro.thresh)        
     
     # exit here if not 2 or more hits
     if(length(hits) < 2) return(hits)       
@@ -183,7 +236,7 @@ clusterCalls <- function(calls, ro.thresh=0.5, multi.assign=FALSE)
             
             # if not, check it
             prev.cluster <- hits[cid == j]
-            mergeIndex <- getMergeIndex(curr.hit, prev.cluster, hits)
+            mergeIndex <- .getMergeIndex(curr.hit, prev.cluster, hits)
             
             if(!is.null(mergeIndex))
             {
@@ -202,34 +255,8 @@ clusterCalls <- function(calls, ro.thresh=0.5, multi.assign=FALSE)
         function(h) union(queryHits(h), subjectHits(h)))
     
     # can calls be assigned to more than one cluster?
-    if(!multi.assign) call.clusters <- pruneMultiAssign(call.clusters)
+    if(!multi.assign) call.clusters <- .pruneMultiAssign(call.clusters)
     
     return(call.clusters)
-}
-
-# this clustering procedure is then invoked on each initial cluster, which are, 
-# according to the procedure outlined by Conrad et al., constructed by merging 
-# all calls with >= 1 bp overlap.
-populationRangesRO <- function(grl, ro.thresh=0.5, multi.assign=FALSE)
-{
-    gr <- unlist(grl)
-
-    # build initial clusters
-    init.clusters <- reduce(gr)
-    message(paste("TODO:", length(init.clusters)))
-
-    # cluster within each initial cluster
-    cl.per.iclust <- sapply(init.clusters, 
-        function(ic)
-        {
-            message(which(init.clusters == ic))
-            # get calls of cluster
-            ccalls <- subsetByOverlaps(gr, ic)
-            clusters <- clusterCalls(ccalls, ro.thresh, multi.assign)
-            clusters <- range(extractList(ccalls, clusters))
-            clusters <- sort(unlist(clusters))  
-    })
-    ro.ranges <- unname(unlist(GRangesList(cl.per.iclust)))
-    return(ro.ranges)
 }
 
