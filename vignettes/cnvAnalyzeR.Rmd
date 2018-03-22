@@ -1,0 +1,81 @@
+---
+title: "A comprehensive tool suite for CNV analysis"
+author:
+    - name: Vinicius Henrique da Silva
+      affiliation: Animal Breeding and Genomics Center, Wageningen University
+      email: vinicius.dasilva@wur.nl
+    - name: Ludwig Geistlinger
+      affiliation: School of Public Health, City University of New York
+      email: ludwig.geistlinger@sph.cuny.edu
+package: cnvAnalyzeR
+abstract: > 
+    The _GSEABenchmarkeR_ package implements an extendable framework for
+    reproducible evaluation of set- and network-based methods for enrichment
+    analysis of gene expression data. This includes support for the efficient
+    execution of these methods on comprehensive real data compendia (microarray
+    and RNA-seq) using parallel computation on standard workstations and
+    institutional computer grids. Methods can then be assessed with respect to
+    runtime, statistical significance, and relevance of the results for the
+    phenotypes investigated.
+output:
+  BiocStyle::html_document:
+    toc: true
+    toc_depth: 2
+vignette: >
+  % \VignetteIndexEntry{A comprehensive tool suite for CNV analysis}
+  % \VignetteEngine{knitr::rmarkdown}
+---
+
+```{r setup, echo=FALSE}
+suppressPackageStartupMessages({ 
+    library(cnvAnalyzeR)
+})
+```
+
+# Setup
+Copy number variation (CNV) is a frequently observed deviation from the diploid 
+state due to duplication or deletion of genomic regions.
+
+Some papers that we want to cite:
+- Genome-wide detection of CNVs and their association with meat tenderness in 
+    Nelore cattle
+    [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)
+- Distribution and functionality of copy number variation across European cattle
+    populations
+    [Upadhyay et al., 2017](https://doi.org/10.3389/fgene.2017.00108)
+- Widespread modulation of gene expression by copy number variation in skeletal 
+    muscle
+    [Geistlinger et al., 2018](https://doi.org/10.1038/s41598-018-19782-4)
+- CNVs are associated with genomic architecture in a songbird 
+    [da Silva et al., 2016](https://doi.org/10.1186/s12864-018-4577-1)
+
+We start by loading the package.
+
+```{r lib}
+library(cnvAnalyzeR)
+```
+
+# Reading and accessing CNV data
+
+The `r Biocpkg("cnvAnalyzeR")` package uses `r Biocpkg("GenomicRanges")` and 
+`r Biocpkg("RaggedExperiment")` to represent, access, and manipulate CNV data.
+
+# Summarizing individual CNV calls across a population
+
+Here, we use the approach from `CNVRuler` to summarize CNV calls to CNV regions. 
+We also provide an implementation of the _Reciprocal Overlap (RO)_ procedure.
+A `GISTIC`-like procedure for detecting recurrent CNVs is also in preparation.
+
+# Overlap analysis of CNVs with functional genomic regions
+
+Here, we do some cool stuff with the `r Biocpkg("regioneR")` package.
+
+# CNV-expression association analysis
+
+Here, we analyze differences in expression between CN states based on the
+`r Biocpkg("edgeR")` package.
+
+# CNV-phenotype association analysis
+
+Here, we analyze the genome-wide association of CNVs with quantitative phenotypes
+using `PLINK`.

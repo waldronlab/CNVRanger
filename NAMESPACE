@@ -15,6 +15,6 @@ importFrom("utils", "available.packages", "browseURL",
              "read.csv", "read.delim", "unzip", "write.table")
 
 export( 
-    readCNVCalls,
-    populationRanges
+    populationRanges,
+    setupCnvAna    
 )
