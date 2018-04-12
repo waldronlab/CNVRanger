@@ -1,6 +1,7 @@
 ##################
 # Author: Vinicius Henrique da Silva
 # Script description: Functions related to CNV-GWAS
+# Date: April 12, 2018
 # Code: CNVASSOPACK002
 ###################
 
@@ -689,13 +690,12 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 #' @param method.m.test Correction for multiple tests to be used. FDR is default, see \code{\link(p.adjust)} for
 #' other methods.
 #' @param lo.phe The phenotype to be analyzed in the PhenInfo$phenotypesSam data-frame 
-#' @param reconvert.chr.names a logical value indicating if the chromosome names may have different names than integers 
-#' (previously indicated in the \code{\link{prodGdsCnv}} function). 
+#' @param chr.code.name A data-frame with the integer name in the first column and the original name for each chromosome  
 #' @return The CNV segments and the representative probes and their respective p-value
 #' @examples
 #' @export
 
-cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix=FALSE, method.m.test = "fdr", lo.phe=1, reconvert.chr.names=FALSE){
+cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix=FALSE, method.m.test = "fdr", lo.phe=1, chr.code.name=NULL){
   phenotypesSam <- phen.info$phenotypesSam
   phenotypesSamX <- phenotypesSam[,c(1,(lo.phe+1))]
   phenotypesSamX <- na.omit(phenotypesSamX) ### Exclude samples without phenotypes. i.e NA
@@ -703,7 +703,7 @@ cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix
   
   #################################### Produce the GDS for a given phenotype
   
-  probes.cnv.gr <- prodGdsCnv(phen.info, freq.cn, snp.matrix, n.cor, lo.phe)
+  probes.cnv.gr <- prodGdsCnv(phen.info, freq.cn, snp.matrix, n.cor, lo.phe, chr.code.name)
   
   ##################################### Produce PLINK map ##################
   
@@ -751,7 +751,7 @@ cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix
   
   #################################### Reconvert the chrs to original names if applicable
   
-  if(reconvert.chr.names == TRUE){
+  if(!is.null(chr.code.name)){
   (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=T, readonly=FALSE)) ## read GDS
   chr.names.df < gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "Chr.names"))
   
