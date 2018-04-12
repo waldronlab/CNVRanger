@@ -1,7 +1,6 @@
 ##################
 # Author: Vinicius Henrique da Silva
 # Script description: Functions related to CNV-GWAS
-# Date: April 1, 2018
 # Code: CNVASSOPACK002
 ###################
 
@@ -176,7 +175,7 @@
 #' phen.info <- setupCnvAna(name, phen.loc, map.loc, cnv.out.loc)
 #' @export
 
-setupCnvAna <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL){
+setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL){
   
   ## Create the folder structure for all subsequent analysis
   all.paths <- .createFolderTree(name, folder)
@@ -264,17 +263,30 @@ testit <- function(x)
 #' @param snp.matrix Only FALSE implemented - If TRUE B allele frequencies (BAF) would be used to reconstruct CNV-SNP genotypes
 #' @param n.cor Number of cores to be used
 #' @param lo.phe The phenotype to be analyzed in the PhenInfo$phenotypesSam data-frame 
+#' @param chr.code.name A data-frame with the integer name in the first column and the original name for each chromosome 
 #' @return probes.cnv.gr object with information about all probes to be used in the downstream CNV-GWAS
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @seealso (\code{\link{snpgdsCreateGeno}})
 #' @examples
-#'  
+#' 
+#'  Construct the data-frame with integer and original chromosome names 
+#'df <- "27 1A
+#' 25 25LG1
+#' 29 4A
+#' 30 LGE22
+#' 31 25LG2
+#' 32 LG22
+#' 33 Z"
+#' 
+#' chr.code.name <- read.table(text=df, header=F)
+#' 
+#' head(chr.code.name)
 #'
-#' probes.cnv.gr <- prodGdsCnv(phen.info)
+#' probes.cnv.gr <- prodGdsCnv(phen.info, chr.code.name=chr.code.name)
 #' 
 #'   @export
 
-prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.phe=1){  
+prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.phe=1, chr.code.name=NULL){  
   
   message("initializing ...", appendLF = FALSE)
   
@@ -292,6 +304,19 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   cnvs <- read.table(file.path(all.paths[1], "CNVOut.txt"), sep="", header=F) ### CNV table 
   
   CNVs <- .CheckConvertCNVs(cnvs)
+  
+  
+  ####################### Check if the chromosomes are numeric
+  
+  chr.names <- CNVs$chr
+  chr.names <- gsub("chr", "", chr.names)
+  
+  if(any(is.na(chr.names))){
+    stop("Your chromosome names should be integers. If they are not, make them integers and include the correspondent names 
+         in chr.code.name parameter")
+  }
+  
+  #############################
   
   CNVs$start <- as.integer(as.character(CNVs$start))
   CNVs$end <- as.integer(as.character(CNVs$end))
@@ -382,6 +407,12 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   gdsfmt::add.gdsn(genofile, name="FamID", val=FamID[,2], replace=TRUE)
   FamID <- SexIds[match(all.samples, SexIds$samplesPhen),] ### Check order correspondence
   gdsfmt::add.gdsn(genofile, name="Sex", val=SexIds[,2], replace=TRUE)
+  
+  ## Include chr names if needed
+  if(!is.null(chr.code.name)){
+    gdsfmt::add.gdsn(genofile, name="Chr.names", val=chr.code.name, replace=TRUE)  
+  }
+  
   SNPRelate::snpgdsClose(genofile)
   ########################################### END #######################################
   message("done", appendLF = FALSE)
@@ -658,11 +689,13 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 #' @param method.m.test Correction for multiple tests to be used. FDR is default, see \code{\link(p.adjust)} for
 #' other methods.
 #' @param lo.phe The phenotype to be analyzed in the PhenInfo$phenotypesSam data-frame 
+#' @param reconvert.chr.names a logical value indicating if the chromosome names may have different names than integers 
+#' (previously indicated in the \code{\link{prodGdsCnv}} function). 
 #' @return The CNV segments and the representative probes and their respective p-value
 #' @examples
 #' @export
 
-cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix=FALSE, method.m.test = "fdr", lo.phe=1){
+cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix=FALSE, method.m.test = "fdr", lo.phe=1, reconvert.chr.names=FALSE){
   phenotypesSam <- phen.info$phenotypesSam
   phenotypesSamX <- phenotypesSam[,c(1,(lo.phe+1))]
   phenotypesSamX <- na.omit(phenotypesSamX) ### Exclude samples without phenotypes. i.e NA
@@ -678,36 +711,72 @@ cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix
   
   ########################################### END #######################################
   
-  ##################################### (iv) Produce gvar to use as PLINK input #########
+  ##################################### Produce gvar to use as PLINK input #########
   
   .prodPLINKgvar(all.paths)
   
   ########################################### END #######################################
   
-  ##################################### (v) Produce fam (phenotype) to use as PLINK input #############
+  ##################################### Produce fam (phenotype) to use as PLINK input #############
   
   .prodPLINKfam(all.paths)
   
   ########################################### END #######################################
   
-  ##################################### (vi) Run PLINK #############
+  ##################################### Run PLINK #############
   
   .runPLINK(all.paths)
   
   ########################################### END #######################################
   
-  ##################################### (vii) Produce CNV segments #############
+  ##################################### Produce CNV segments #############
   
   all.segs.gr <- .prodCNVseg(all.paths, probes.cnv.gr)
   
   ########################################### END #######################################
   
-  ##################################### (viii) Associate SNPs with CNV segments #############
+  ##################################### Associate SNPs with CNV segments #############
   
   segs.pvalue.gr <- .assoPrCNV(all.paths, all.segs.gr)
   
   ######################################################## END ###########################################
   
+  #################################### Plot the QQ-plot of the analysis
+  
+  pdf(file.path(all.paths[3], paste0(unique(values(segs.pvalue.gr)$Phenotype),"QQ-PLOT.pdf")))
+  qqunif.plot(values(segs.pvalue.gr)$MinPvalue, auto.key=list(corner=c(.95,.05)))
+  
+  dev.off()
+  ######################################################## END ###########################################
+  
+  #################################### Reconvert the chrs to original names if applicable
+  
+  if(reconvert.chr.names == TRUE){
+  (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=T, readonly=FALSE)) ## read GDS
+  chr.names.df < gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "Chr.names"))
+  
+  segs.pvalue <- data.frame(segs.pvalue.gr)
+  segs.pvalue <- segs.pvalue[ , -which(names(segs.pvalue) %in% c("strand"))]
+  
+  for(lopN in len_seq(nrow(chr.names.df))){
+  segs.pvalue$seqnames <- gsub(chr.names.df[lopN,1],chr.names.df[lopN,2], segs.pvalue$seqnames)
+  }
+  
+  segs.pvalue.gr <- makeGRangesFromDataFrame(segs.pvalue, keep.extra.columns = TRUE)
+  
+  SNPRelate::snpgdsClose(genofile)
+  }
+  
+  ######################################################## END ########################################
+  
+  
+  #################################### Plot the manhattan ######################
+  
+  #TODO
+  
+  ######################################################## END ###########################################
+  
+
   return(segs.pvalue.gr)
 }
 
