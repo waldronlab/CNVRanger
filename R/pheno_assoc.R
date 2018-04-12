@@ -86,10 +86,10 @@
   
   all <- data.table::fread(file.path(pheno.path, file.nam), header=TRUE, sep="\t") ### Import phenotypes
   
-  if(!all(colnames(all)[1:3]==c("sample_id", "fam", "sex"))){
+  if(!all(colnames(all)[1:3]==c("sample.id", "fam", "sex"))){
     stop("Unexpected first three column names")}
   
-  samplesPhen <- unique(all$sample_id) ## Greb sample names
+  samplesPhen <- unique(all$sample.id) ## Greb sample names
   phenotypes <- names(all[, 4:ncol(all)]) ## Greb phenotype names
   
   phenotypesdf <- all[, 4:ncol(all), drop = FALSE]
@@ -163,8 +163,8 @@
 #' 
 #' @param name String with a project code or name
 #' @param phen.loc Path to the tab separated text file cointaining phenotype and sample info
+#' @param cnv.out.loc Path to the CNV analysis output (i.e. PennCNV output or tab delimited text file)
 #' @param map.loc Path to the probe map (e.g. used in PennCNV analysis)
-#' @param penn.out.loc Path to the CNV analysis output (i.e. PennCNV output or tab delimited text file)
 #' @param folder Choose manually the project folder (i.e. path as the root folder)
 #' @return List phen.info with samplesPhen, phenotypes, phenotypesdf, phenotypesSam, FamID, SexIds and all.paths
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
@@ -172,8 +172,8 @@
 #' name <- "Project1"
 #' phen.loc <- ".../Pheno.txt"
 #' map.loc <- ".../Map.txt"
-#' penn.out.loc <- ".../PennCNVOutput.txt"
-#' phen.info <- setupCnvAna(name, phen.loc, map.loc, cnv.out.loc)
+#' cnv.out.loc <- ".../CNVOutput.txt"
+#' phen.info <- setupCnvGWAS(name, phen.loc, map.loc, cnv.out.loc)
 #' @export
 
 setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL){
@@ -184,7 +184,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL)
   ## Import the phenotype and sample info from external folder
   file.copy(phen.loc, file.path(all.paths[1], "/Pheno.txt"))
   ## Import the PennCNV output from external folder
-  file.copy(penn.out.loc, file.path(all.paths[1], "/CNVOut.txt"))
+  file.copy(cnv.out.loc, file.path(all.paths[1], "/CNVOut.txt"))
   
   if(is.null(map.loc)){
     ## Import the probe map from external folder
