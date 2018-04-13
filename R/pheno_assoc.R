@@ -115,8 +115,8 @@
 .CheckConvertCNVs <- function(cnvs){
   
   ## If PennCNV file
-  if(unique(sub("^([[:alpha:]]*).*", "\\1", cnvs$V2))=="numsnp"){
-    
+  if(unique(sub("^([[:alpha:]]*).*", "\\1", cnvs$V2))[[1]]=="numsnp"){
+    cnvs <- as.data.frame(cnvs)
     df1 <- reshape2::colsplit(cnvs$V1, ":", c("chr", "loc"))
     df2 <- reshape2::colsplit(df1$loc, "-", c("start", "end"))
     df1 <- cbind(df1[,-2, drop=FALSE], df2)
@@ -127,8 +127,9 @@
     CNVs <- cnvs
     
     ## If general format
-  } else if(all(colnames(cnvs))==c("chr", "start", "end","sample.id", "state", "num.snps", "start.probe", "end.probe")){ 
-    
+  } else if(as.character(cnvs[1,])==c("chr", "start", "end","sample.id", "state", "num.snps", "start.probe", "end.probe")){ 
+    #if(all(colnames(cnvs))==c("chr", "start", "end","sample.id", "state", "num.snps", "start.probe", "end.probe")){ 
+    cnvs <- as.data.frame(cnvs)
     ## Convert to PennCNV format
     cnvs$V1 <- paste0(cnvs$chr, ":",cnvs$start, "-", cnvs$end)
     cnvs$length <- (cnvs$end - cnvs$start)+1
@@ -145,6 +146,7 @@
     
     ## If sequencing info
   } else if(all(colnames(cnvs))==c("chr", "start", "end", "sample.id", "state")){
+    cnvs <- as.data.frame(cnvs)
     ## Convert to PennCNV 
     
     ## TODO 
@@ -302,7 +304,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   
   ######################  Import CNVs to data-frame
   
-  cnvs <- read.table(file.path(all.paths[1], "CNVOut.txt"), sep="", header=F) ### CNV table 
+  cnvs <- data.table::fread(file.path(all.paths[1], "CNVOut.txt"), sep="\t", header=FALSE) ### CNV table 
   
   CNVs <- .CheckConvertCNVs(cnvs)
   
