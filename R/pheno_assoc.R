@@ -127,9 +127,13 @@
     CNVs <- cnvs
     
     ## If general format
-  } else if(as.character(cnvs[1,])==c("chr", "start", "end","sample.id", "state", "num.snps", "start.probe", "end.probe")){ 
-    #if(all(colnames(cnvs))==c("chr", "start", "end","sample.id", "state", "num.snps", "start.probe", "end.probe")){ 
+  } else if(all(as.character(cnvs[1,])==c("chr", "start", "end","sample.id", "state", "num.snps", "start.probe", "end.probe"))){ 
+    the.names <- as.character(cnvs[1,])
+    cnvs <- cnvs[-1,]
+    colnames(cnvs) <- the.names
     cnvs <- as.data.frame(cnvs)
+    cnvs$start <- as.numeric(cnvs$start)
+    cnvs$end <- as.numeric(cnvs$end)
     ## Convert to PennCNV format
     cnvs$V1 <- paste0(cnvs$chr, ":",cnvs$start, "-", cnvs$end)
     cnvs$length <- (cnvs$end - cnvs$start)+1
@@ -138,14 +142,14 @@
     cnvs$num.snps <- paste0("numsnp=", cnvs$length)
     
     cnvs$start.probe <- paste0("startSNP=", cnvs$start.probe)
-    cnvs$end.probe <- paste0("endSNP=", cnvs$start.probe)
+    cnvs$end.probe <- paste0("endSNP=", cnvs$end.probe)
     
     cnvs <- subset(cnvs, select =c(chr, start, end, V1, num.snps, length, state, sample.id, start.probe, end.probe))
     colnames(cnvs) <- c("chr", "start", "end", "V1", "V2", "V3", "V4", "V5", "V6", "V7")
     CNVs <- cnvs
     
     ## If sequencing info
-  } else if(all(colnames(cnvs))==c("chr", "start", "end", "sample.id", "state")){
+  } else if(all(as.character(cnvs[1,])==c("chr", "start", "end", "sample.id", "state"))){
     cnvs <- as.data.frame(cnvs)
     ## Convert to PennCNV 
     
