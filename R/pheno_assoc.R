@@ -170,7 +170,8 @@
 #' @param name String with a project code or name
 #' @param phen.loc Path to the tab separated text file cointaining phenotype and sample info
 #' @param cnv.out.loc Path to the CNV analysis output (i.e. PennCNV output or tab delimited text file)
-#' @param map.loc Path to the probe map (e.g. used in PennCNV analysis)
+#' @param map.loc Path to the probe map (e.g. used in PennCNV analysis). Column names with the probe name, 
+#' chromosome and coordinate as: Name, Chr and Position. Tab delimited.
 #' @param folder Choose manually the project folder (i.e. path as the root folder)
 #' @return List phen.info with samplesPhen, phenotypes, phenotypesdf, phenotypesSam, FamID, SexIds and all.paths
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
@@ -388,7 +389,6 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   CNVBiMaCN <- matrix(2, nrow = length(probes.cnv.gr), 
                       ncol = length(all.samples))
   n <- gdsfmt::add.gdsn(genofile, "CNVgenotype", CNVBiMaCN, replace=TRUE)
-  read.gdsn(n)
   
   gback <- as.numeric(CNVBiMaCN[,1])
   
@@ -709,46 +709,51 @@ cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix
   all.paths <- phen.info$all.paths
   
   #################################### Produce the GDS for a given phenotype
+  message("Produce the GDS for a given phenotype")
   
   probes.cnv.gr <- prodGdsCnv(phen.info, freq.cn, snp.matrix, n.cor, lo.phe, chr.code.name)
   
   ##################################### Produce PLINK map ##################
+  message("Produce PLINK map")
   
   .prodPLINKmap(all.paths)
   
   ########################################### END #######################################
   
   ##################################### Produce gvar to use as PLINK input #########
+  message("Produce gvar to use as PLINK input")
   
   .prodPLINKgvar(all.paths)
   
   ########################################### END #######################################
   
   ##################################### Produce fam (phenotype) to use as PLINK input #############
+  message("Produce fam (phenotype) to use as PLINK input")
   
   .prodPLINKfam(all.paths)
   
   ########################################### END #######################################
   
   ##################################### Run PLINK #############
-  
+  message("Run PLINK")
   .runPLINK(all.paths)
   
   ########################################### END #######################################
   
   ##################################### Produce CNV segments #############
-  
+  message("Produce CNV segments")
   all.segs.gr <- .prodCNVseg(all.paths, probes.cnv.gr)
   
   ########################################### END #######################################
   
   ##################################### Associate SNPs with CNV segments #############
-  
+  message("Associate SNPs with CNV segments")
   segs.pvalue.gr <- .assoPrCNV(all.paths, all.segs.gr)
   
   ######################################################## END ###########################################
   
   #################################### Plot the QQ-plot of the analysis
+  message("Plot the QQ-plot of the analysis")
   
   pdf(file.path(all.paths[3], paste0(unique(values(segs.pvalue.gr)$Phenotype),"QQ-PLOT.pdf")))
   qqunif.plot(values(segs.pvalue.gr)$MinPvalue, auto.key=list(corner=c(.95,.05)))
