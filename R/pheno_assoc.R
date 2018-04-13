@@ -189,9 +189,9 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL)
   all.paths <- .createFolderTree(name, folder)
   
   ## Import the phenotype and sample info from external folder
-  file.copy(phen.loc, file.path(all.paths[1], "/Pheno.txt"))
+  file.copy(phen.loc, file.path(all.paths[1], "/Pheno.txt"), overwrite = TRUE)
   ## Import the PennCNV output from external folder
-  file.copy(cnv.out.loc, file.path(all.paths[1], "/CNVOut.txt"))
+  file.copy(cnv.out.loc, file.path(all.paths[1], "/CNVOut.txt"),  overwrite = TRUE)
   
   if(is.null(map.loc)){
     ## Import the probe map from external folder
@@ -279,13 +279,14 @@ testit <- function(x)
 #' @examples
 #' 
 #'  Construct the data-frame with integer and original chromosome names 
-#'df <- "27 1A
-#' 25 25LG1
-#' 29 4A
-#' 30 LGE22
-#' 31 25LG2
-#' 32 LG22
-#' 33 Z"
+#'  
+#'  
+#'df <- "16 1A
+#'25 4A
+#' 29 25LG1
+#' 30 25LG2
+#' 31 LGE22
+#' 32 Z"
 #' 
 #' chr.code.name <- read.table(text=df, header=F)
 #' 
@@ -372,7 +373,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   }
   
   ###################### Create a GDS with chr and SNP names to numeric
-  SNPRelate::snpgdsCreateGeno("CNV.gds", 
+  SNPRelate::snpgdsCreateGeno(file.path(all.paths[1], "CNV.gds"), 
                               genmat = CNVBiMa,
                               sample.id = all.samples, 
                               snp.id = as.character(values(probes.cnv.gr)$snp.id),
@@ -384,7 +385,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   testit(15)
   
   ###################### Replace genotype matrix with CNV genotypes
-  (genofile <- SNPRelate::snpgdsOpen("CNV.gds", allow.fork=TRUE, readonly=FALSE))
+  (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=TRUE, readonly=FALSE))
   
   CNVBiMaCN <- matrix(2, nrow = length(probes.cnv.gr), 
                       ncol = length(all.samples))
