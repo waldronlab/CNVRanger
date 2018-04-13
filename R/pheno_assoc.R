@@ -212,7 +212,8 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL)
     write.table(probe.like.map, file.path(all.paths[1], "/MapPenn.txt"), col.names = TRUE, row.names = FALSE,
                 quote = FALSE, sep="\t")
     
-  }else file.copy(map.loc, file.path(all.paths[1], "/MapPenn.txt"))
+  }else{
+    file.copy(map.loc, file.path(all.paths[1], "/MapPenn.txt"), overwrite = TRUE)}
   
   phen.info <- .loadPhen("Pheno.txt", all.paths[1])
   
@@ -331,7 +332,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   CNVsGr <- CNVsGr[values(CNVsGr)$V5 %in% samplesPhen] ### Subset CNVs in phenotyped samples
   
   ######################  Import SNP map to data-frame
-  probes <- data.table::fread("MapPenn.txt", header=TRUE, sep="\t")
+  probes <- data.table::fread(file.path(all.paths[1], "MapPenn.txt"), header=TRUE, sep="\t")
   probes <- as.data.frame(probes)
   probes$Position <- as.numeric(as.character(probes$Position))
   probes <- probes[complete.cases(probes), ]
