@@ -215,7 +215,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL)
   if(PlinkVer != "TRUE"){
     stop("PLINK setup failed")}
   
-  NewPLINK <- file.path(all.paths[2], dir(path = ".", pattern = "plink-1*"))
+  NewPLINK <- file.path(all.paths[2], dir(path = all.paths[2], pattern = "plink-1*"))
   all.paths[2] <- NewPLINK
   
   phen.info$all.paths <- all.paths
