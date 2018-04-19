@@ -79,18 +79,19 @@
 #' @param pheno.path First item of the list returned by \code{CreateFolderTree} function
 #' @return List phen.info with samplesPhen, phenotypes, phenotypesdf, phenotypesSam, FamID and SexIds
 #' @examples
-#' phen.info <- loadPhen("/home/.../CNVPhen.txt")
+#' phen.info <- loadPhen("/home/.../Phen.txt")
 #' sapply(phen.info, class)
 
 .loadPhen <- function(file.nam, pheno.path){
   
   all <- data.table::fread(file.path(pheno.path, file.nam), header=TRUE, sep="\t") ### Import phenotypes
+  all <- as.data.frame(all)
   
   if(!all(colnames(all)[1:3]==c("sample.id", "fam", "sex"))){
     stop("Unexpected first three column names")}
   
   samplesPhen <- unique(all$sample.id) ## Greb sample names
-  phenotypes <- names(all[, 4:ncol(all)]) ## Greb phenotype names
+  phenotypes <- names(all[, 4:ncol(all), drop=FALSE]) ## Greb phenotype names
   
   phenotypesdf <- all[, 4:ncol(all), drop = FALSE]
   phenotypesdf <- as.data.frame(phenotypesdf) ### Greb phenotypes values
@@ -382,7 +383,6 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
                               snp.position = start(probes.cnv.gr)
   )
   
-  testit(15)
   
   ###################### Replace genotype matrix with CNV genotypes
   (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=TRUE, readonly=FALSE))
@@ -390,19 +390,20 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   CNVBiMaCN <- matrix(2, nrow = length(probes.cnv.gr), 
                       ncol = length(all.samples))
   n <- gdsfmt::add.gdsn(genofile, "CNVgenotype", CNVBiMaCN, replace=TRUE)
+  gdsfmt::read.gdsn(n)
   
   gback <- as.numeric(CNVBiMaCN[,1])
   
   if(rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac"){
     multicoreParam <-  BiocParallel::MulticoreParam(workers = n.cor)
-    suppressMessages(BiocParallel::bplapply(1:length(all.samples), .writeProbesCNV, BPPARAM = multicoreParam, all.samples=all.samples,
-                                            genofile=genofile, CNVsGr=CNVsGr, probes.cnv.gr=probes.cnv.gr, n=n))
+    BiocParallel::bplapply(1:length(all.samples), .writeProbesCNV, BPPARAM = multicoreParam, all.samples=all.samples,
+                                            genofile=genofile, CNVsGr=CNVsGr, probes.cnv.gr=probes.cnv.gr, n=n)
   }
   
   if(rappdirs:::get_os() == "win"){
     param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
-    suppressMessages(BiocParallel::bplapply(1:length(all.samples), .writeProbesCNV, BPPARAM = param, all.samples=all.samples, 
-                                            genofile=genofile, CNVsGr=CNVsGr, probes.cnv.gr=probes.cnv.gr, n=n))
+    BiocParallel::bplapply(1:length(all.samples), .writeProbesCNV, BPPARAM = param, all.samples=all.samples, 
+                                            genofile=genofile, CNVsGr=CNVsGr, probes.cnv.gr=probes.cnv.gr, n=n)
   }
   
   testit(15) ## Wait to make sure that gds is writen
@@ -424,6 +425,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   
   SNPRelate::snpgdsClose(genofile)
   ########################################### END #######################################
+  testit(15)
   message("done", appendLF = FALSE)
   return(probes.cnv.gr)}
 
@@ -431,7 +433,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 #' @examples
 #' Gens <- .prodGvar(lo, genofile, sam.gen, snps, fam.id)
 
-.prodGvar <- function(lo, genofile, sam.gen, snps, fam.id){
+.prodGvar <- function(lo, genofile, sam.gen, snps, fam.id, snp.matrix){
   g <- as.numeric(SNPRelate::snpgdsGetGeno(genofile, sample.id=sam.gen[[lo]]))
   A <- rep("A", length(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), start=c(1,lo), count=c(length(g),1))))
   B <- rep("B", length(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), start=c(1,lo), count=c(length(g),1))))
@@ -442,12 +444,12 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   CNVg[CNVg==-1] <- 0
   B[CNVg==1] <- "A"
   
-  if(SNPmatrix=="FALSE"){
+  if(snp.matrix=="FALSE"){
     df <- as.data.frame(cbind(as.character(fam.id[[lo]]), sam.gen[[lo]], snps, 
                               A, CNVg, B, Dose1))
     colnames(df) <- c("FID", "IID", "NAME", "ALLELE1", "DOSAGE1", "ALLELE2", "DOSAGE2")}
   
-  if(SNPmatrix=="TRUE"){ #### TODO - To implement
+  if(snp.matrix=="TRUE"){ #### TODO - To implement
     ...
   }
   return(df)
@@ -457,7 +459,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 #' 
 
 .prodPLINKmap <- function(all.paths){
-  (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=TRUE, readonly=FALSE))
+  (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=TRUE))
   Pmap <- as.data.frame(cbind(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome")), 
                               gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id")),
                               0, gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.position"))))
@@ -470,7 +472,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 #' HELPER - Produce the PLINK .gvar file in disk
 #' 
 
-.prodPLINKgvar <- function(all.paths){
+.prodPLINKgvar <- function(all.paths, n.cor, snp.matrix){
   
   (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=TRUE, readonly=FALSE)) ## read GDS
   sam.gen <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id")) ## Extract samples
@@ -481,14 +483,14 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   # Identify the SO
   if(rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac"){
     multicoreParam <- BiocParallel::MulticoreParam(workers = n.cor)
-    Gens <- BiocParallel::bplapply(1:length(sam.gen), .prodGvar, BPPARAM = multicoreParam, genofile=genofile, sam.gen=sam.gen,
-                                   snps=snps, fam.id=fam.id)
+    Gens <- suppressMessages(BiocParallel::bplapply(1:length(sam.gen), .prodGvar, BPPARAM = multicoreParam, genofile=genofile, sam.gen=sam.gen,
+                                   snps=snps, fam.id=fam.id, snp.matrix=snp.matrix))
   }
   
   if(rappdirs:::get_os() == "win"){
     param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
-    Gens <- BiocParallel::bplapply(1:length(sam.gen), .prodGvar, BPPARAM = param, genofile=genofile, sam.gen=sam.gen,
-                                   snps=snps, fam.id=fam.id)
+    Gens <- suppressMessages(BiocParallel::bplapply(1:length(sam.gen), .prodGvar, BPPARAM = param, genofile=genofile, sam.gen=sam.gen,
+                                   snps=snps, fam.id=fam.id, snp.matrix=snp.matrix))
   }
   
   gentype.all <- data.table::rbindlist(Gens)
@@ -514,7 +516,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   famdf <- as.data.frame(cbind(FAMID, SamGen, SamGen, "NC", Sex, Phen[,2]))
   colnames(famdf) <- c("FAID", "IID", "PID", "MID", "Sex", "Phenotype")
   
-  write.table(famdf, file.path(all.paths[2]), "mydata.fam", sep = "\t", col.names = TRUE, row.names=FALSE, quote=FALSE)
+  write.table(famdf, file.path(all.paths[2], "mydata.fam"), sep = "\t", col.names = TRUE, row.names=FALSE, quote=FALSE)
   SNPRelate::snpgdsClose(genofile)
 }
 
@@ -524,7 +526,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 .runPLINK <- function(all.paths){
   
   plinkPath <- paste0("\'", all.paths[2], "/plink\'")
-  system(paste(plinkPath, "--gfile mydata --noweb"), wait=TRUE)
+  system(paste(plinkPath, "--gfile", file.path(all.paths[2], "mydata"), paste("--out", file.path(all.paths[2], "plink")), "--noweb"), wait=TRUE)
   
   (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=T, readonly=FALSE)) ## read GDS
   sumphen <- paste0("plink.gvar.summary.",names(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "phenotype")))[[2]])
@@ -537,9 +539,9 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 #' HELPER - Produce CNV segments
 #' 
 
-.prodCNVseg <- function(all.paths, probes.cnv.gr){
+.prodCNVseg <- function(all.paths, probes.cnv.gr, min.sim){
   
-  (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=T, readonly=FALSE)) ## read GDS
+  (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=TRUE, readonly=FALSE)) ## read GDS
   
   chrx <- as.data.frame(cbind(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome")), 
                               seq(from=1, to=length(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome"))), by=1) ))
@@ -553,23 +555,52 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   SimiLar.all <- NULL
   for(lo in 1:length(chrx.split)){
     snpindex <- as.numeric(as.character(chrx.split[[lo]]$V2))
+    
     g1x <- g1[snpindex,]
+    
+    if(length(snpindex)==1){
+      SimiLar.all[[lo]] <- "UNIQUE"
+      next
+    }
+    
+    if(length(snpindex)==2){
+    g1x <- rbind(g1x, rep(2, ncol(g1x))) # If only two SNPs input a 2n row
+    }
+    
     g1xM <- g1x[-(nrow(g1x)),]
+    
+    
     g1CN <- apply(g1xM, 1, function (x) sum(table(x)[names(table(x))!=2]))
     g1x <- as.data.frame(t(sapply(1:nrow(g1x), function(i) replace(g1x[i,], g1x[i,] == 2, paste0(i, 'R')))))
+    
     g2x <- g2[snpindex,]
+    
+    if(length(snpindex)==2){
+      g2x <- rbind(g2x, rep(2, ncol(g2x))) # If only two SNPs input a 2n row
+    }
+    
     g2x <- as.data.frame(t(sapply(1:nrow(g2x), function(i) replace(g2x[i,], g2x[i,] == 2, paste0(i, 'R')))))
     g1x <- g1x[-(nrow(g1x)),]
     g2x <- g2x[-1,]
     ftma <- g1x==g2x
     SimiLar <- apply(ftma, 1, function(x) as.numeric(table(x)["TRUE"]))
     SimiLar[is.na(SimiLar)] <- 0
-    SimiLar.all[[lo]] <- as.numeric(SimiLar)/g1CN ### CNV genotype similarity between subsequent SNPs
+    
+    simX <- as.numeric(SimiLar)/g1CN
+    if(length(snpindex)==2){
+    simX <- simX[-2]
+    }
+    
+    SimiLar.all[[lo]] <- simX ### CNV genotype similarity between subsequent SNPs
   }
   
   all.segs <- NULL
   for(ch in 1:length(SimiLar.all)){
     SimiLarX <- SimiLar.all[[ch]]
+    if(all(SimiLarX=="UNIQUE")){
+      all.segs[[ch]] <- "start"
+      next
+    }
     nextP <- NULL
     all.segsch <- NULL
     for(se in 1:length(SimiLarX)){
@@ -595,9 +626,9 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
       
       if(se ==length(SimiLarX)){
         if(SimiLarX[[se]]>=min.sim){
-          all.segsch[[se+1]] <- "start"}
-        if(SimiLarX[[se]]<min.sim){
           all.segsch[[se+1]] <- "cont"}
+        if(SimiLarX[[se]]<min.sim){
+          all.segsch[[se+1]] <- "start"}
       }
       
     }
@@ -633,7 +664,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
     all.segs.gr[[chx]] <- unlist(all.segs.grX)
   }
   
-  snpgdsClose(genofile)
+  SNPRelate::snpgdsClose(genofile)
   
   return(all.segs.gr)
   
@@ -643,7 +674,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 #' HELPER - Associate probes with CNV segments and draw p-values
 #' 
 
-.assoPrCNV  <- function(all.paths, all.segs.gr){
+.assoPrCNV  <- function(all.paths, all.segs.gr, phenotypesSamX, method.m.test){
   
   segs.pvalue.gr <- unlist(all.segs.gr)
   values(segs.pvalue.gr)$SegName <- seq(from=1, to=length(segs.pvalue.gr), by=1)
@@ -652,7 +683,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   
   sum.file <- paste0("plink.gvar.summary.",names(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "phenotype")))[[2]])
   results <- read.table(file.path(all.paths[2], sum.file), header=TRUE) 
-  mydata.map <- read.table("mydata.map", header=TRUE)
+  mydata.map <- read.table(file.path(all.paths[2],"mydata.map"), header=TRUE)
   resultsp <- merge(results, mydata.map, by.x="NAME", by.y="NAME", all.x=TRUE, all.y=FALSE)
   
   #### Choose the method - TODO - Change if SNPMatrix implemented - Allow to get other p-values
@@ -684,6 +715,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   
 }
 
+
 #' Run the CNV-GWAS 
 #' 
 #' (i) Produces the requested inputs for a PLINK analysis and (ii) run a 
@@ -703,7 +735,8 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 #' @examples
 #' @export
 
-cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix=FALSE, method.m.test = "fdr", lo.phe=1, chr.code.name=NULL){
+cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix=FALSE, 
+                    method.m.test = "fdr", lo.phe=1, chr.code.name=NULL){
   phenotypesSam <- phen.info$phenotypesSam
   phenotypesSamX <- phenotypesSam[,c(1,(lo.phe+1))]
   phenotypesSamX <- na.omit(phenotypesSamX) ### Exclude samples without phenotypes. i.e NA
@@ -724,7 +757,7 @@ cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix
   ##################################### Produce gvar to use as PLINK input #########
   message("Produce gvar to use as PLINK input")
   
-  .prodPLINKgvar(all.paths)
+  .prodPLINKgvar(all.paths, n.cor, snp.matrix)
   
   ########################################### END #######################################
   
@@ -743,13 +776,13 @@ cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix
   
   ##################################### Produce CNV segments #############
   message("Produce CNV segments")
-  all.segs.gr <- .prodCNVseg(all.paths, probes.cnv.gr)
+  all.segs.gr <- .prodCNVseg(all.paths, probes.cnv.gr, min.sim)
   
   ########################################### END #######################################
   
   ##################################### Associate SNPs with CNV segments #############
   message("Associate SNPs with CNV segments")
-  segs.pvalue.gr <- .assoPrCNV(all.paths, all.segs.gr)
+  segs.pvalue.gr <- .assoPrCNV(all.paths, all.segs.gr, phenotypesSamX, method.m.test)
   
   ######################################################## END ###########################################
   
@@ -757,22 +790,23 @@ cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix
   message("Plot the QQ-plot of the analysis")
   
   pdf(file.path(all.paths[3], paste0(unique(values(segs.pvalue.gr)$Phenotype),"QQ-PLOT.pdf")))
-  qqunif.plot(values(segs.pvalue.gr)$MinPvalue, auto.key=list(corner=c(.95,.05)))
-  
+  qq.plot.pdf <- qqunif.plot(values(segs.pvalue.gr)$MinPvalue, auto.key=list(corner=c(.95,.05)))
+  print(qq.plot.pdf)
   dev.off()
+  
   ######################################################## END ###########################################
   
   #################################### Reconvert the chrs to original names if applicable
   
   if(!is.null(chr.code.name)){
-  (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=T, readonly=FALSE)) ## read GDS
-  chr.names.df < gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "Chr.names"))
+  (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=TRUE, readonly=FALSE)) ## read GDS
+  chr.code.name < gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "Chr.names"))
   
   segs.pvalue <- data.frame(segs.pvalue.gr)
   segs.pvalue <- segs.pvalue[ , -which(names(segs.pvalue) %in% c("strand"))]
   
-  for(lopN in len_seq(nrow(chr.names.df))){
-  segs.pvalue$seqnames <- gsub(chr.names.df[lopN,1],chr.names.df[lopN,2], segs.pvalue$seqnames)
+  for(lopN in seq_len(nrow(chr.code.name))){
+  segs.pvalue$seqnames <- gsub(chr.code.name[lopN,1],chr.code.name[lopN,2], segs.pvalue$seqnames)
   }
   
   segs.pvalue.gr <- makeGRangesFromDataFrame(segs.pvalue, keep.extra.columns = TRUE)
@@ -788,8 +822,9 @@ cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix
   #TODO
   
   ######################################################## END ###########################################
-  
+  segs.pvalue.gr <- segs.pvalue.gr[order(values(segs.pvalue.gr)$MinPvalue)]  
 
   return(segs.pvalue.gr)
 }
+
 
