@@ -17,5 +17,6 @@ importFrom("utils", "available.packages", "browseURL",
 export( 
     populationRanges,
     setupCnvGWAS,
-    cnvGWAS 
+    cnvGWAS, 
+    prodGdsCnv
 )
