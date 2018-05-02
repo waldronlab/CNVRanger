@@ -77,25 +77,72 @@
 #'
 #' @param file.nam Name of the file to be imported
 #' @param pheno.path First item of the list returned by \code{CreateFolderTree} function
+#' @param pops.names Indicate the name of the populations, if using more than one
 #' @return List phen.info with samplesPhen, phenotypes, phenotypesdf, phenotypesSam, FamID and SexIds
 #' @examples
 #' phen.info <- loadPhen("/home/.../Phen.txt")
 #' sapply(phen.info, class)
 
-.loadPhen <- function(file.nam, pheno.path){
+.loadPhen <- function(file.nam, pheno.path, pops.names=NULL){
   
-  all <- data.table::fread(file.path(pheno.path, file.nam), header=TRUE, sep="\t") ### Import phenotypes
+  samplesPhen.all <- NULL
+  phenotypes.all <- NULL
+  phenotypesdf.all <- NULL
+  phenotypesSam.all <- NULL
+  FamID.all <- NULL
+  SexIds.all <- NULL
+  
+  for(npop in seq_len(length(file.nam))){
+  dfN <- data.table::fread(file.path(pheno.path, file.nam[npop]))
+  if(all(names(dfN) == "INEXISTENT")){
+  ## Extract the sample names from CNV file instead
+  cnv.file <- paste0("CNVOutPop", npop,".txt")
+  
+  cnvs <- read.table(file.path(pheno.path, cnv.file), sep="", header=F) ### - adapt to multiple populations 
+  CNVs <- .CheckConvertCNVs(cnvs)
+  all.samples <- as.character(CNVs$V5)
+  all.samples <- unique(all.samples)
+  samplesPhen <- all.samples
+  phenotypes <- phenotypes.all[[1]]
+  phenotypesdf <- data.frame(rep("NA", length(all.samples)))
+  colnames(phenotypesdf) <- phenotypes
+  phenotypesSam <- cbind(all.samples, phenotypesdf)
+  colnames(phenotypesSam)[1] <- "samplesPhen"
+  FamID <- cbind(samplesPhen=as.character(phenotypesSam$samplesPhen), V2=rep("NA", length(all.samples)))
+  FamID <- as.data.frame(FamID)
+  SexIds <- cbind(samplesPhen=as.character(phenotypesSam$samplesPhen), V2=rep("NA", length(all.samples)))
+  SexIds <- as.data.frame(SexIds)
+  
+  }else{
+  all <- data.table::fread(file.path(pheno.path, file.nam[npop]), header=TRUE, sep="\t") ### Import phenotypes
   all <- as.data.frame(all)
-  
+
   if(!all(colnames(all)[1:3]==c("sample.id", "fam", "sex"))){
     stop("Unexpected first three column names")}
   
+  ### Include samples with CNV but without phenotypes
+  cnv.file <- paste0("CNVOutPop", npop,".txt")
+  
+  cnvs <- read.table(file.path(pheno.path, cnv.file), sep="", header=F) 
+  CNVs <- .CheckConvertCNVs(cnvs)
+  all.samples <- as.character(CNVs$V5)
+  all.samples <- unique(all.samples)
+  
+  pheno.na <- cbind(as.data.frame(all.samples), "fam"=NA, "sex"=NA) 
+  colnames(pheno.na)[1] <- "sample.id"
+  pheno.na$sample.id <- as.character(pheno.na$sample.id)
+  pheno.na <- pheno.na[-which(pheno.na$sample.id %in% all$sample.id),]
+  
+  all <- plyr::rbind.fill(all, pheno.na)
+  all[is.na(all)] <- -9
+  
+  ### Produce phen.info objects
   samplesPhen <- unique(all$sample.id) ## Greb sample names
   phenotypes <- names(all[, 4:ncol(all), drop=FALSE]) ## Greb phenotype names
   
   phenotypesdf <- all[, 4:ncol(all), drop = FALSE]
   phenotypesdf <- as.data.frame(phenotypesdf) ### Greb phenotypes values
-  phenotypesdf <- as.data.frame(phenotypesdf[!duplicated(phenotypesdf),,drop = FALSE])
+  #phenotypesdf <- as.data.frame(phenotypesdf[!duplicated(phenotypesdf),,drop = FALSE])
   
   phenotypesSam <- data.frame(samplesPhen, phenotypesdf)
   phenotypesSam$samplesPhen <- as.character(phenotypesSam$samplesPhen)
@@ -103,9 +150,42 @@
   FamID <- data.frame(samplesPhen, "V2"=all$fam[as.numeric(rownames(phenotypesSam))])
   
   SexIds <- data.frame(samplesPhen,"V2"=all$sex[as.numeric(rownames(phenotypesSam))])
+  }
+    
+  samplesPhen.all[[npop]] <- samplesPhen
+  phenotypes.all[[npop]] <- phenotypes
+  phenotypesdf.all[[npop]] <- phenotypesdf
+  phenotypesSam.all[[npop]] <- phenotypesSam
+  FamID.all[[npop]] <- FamID
+  SexIds.all[[npop]] <- SexIds
+  }
   
+  samplesPhen <- unlist(samplesPhen.all)
+  phenotypes <- unique(unlist(phenotypes.all))
+  phenotypesdf <- data.table::rbindlist(phenotypesdf.all)
+  phenotypesdf <- as.data.frame(phenotypesdf)
+  phenotypesSam <- data.table::rbindlist(phenotypesSam.all)
+  phenotypesSam <- as.data.frame(phenotypesSam)
+  FamID <- data.table::rbindlist(FamID.all)
+  FamID <- as.data.frame(FamID)
+  SexIds <- data.table::rbindlist(SexIds.all)
+  SexIds <- as.data.frame(SexIds)
+  
+  if(!is.null(pops.names)){
+  
+  all.pop.names <- NULL
+  for(npop in seq_len(length(file.nam))){
+  all.pop.names[[npop]] <- rep(pops.names[npop], length(samplesPhen.all[[npop]]))
+  }
+  
+  pops.names <- unlist(all.pop.names)
   phen.info <- list("samplesPhen" = samplesPhen, "phenotypes" = phenotypes, "phenotypesdf" = phenotypesdf,
-                    "phenotypesSam" = phenotypesSam, "FamID" = FamID, "SexIds" = SexIds)
+                    "phenotypesSam" = phenotypesSam, "FamID" = FamID, "SexIds" = SexIds, "pops.names" = pops.names)
+  }
+  else{
+  phen.info <- list("samplesPhen" = samplesPhen, "phenotypes" = phenotypes, "phenotypesdf" = phenotypesdf,
+                    "phenotypesSam" = phenotypesSam, "FamID" = FamID, "SexIds" = SexIds)}
+  
   return(phen.info)
 }
 
@@ -128,8 +208,8 @@
     CNVs <- cnvs
     
     ## If general format
-  } else if(all(as.character(cnvs[1,])==c("chr", "start", "end","sample.id", "state", "num.snps", "start.probe", "end.probe"))){ 
-    the.names <- as.character(cnvs[1,])
+  } else if(all(as.character(as.matrix(cnvs[1,]))==c("chr", "start", "end","sample.id", "state", "num.snps", "start.probe", "end.probe"))){ 
+    the.names <- as.character(as.matrix(cnvs[1,]))
     cnvs <- cnvs[-1,]
     colnames(cnvs) <- the.names
     cnvs <- as.data.frame(cnvs)
@@ -150,7 +230,7 @@
     CNVs <- cnvs
     
     ## If sequencing info
-  } else if(all(as.character(cnvs[1,])==c("chr", "start", "end", "sample.id", "state"))){
+  } else if(all(as.character(as.matrix(cnvs[1,]))==c("chr", "start", "end", "sample.id", "state"))){
     cnvs <- as.data.frame(cnvs)
     ## Convert to PennCNV 
     
@@ -160,6 +240,14 @@
   } else stop("Unexpected CNV input format - is it tab delimited?")
   
   return(CNVs)
+}
+
+#' HELPER - Load multiple CNV inputs
+#' @param 
+
+.loadToMergeCNV <- function(cnv.file.all, cnv.path){
+  ## Load and merge CNV files from multiple populations
+  data.table::fread(file.path(cnv.path, cnv.file.all), header=TRUE)
 }
 
 #' Setup the folders and files to apply the CNV-GWAS analysis
@@ -174,25 +262,70 @@
 #' @param map.loc Path to the probe map (e.g. used in PennCNV analysis). Column names with the probe name, 
 #' chromosome and coordinate as: Name, Chr and Position. Tab delimited.
 #' @param folder Choose manually the project folder (i.e. path as the root folder)
+#' @param pops.names Indicate the name of the populations, if using more than one
 #' @return List phen.info with samplesPhen, phenotypes, phenotypesdf, phenotypesSam, FamID, SexIds and all.paths
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @examples
+#' 
+#' ## One population
 #' name <- "Project1"
 #' phen.loc <- ".../Pheno.txt"
 #' map.loc <- ".../Map.txt"
 #' cnv.out.loc <- ".../CNVOutput.txt"
-#' phen.info <- setupCnvGWAS(name, phen.loc, map.loc, cnv.out.loc)
+#' phen.info <- setupCnvGWAS(name, phen.loc, cnv.out.loc, map.loc)
+#' 
+#' ## Multiple populations
+#' phen.loc <- c(".../PhenoPop1.txt", ".../PhenoPop2.txt")
+#' map.loc <- ".../Map.txt"
+#' cnv.out.loc <- c(".../CNVOutputPop1.txt", ".../CNVOutputPop2.txt")
+#' phen.info <- setupCnvGWAS(name, phen.loc, cnv.out.loc, map.loc)
+#'
+#' ## Multiple populations where one is lacking phenotypes ## Always phenotyped populations first
+#' phen.loc <- c(".../PhenoPop1.txt", "INEXISTENT")
+#' map.loc <- ".../Map.txt"
+#' cnv.out.loc <- c(".../CNVOutputPop1.txt", ".../CNVOutputPop2.txt")
+#' phen.info <- setupCnvGWAS(name, phen.loc, cnv.out.loc, map.loc)
+#' 
 #' @export
 
-setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL){
+setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL, pops.names=NULL){
   
   ## Create the folder structure for all subsequent analysis
   all.paths <- .createFolderTree(name, folder)
   
+  ## Only one population
+  if(length(phen.loc) == 1 && length(cnv.out.loc) == 1){
   ## Import the phenotype and sample info from external folder
   file.copy(phen.loc, file.path(all.paths[1], "/Pheno.txt"), overwrite = TRUE)
   ## Import the PennCNV output from external folder
   file.copy(cnv.out.loc, file.path(all.paths[1], "/CNVOut.txt"),  overwrite = TRUE)
+  pheno.file <- "Pheno.txt"
+  cnv.file <- "CNVOut.txt"
+  }
+  
+  ## Multiple populations
+  if(length(phen.loc) != length(cnv.out.loc)){
+   stop("phen.loc and cnv.out.loc should have the same length. Use the string INEXISTENT if phenotypes are missing")}
+  
+  if(length(phen.loc) > 1 && length(cnv.out.loc) > 1){
+  
+  pheno.file.all <- NULL  
+  cnv.file.all <- NULL
+  
+  for(npop in seq_len(length(phen.loc))){
+  pheno.file <- paste0("/PhenoPop", npop,".txt")
+  pheno.file.all[[npop]] <- pheno.file
+  cnv.file <- paste0("/CNVOutPop", npop,".txt")
+  cnv.file.all[[npop]] <- cnv.file
+  
+  if(phen.loc[npop] == "INEXISTENT"){
+  write.table(c("INEXISTENT"), file.path(all.paths[1], pheno.file), quote=FALSE, 
+              col.names = FALSE, row.names=FALSE)
+  }else{
+  file.copy(phen.loc[npop], file.path(all.paths[1], pheno.file), overwrite = TRUE)}
+  file.copy(cnv.out.loc[npop], file.path(all.paths[1], cnv.file), overwrite = TRUE)
+  }
+  }
   
   if(is.null(map.loc)){
     ## Import the probe map from external folder
@@ -214,10 +347,24 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL)
     write.table(probe.like.map, file.path(all.paths[1], "/MapPenn.txt"), col.names = TRUE, row.names = FALSE,
                 quote = FALSE, sep="\t")
     
-  }else{
+  }
+  else{
+    if(length(map.loc)>1){
+    stop("The map should be unique. If multiple populations with different probe map use map.loc=NULL")  
+    }
     file.copy(map.loc, file.path(all.paths[1], "/MapPenn.txt"), overwrite = TRUE)}
   
-  phen.info <- .loadPhen("Pheno.txt", all.paths[1])
+  ## Write phenotype names and merge CNV file for multiple populations
+  if(length(phen.loc) > 1 && length(cnv.out.loc) > 1){
+  pheno.file<-unlist(pheno.file.all)
+  all.cnvs <- lapply(cnv.file.all,.loadToMergeCNV, cnv.path=all.paths[1])
+  all.cnvs <- data.table::rbindlist(all.cnvs)
+  all.cnvs <- as.data.frame(all.cnvs)
+  write.table(all.cnvs, file.path(all.paths[1], "CNVOut.txt"), sep="\t",
+              col.names=TRUE, row.names = FALSE)
+  }
+  
+  phen.info <- .loadPhen(pheno.file, all.paths[1], pops.names=pops.names)
   
   PlinkVer <- .getPLINK(all.paths[2])
   
@@ -231,12 +378,12 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL)
   return(phen.info)
 }
 
-#' HELPER - Write CNV-genotype in a probe-wise fashion
+#' HELPER - Write CNV-genotype in a dosage-like fashion
 #' 
 
 .writeProbesCNV <- function(lo, all.samples, genofile, CNVsGr, probes.cnv.gr, n){
   sampleX <- all.samples[[lo]]
-  g <- as.numeric(SNPRelate::snpgdsGetGeno(genofile, sample.id=sampleX))
+  g <- as.numeric(suppressMessages(SNPRelate::snpgdsGetGeno(genofile, sample.id=sampleX)))
   CNVSamByState <- split(CNVsGr[values(CNVsGr)$V5 == all.samples[lo]], 
                          as.character(elementMetadata(CNVsGr[values(CNVsGr)$V5 == all.samples[lo]])$V4))
   for(slo in seq_len(length(CNVSamByState))){
@@ -248,6 +395,136 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL)
   }
   g <- as.integer(g)
   gdsfmt::write.gdsn(n, g, start=c(1,lo), count=c(length(g),1))
+}
+
+#' HELPER - Write CNV-genotype in a SNP-like fashion
+#' @param lo loop number
+#' @param genofile loaded gds file
+#' @param n is the object from \code{gdsfmt::add.gdsn}
+#' @param ranges.gr is the CNVs of each sample
+
+.replaceSNPtoCNV <- function(lo, all.samples, genofile, CNVsGr, probes.cnv.gr, n){
+  sampleX <- all.samples[[lo]]
+  g <- as.numeric(suppressMessages(SNPRelate::snpgdsGetGeno(genofile, sample.id=sampleX)))
+  
+  #2n 
+  g[seq_len(length(g))] <- "1"
+  
+  # 0n 
+  CNVsGr0n <- CNVsGr[which(values(CNVsGr)$sample == sampleX)]
+  CNVsGr0n <- CNVsGr0n[which(values(CNVsGr0n)$type == "state1,cn=0")]
+  probes.cnv.gr.0n <- subsetByOverlaps(probes.cnv.gr, CNVsGr0n)
+  
+  g[values(probes.cnv.gr.0n)$tag.snp] <- "0"
+  
+  # 1n
+  CNVsGr1n <- CNVsGr[which(values(CNVsGr)$sample == sampleX)]
+  CNVsGr1n <- CNVsGr1n[which(values(CNVsGr1n)$type == "state2,cn=1")]
+  probes.cnv.gr.1n <- subsetByOverlaps(probes.cnv.gr, CNVsGr1n)
+  
+  g[values(probes.cnv.gr.1n)$tag.snp] <- "0"
+  
+  # 3n
+  CNVsGr3n <- CNVsGr[which(values(CNVsGr)$sample == sampleX)]
+  CNVsGr3n <- CNVsGr3n[which(values(CNVsGr3n)$type == "state5,cn=3")]
+  probes.cnv.gr.3n <- subsetByOverlaps(probes.cnv.gr, CNVsGr3n)
+  
+  g[values(probes.cnv.gr.3n)$tag.snp] <- "2"
+  
+  # 4n
+  CNVsGr4n <- CNVsGr[which(values(CNVsGr)$sample == sampleX)]
+  CNVsGr4n <- CNVsGr4n[which(values(CNVsGr4n)$type == "state6,cn=4")]
+  probes.cnv.gr.4n <- subsetByOverlaps(probes.cnv.gr, CNVsGr4n)
+  
+  g[values(probes.cnv.gr.4n)$tag.snp] <- "2"
+  
+  # 2n
+  #g[c(-(values(probes.cnv.gr.0n)$tag.snp),-(values(probes.cnv.gr.1n)$tag.snp),-(values(probes.cnv.gr.3n)$tag.snp),-(values(probes.cnv.gr.4n)$tag.snp))] <- "1"
+  
+  g <- as.numeric(g)
+  
+  ### Replace the genotype in the gds file
+  gdsfmt::write.gdsn(n, g, start=c(1,lo), count=c(length(g),1))
+  
+}
+
+#' HELPER - Write CNV-genotype in SNP-like fashion in biallelic loci 
+#' @param lo loop number, based on the number of SNPs per turn
+#' @param genofile loaded gds file
+#' @param n is the object from \code{gdsfmt::add.gdsn}
+#' @param chunk Intervals of SNP to import and convert
+#' @param coding.translate For 'CNVgenotypeSNPlike'. If NULL or unrecognized string use only biallelic CNVs. If 'all' code multiallelic CNVs as 0 
+#' for loss; 1 for 2n and 2 for gain.  
+
+.recodeCNVgenotype <- function(lo, genofile, all.samples, n, chunk, coding.translate){
+  
+  count.end <- (chunk[lo+1])-chunk[lo]
+  
+  if(length(chunk)-1 != lo){
+    CNVgenoX <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), start=c(chunk[lo],1), count=c(count.end, length(all.samples))))
+  }else{
+    CNVgenoX <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), start=c(chunk[lo],1), count=c(count.end+1, length(all.samples))))
+    }
+  
+  ### Put four copies as max
+  CNVgenoX[CNVgenoX>4] <- 4
+  CNVgenoX <- as.data.frame(CNVgenoX)
+  
+  CNVgenoX$zn <- 0
+  CNVgenoX$on <- 1
+  CNVgenoX$tn <- 2
+  CNVgenoX$thn <- 3
+  CNVgenoX$fn <- 4
+  
+  ### Count genotypes
+  genos <- apply(CNVgenoX, 1,table)
+  genos <- genos-1
+  genos <- t(genos)
+  
+  #### Recode genotypes
+  indexLoss <-apply(genos[,1:2], 1, sum)>0 & apply(genos[,4:5], 1, sum)==0
+  indexGain <-apply(genos[,1:2], 1, sum)==0 & apply(genos[,4:5], 1, sum)>0
+  indexExclude <-apply(genos[,1:2], 1, sum)>0 & apply(genos[,4:5], 1, sum)>0
+  
+  ## Exclude index in the matrix
+  CNVgenoX  <- CNVgenoX[, -((ncol(CNVgenoX)-4):ncol(CNVgenoX))]
+  
+  ### To character
+  CNVgenoX <- t(apply(CNVgenoX,1, paste0, "n"))
+ 
+  ### Replace Gain
+  CNVgenoX[indexGain,] <- gsub("2n","0", CNVgenoX[indexGain,])
+  CNVgenoX[indexGain,] <- gsub("3n","1", CNVgenoX[indexGain,])
+  CNVgenoX[indexGain,] <- gsub("4n","2", CNVgenoX[indexGain,])
+  
+  ### Replace Loss
+  CNVgenoX[indexLoss,] <- gsub("2n","0", CNVgenoX[indexLoss,])
+  CNVgenoX[indexLoss,] <- gsub("1n","1", CNVgenoX[indexLoss,])
+  CNVgenoX[indexLoss,] <- gsub("0n","2", CNVgenoX[indexLoss,])
+  
+  
+  ## Non bi-allelic CNVs = no genotype
+  if(is.null(coding.translate)){
+    coding.translate <- "biallelic"
+  }
+  if(coding.translate == "all"){
+    CNVgenoX[indexExclude,] <- gsub("4n","2", CNVgenoX[indexExclude,])
+    CNVgenoX[indexExclude,] <- gsub("3n","2", CNVgenoX[indexExclude,])
+    CNVgenoX[indexExclude,] <- gsub("2n","-1", CNVgenoX[indexExclude,])
+    CNVgenoX[indexExclude,] <- gsub("1n","0", CNVgenoX[indexExclude,])
+    CNVgenoX[indexExclude,] <- gsub("0n","0", CNVgenoX[indexExclude,])
+  }else{
+    CNVgenoX[indexExclude,] <- -1  
+  }
+  
+  CNVgenoX <- apply(CNVgenoX, 2, as.numeric)
+  
+  ### Replace the genotype in the gds file
+  if(length(chunk)-1 != lo){
+  gdsfmt::write.gdsn(n, CNVgenoX, start=c(chunk[lo],1), count=c(count.end,length(all.samples)))
+  }else{
+  gdsfmt::write.gdsn(n, CNVgenoX, start=c(chunk[lo],1), count=c(count.end+1,length(all.samples)))
+    }
 }
 
 #' HELPER Wait x seconds
@@ -274,6 +551,17 @@ testit <- function(x)
 #' @param n.cor Number of cores to be used
 #' @param lo.phe The phenotype to be analyzed in the PhenInfo$phenotypesSam data-frame 
 #' @param chr.code.name A data-frame with the integer name in the first column and the original name for each chromosome 
+#' @param genotype.nodes Expression data type. Nodes with CNV genotypes to be produced in the gds file. 
+#' Use 'CNVGenotype' for dosage-like genotypes (i.e. from 0 to Inf). Use 'CNVgenotypeSNPlike' alonside for SNP-like 
+#' CNV genotype in a separated node (i.e.  ‘0, 1, 2, 3, 4’ as ‘0/0, 0/1, 1/1, 1/2, 2/2’).
+#' @param chunk.len Number of SNPs per chunk if using 'CNVgenotypeSNPlike' option
+#' @param coding.translate For 'CNVgenotypeSNPlike'. If NULL or unrecognized string use only biallelic CNVs. If 'all' code multiallelic CNVs as 0 
+#' for loss; 1 for 2n and 2 for gain. 
+#' @param lrr logical. Import LRR/BAF values from external files
+#' @param path.files Folder containing the input CNV files used for the CNV calling (i.e. one text file with 5 collumns 
+#' for each sample). Columns should contain (i) probe name, (ii) Chromosome, (iii) Position, (iv) LRR and (v) BAF. Only if lrr = TRUE
+#' @param list.of.files Data-frame with two columns where the (i) is the file name with signals and (ii) is the 
+#' correspondent name of the sample in the gds file. Only if lrr = TRUE
 #' @return probes.cnv.gr object with information about all probes to be used in the downstream CNV-GWAS
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @seealso (\code{\link{snpgdsCreateGeno}})
@@ -297,7 +585,9 @@ testit <- function(x)
 #' 
 #'   @export
 
-prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.phe=1, chr.code.name=NULL){  
+prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.phe=1, 
+                       chr.code.name=NULL, genotype.nodes="CNVGenotype", chunk.len =1000000,
+                       coding.translate=NULL, lrr=FALSE, path.files=NULL, list.of.files=NULL){  
   
   message("initializing ...", appendLF = FALSE)
   
@@ -308,14 +598,12 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   all.paths <- phen.info$all.paths
   
   phenotypesSamX <- phenotypesSam[,c(1,(lo.phe+1))]
-  phenotypesSamX <- na.omit(phenotypesSamX) ### Exclude samples without phenotypes. i.e NA
+  #phenotypesSamX <- na.omit(phenotypesSamX) ### Exclude samples without phenotypes. i.e NA
   
   ######################  Import CNVs to data-frame
   
   cnvs <- data.table::fread(file.path(all.paths[1], "CNVOut.txt"), sep="\t", header=FALSE) ### CNV table 
-  
   CNVs <- .CheckConvertCNVs(cnvs)
-  
   
   ####################### Check if the chromosomes are numeric
   
@@ -323,7 +611,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   chr.names <- gsub("chr", "", chr.names)
   
   if(any(is.na(chr.names))){
-    stop("Your chromosome names should be integers. If they are not, make them integers and include the correspondent names 
+    stop("Chromosome names should be integers. If they are not, make them integers and include the correspondent names 
          in chr.code.name parameter")
   }
   
@@ -370,7 +658,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   
   ###################### SNP genotype matrix available - TODO
   if(snp.matrix == "TRUE"){
-    ...
+    ... ## CHECK IF WE HAVE THE SAME SAMPLES - INCLUDE NA FOR SAMPLES WITH ONLY ONE GENOTYPE TYPE? (i.e CNV or SNP)
   }
   
   ###################### Create a GDS with chr and SNP names to numeric
@@ -384,6 +672,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   )
   
   
+  if("CNVGenotype" %in% genotype.nodes){
   ###################### Replace genotype matrix with CNV genotypes
   (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=TRUE, readonly=FALSE))
   
@@ -391,8 +680,6 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
                       ncol = length(all.samples))
   n <- gdsfmt::add.gdsn(genofile, "CNVgenotype", CNVBiMaCN, replace=TRUE)
   gdsfmt::read.gdsn(n)
-  
-  gback <- as.numeric(CNVBiMaCN[,1])
   
   if(rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac"){
     multicoreParam <-  BiocParallel::MulticoreParam(workers = n.cor)
@@ -406,30 +693,80 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
                                             genofile=genofile, CNVsGr=CNVsGr, probes.cnv.gr=probes.cnv.gr, n=n)
   }
   
-  testit(15) ## Wait to make sure that gds is writen
+  testit(15) ## Wait to make sure that gds is writen in parallel
+  SNPRelate::snpgdsClose(genofile)
   
-  message("GDS writen...", appendLF = FALSE)
+  }
+  
+  if("CNVgenotypeSNPlike" %in% genotype.nodes){
+    
+    (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=TRUE, readonly=FALSE))
+    
+    CNVBiMaCN <- matrix(2, nrow = length(probes.cnv.gr), 
+                        ncol = length(all.samples))
+    
+    n <- gdsfmt::add.gdsn(genofile, "CNVgenotypeSNPlike", CNVBiMaCN, replace=TRUE)
+    gdsfmt::read.gdsn(n)
+    
+    ### Define the chunks of SNPs to import 
+    chunk <- seq(from=1, to=length(probes.cnv.gr), by=chunk.len)
+    if(chunk[length(chunk)]!=length(probes.cnv.gr)){
+    chunk[length(chunk)+1] <- length(probes.cnv.gr)}
+    
+    if(rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac"){
+      multicoreParam <-  BiocParallel::MulticoreParam(workers = n.cor)
+      BiocParallel::bplapply(1:(length(chunk)-1), .recodeCNVgenotype, BPPARAM = multicoreParam,
+                             genofile=genofile, all.samples=all.samples, n=n, chunk=chunk, coding.translate=coding.translate)
+    }
+    
+    if(rappdirs:::get_os() == "win"){
+      param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
+      BiocParallel::bplapply(1:(length(chunk)-1), .recodeCNVgenotype, BPPARAM = param,
+                             genofile=genofile, all.samples=all.samples, n=n, chunk=chunk, coding.translate=coding.translate)
+    }
+    testit(15) ## Wait to make sure that gds is writen in parallel
+    gdsfmt::closefn.gds(genofile)
+    
+    
+  }
+  
+  if(!all("CNVGenotype" %in% genotype.nodes | "CNVgenotypeSNPlike" %in% genotype.nodes)){
+    stop("Undefined method in CNV genotype")
+  }
+  
+  ### Include LRR/BAF info
+  if(lrr == TRUE){
+  importLRR_BAF(all.paths, path.files, list.of.files, n.cor=1) ## TODO: Change n.cor option once parallel BUG fixed
+    }
+  
   
   ###################### Include the phenotype 'lo' in the GDS
+  (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=TRUE, readonly=FALSE))
   phenotypesSamX <- phenotypesSamX[match(all.samples, phenotypesSamX$samplesPhen),] ### Check order correspondence
+  #phenotypesSamX
   gdsfmt::add.gdsn(genofile, name="phenotype", val=phenotypesSamX, replace=TRUE)
   FamID <- FamID[match(all.samples, FamID$samplesPhen),] ### Check order correspondence
-  gdsfmt::add.gdsn(genofile, name="FamID", val=FamID[,2], replace=TRUE)
+  gdsfmt::add.gdsn(genofile, name="FamID", val=FamID[,2], replace=TRUE, storage="string")
   FamID <- SexIds[match(all.samples, SexIds$samplesPhen),] ### Check order correspondence
-  gdsfmt::add.gdsn(genofile, name="Sex", val=SexIds[,2], replace=TRUE)
+  gdsfmt::add.gdsn(genofile, name="Sex", val=SexIds[,2], replace=TRUE, storage="string")
   
   ## Include chr names if needed
   if(!is.null(chr.code.name)){
     gdsfmt::add.gdsn(genofile, name="Chr.names", val=chr.code.name, replace=TRUE)  
   }
   
+  if(!is.null(phen.info$pops.names)){
+    gdsfmt::add.gdsn(genofile, name="Pops.names", val=phen.info$pops.names, replace=TRUE)
+  }
+  
   SNPRelate::snpgdsClose(genofile)
+  message("GDS writen...", appendLF = FALSE)
   ########################################### END #######################################
   testit(15)
   message("done", appendLF = FALSE)
-  return(probes.cnv.gr)}
+  return(probes.cnv.gr)} ## BUG - small value in chuck mixing genotypes
 
-#' HELPER - Internal function of parallel implementation to produce the .gvar file requested for the CNV-GWAS in PLINK
+#' HELPER - Internal function of parallel implementation to produce the .gvar file (absolute copy number) requested for the CNV-GWAS in PLINK
 #' @examples
 #' Gens <- .prodGvar(lo, genofile, sam.gen, snps, fam.id)
 
@@ -455,6 +792,36 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   return(df)
 }
 
+
+#' HELPER - Internal function of parallel implementation to produce the .gvar file (LRR) requested for the CNV-GWAS in PLINK
+#' @examples
+#' Gens <- .prodGvarLRR(lo, genofile, sam.gen, snps, fam.id)
+
+.prodGvarLRR <- function(lo, genofile, sam.gen, snps, fam.id, snp.matrix){
+  
+  ## Transform LRR calclulations into genotypes
+  g <- as.numeric(SNPRelate::snpgdsGetGeno(genofile, sample.id=sam.gen[[lo]]))
+  A <- rep("A", length(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), start=c(1,lo), count=c(length(g),1))))
+  B <- rep("B", length(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), start=c(1,lo), count=c(length(g),1))))
+  LRRg <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "LRR"), start=c(1,lo), count=c(length(g),1))
+  
+  
+  CNVg <- LRRg
+  Dose1 <- rep(0, length(CNVg))
+  
+  
+  if(snp.matrix=="FALSE"){
+    df <- as.data.frame(cbind(as.character(fam.id[[lo]]), sam.gen[[lo]], snps, 
+                              A, CNVg, B, Dose1))
+    colnames(df) <- c("FID", "IID", "NAME", "ALLELE1", "DOSAGE1", "ALLELE2", "DOSAGE2")}
+  
+  if(snp.matrix=="TRUE"){ #### TODO - To implement
+    ...
+  }
+  return(df)
+}
+
+
 #' HELPER - Produce PLINK probe map in disk
 #' 
 
@@ -472,7 +839,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 #' HELPER - Produce the PLINK .gvar file in disk
 #' 
 
-.prodPLINKgvar <- function(all.paths, n.cor, snp.matrix){
+.prodPLINKgvar <- function(all.paths, n.cor, snp.matrix, lrr=FALSE){
   
   (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=TRUE, readonly=FALSE)) ## read GDS
   sam.gen <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id")) ## Extract samples
@@ -481,6 +848,20 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   
   ## Produce gvar file in parallel processing
   # Identify the SO
+  if(lrr == TRUE){
+    if(rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac"){
+      multicoreParam <- BiocParallel::MulticoreParam(workers = n.cor)
+      Gens <- suppressMessages(BiocParallel::bplapply(1:length(sam.gen), .prodGvarLRR, BPPARAM = multicoreParam, genofile=genofile, sam.gen=sam.gen,
+                                                      snps=snps, fam.id=fam.id, snp.matrix=snp.matrix))
+    }
+    
+    if(rappdirs:::get_os() == "win"){
+      param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
+      Gens <- suppressMessages(BiocParallel::bplapply(1:length(sam.gen), .prodGvarLRR, BPPARAM = param, genofile=genofile, sam.gen=sam.gen,
+                                                      snps=snps, fam.id=fam.id, snp.matrix=snp.matrix))
+    }
+    
+  }else{
   if(rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac"){
     multicoreParam <- BiocParallel::MulticoreParam(workers = n.cor)
     Gens <- suppressMessages(BiocParallel::bplapply(1:length(sam.gen), .prodGvar, BPPARAM = multicoreParam, genofile=genofile, sam.gen=sam.gen,
@@ -491,6 +872,8 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
     param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
     Gens <- suppressMessages(BiocParallel::bplapply(1:length(sam.gen), .prodGvar, BPPARAM = param, genofile=genofile, sam.gen=sam.gen,
                                    snps=snps, fam.id=fam.id, snp.matrix=snp.matrix))
+  }
+  
   }
   
   gentype.all <- data.table::rbindlist(Gens)
@@ -674,7 +1057,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 #' HELPER - Associate probes with CNV segments and draw p-values
 #' 
 
-.assoPrCNV  <- function(all.paths, all.segs.gr, phenotypesSamX, method.m.test){
+.assoPrCNV  <- function(all.paths, all.segs.gr, phenotypesSamX, method.m.test, probes.cnv.gr){
   
   segs.pvalue.gr <- unlist(all.segs.gr)
   values(segs.pvalue.gr)$SegName <- seq(from=1, to=length(segs.pvalue.gr), by=1)
@@ -699,9 +1082,15 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   values.all <- vector("list", length(segs.pvalue.gr))
   names.all <- vector("list", length(segs.pvalue.gr))
   for(se in 1:length(segs.pvalue.gr)){
+    if(length(subsetByOverlaps(resultspGr, segs.pvalue.gr[se]))>0){
     values.all[[se]] <- min(values(subsetByOverlaps(resultspGr, segs.pvalue.gr[se]))$VALUE)
     Prbx <- subsetByOverlaps(resultspGr, segs.pvalue.gr[se])
-    names.all[[se]] <- as.character(Prbx[values(Prbx)$VALUE %in% min(values(subsetByOverlaps(resultspGr, segs.pvalue.gr[se]))$VALUE)]$NAME[[1]])
+    names.all[[se]] <- as.character(Prbx[values(Prbx)$VALUE %in% min(values(subsetByOverlaps(resultspGr, segs.pvalue.gr[se]))$VALUE)]$NAME[[1]])}
+    else{
+      probe.sel <- subsetByOverlaps(probes.cnv.gr, segs.pvalue.gr[se])[1]
+      values.all[[se]] <- 1
+      names.all[[se]] <- as.character(values(probe.sel)$Name) }
+    
   }
   
   values(segs.pvalue.gr)$MinPvalue <- unlist(values.all)
@@ -725,27 +1114,50 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 #' @param phen.info Returned by \code{\link{setupCnvAna}}
 #' @param n.cor Number of cores to be used
 #' @param min.sim Minimum CNV genotype distribuition similarity among subsequent probes. Default is 0.95 = 95%
-#' @param freq.cn Minimum frequency where 1 = 100%. Default 0.01 = 1%
+#' @param freq.cn Minimum CNV frequency where 1 = 100%, or all samples deviating from diploid state. Default 0.01 = 1%
 #' @param snp.matrix Only FALSE implemented - If TRUE B allele frequencies (BAF) would be used to reconstruct CNV-SNP genotypes
 #' @param method.m.test Correction for multiple tests to be used. FDR is default, see \code{\link(p.adjust)} for
 #' other methods.
 #' @param lo.phe The phenotype to be analyzed in the PhenInfo$phenotypesSam data-frame 
 #' @param chr.code.name A data-frame with the integer name in the first column and the original name for each chromosome  
+#' @param genotype.nodes Expression data type. Nodes with CNV genotypes to be produced in the gds file. 
+#' @param coding.translate For 'CNVgenotypeSNPlike'. If NULL or unrecognized string use only biallelic CNVs. If 'all' code multiallelic CNVs as 0 
+#' for loss; 1 for 2n and 2 for gain.
+#' @param lrr logical. Import LRR/BAF values from external files
+#' @param path.files Folder containing the input CNV files used for the CNV calling (i.e. one text file with 5 collumns 
+#' for each sample). Columns should contain (i) probe name, (ii) Chromosome, (iii) Position, (iv) LRR and (v) BAF. Only if lrr = TRUE
+#' @param list.of.files Data-frame with two columns where the (i) is the file name with signals and (ii) is the 
+#' correspondent name of the sample in the gds file. Only if lrr = TRUE
+#' @param produce.gds logical. If TRUE produce a new gds, if FALSE use gds previously created   
 #' @return The CNV segments and the representative probes and their respective p-value
 #' @examples
+#' 
+#' segs.pvalue.gr <- cnvGWAS(phen.info)
+#'  
 #' @export
 
 cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix=FALSE, 
-                    method.m.test = "fdr", lo.phe=1, chr.code.name=NULL){
+                    method.m.test = "fdr", lo.phe=1, chr.code.name=NULL, genotype.nodes="CNVGenotype",
+                    coding.translate="all", lrr = FALSE, path.files=NULL, list.of.files=NULL, produce.gds=TRUE){
+  
   phenotypesSam <- phen.info$phenotypesSam
   phenotypesSamX <- phenotypesSam[,c(1,(lo.phe+1))]
   phenotypesSamX <- na.omit(phenotypesSamX) ### Exclude samples without phenotypes. i.e NA
   all.paths <- phen.info$all.paths
   
   #################################### Produce the GDS for a given phenotype
+  
+  if(produce.gds == TRUE){
   message("Produce the GDS for a given phenotype")
   
-  probes.cnv.gr <- prodGdsCnv(phen.info, freq.cn, snp.matrix, n.cor, lo.phe, chr.code.name)
+  probes.cnv.gr <- prodGdsCnv(phen.info=phen.info, freq.cn=freq.cn, snp.matrix=snp.matrix, n.cor=n.cor, 
+                              lo.phe=lo.phe, chr.code.name=chr.code.name, genotype.nodes=genotype.nodes,
+                              coding.translate=coding.translate, lrr=lrr)
+  }else if(produce.gds == FALSE){
+   message("Using existent gds file") 
+  }else{
+  stop("TRUE/FALSE needed")  
+  }
   
   ##################################### Produce PLINK map ##################
   message("Produce PLINK map")
@@ -757,7 +1169,7 @@ cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix
   ##################################### Produce gvar to use as PLINK input #########
   message("Produce gvar to use as PLINK input")
   
-  .prodPLINKgvar(all.paths, n.cor, snp.matrix)
+  .prodPLINKgvar(all.paths, n.cor, snp.matrix, lrr)
   
   ########################################### END #######################################
   
@@ -782,7 +1194,7 @@ cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix
   
   ##################################### Associate SNPs with CNV segments #############
   message("Associate SNPs with CNV segments")
-  segs.pvalue.gr <- .assoPrCNV(all.paths, all.segs.gr, phenotypesSamX, method.m.test)
+  segs.pvalue.gr <- .assoPrCNV(all.paths, all.segs.gr, phenotypesSamX, method.m.test, probes.cnv.gr)
   
   ######################################################## END ###########################################
   
@@ -821,6 +1233,7 @@ cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix
   
   #TODO
   
+  
   ######################################################## END ###########################################
   segs.pvalue.gr <- segs.pvalue.gr[order(values(segs.pvalue.gr)$MinPvalue)]  
 
@@ -828,3 +1241,35 @@ cnvGWAS <- function(phen.info, n.cor, min.sim = 0.95, freq.cn = 0.01, snp.matrix
 }
 
 
+#' HELPER Extract the CNV genotypes in dosage format from GDS
+#' @param genofile is the loaded gds file
+#' @param snp.id is the SNP id to retrieve 
+#' @param node.to.extract CNVgenotype or CNVgenotypeSNPlike. First one is default
+
+.snpgdsGetGenoCNV <- function(genofile, snp.id, node.to.extract="CNVgenotype"){
+  
+  map <- as.data.frame(cbind(snp.id = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.id")), 
+                             chr = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome")), 
+                             position = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.position")), 
+                             probes = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id"))
+  ))
+  
+  all.samples <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id"))
+  
+  if(node.to.extract == "CNVgenotype"){
+    gens <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), start=c(snp.id,1), count=c(1,length(all.samples))))
+  }else if(node.to.extract == "CNVgenotypeSNPlike"){
+    gens <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotypeSNPlike"), start=c(snp.id,1), count=c(1,length(all.samples))))
+  }else{
+    stop("Undefined node to extract CNV genotype")
+  }
+  
+  return(gens)
+  
+}
+
+
+#' HELPER Create the pairwise genotypes for epistasis analysis - TODO
+#' 
+#' 
+#' 
