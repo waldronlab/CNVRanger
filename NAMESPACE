@@ -1,5 +1,6 @@
 import("GenomicRanges")
 import("RaggedExperiment")
+import("lattice")
 
 importMethodsFrom("AnnotationDbi", mapIds, keys, keytypes, select)
 importFrom("S4Vectors", DataFrame)
