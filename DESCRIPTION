@@ -4,7 +4,7 @@ Title: A comprehensive tool suite for CNV analysis
 Author: Vinicius Henrique da Silva and Ludwig Geistlinger
 Maintainer: Ludwig Geistlinger <Ludwig.Geistlinger@sph.cuny.edu>
 Depends: 
-    R(>= 3.4.0), 
+    R(>= 3.5.0), 
     GenomicRanges
 Imports: 
     AnnotationDbi, 

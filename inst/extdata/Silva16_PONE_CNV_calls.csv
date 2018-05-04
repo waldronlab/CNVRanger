@@ -1,4 +1,4 @@
-chr_call,start_call,end_call,NE_id,State
+chr,start,end,NE_id,State
 chr1,16947,45013,NE001423,3
 chr1,36337,67130,NE001426,3
 chr1,16947,36337,NE001428,3

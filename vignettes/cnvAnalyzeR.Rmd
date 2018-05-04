@@ -9,14 +9,10 @@ author:
       email: ludwig.geistlinger@sph.cuny.edu
 package: cnvAnalyzeR
 abstract: > 
-    The _GSEABenchmarkeR_ package implements an extendable framework for
-    reproducible evaluation of set- and network-based methods for enrichment
-    analysis of gene expression data. This includes support for the efficient
-    execution of these methods on comprehensive real data compendia (microarray
-    and RNA-seq) using parallel computation on standard workstations and
-    institutional computer grids. Methods can then be assessed with respect to
-    runtime, statistical significance, and relevance of the results for the
-    phenotypes investigated.
+    The _cnvAnalyzeR_ package implements a comprehensive tool suite for CNV 
+    analysis. This includes CNV calling from SNP-chip genotype and 
+    next-generation sequencing data, CNV architecture, CNV-expression 
+    association, CNV-phenotype association, and CNV evolution.
 output:
   BiocStyle::html_document:
     toc: true
@@ -47,7 +43,7 @@ Some papers that we want to cite:
     muscle
     [Geistlinger et al., 2018](https://doi.org/10.1038/s41598-018-19782-4)
 - CNVs are associated with genomic architecture in a songbird 
-    [da Silva et al., 2016](https://doi.org/10.1186/s12864-018-4577-1)
+    [da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)
 
 We start by loading the package.
 
@@ -59,6 +55,36 @@ library(cnvAnalyzeR)
 
 The `r Biocpkg("cnvAnalyzeR")` package uses `r Biocpkg("GenomicRanges")` and 
 `r Biocpkg("RaggedExperiment")` to represent, access, and manipulate CNV data.
+
+For demonstration, we consider CNV calls as obtained with `PennCNV` from 
+SNP-chip data in a Brazilian cattle breed. 
+[da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)
+
+```{r readCalls}
+data.dir <- system.file("extdata", package="cnvAnalyzeR")
+call.file <- file.path(data.dir, "Silva16_PONE_CNV_calls.csv")
+calls <- read.csv(call.file)
+nrow(calls)
+head(calls)
+```
+
+In total, there are approx. 50,000 calls obtained for 723 samples. 
+
+```{r nrSamples}
+length(unique(calls[,"NE_id"]))
+```
+
+We group the calls by sample ID, resulting in a `GRangesList` data structure.
+Each element of the list thus corresponds to a sample and contains the genomic 
+coordinates of the CNV calls for this sample (along with the copy number state 
+in the `State` metadata column).  
+
+```{r cnvCalls}
+grl <- makeGRangesListFromDataFrame(calls, 
+    split.field="NE_id", keep.extra.columns=TRUE)
+grl
+```
+
 
 # Summarizing individual CNV calls across a population
 
