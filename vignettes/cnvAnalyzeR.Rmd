@@ -33,15 +33,19 @@ Copy number variation (CNV) is a frequently observed deviation from the diploid
 state due to duplication or deletion of genomic regions.
 
 Some papers that we want to cite:
+
 - Genome-wide detection of CNVs and their association with meat tenderness in 
     Nelore cattle
     [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)
+
 - Distribution and functionality of copy number variation across European cattle
     populations
     [Upadhyay et al., 2017](https://doi.org/10.3389/fgene.2017.00108)
+
 - Widespread modulation of gene expression by copy number variation in skeletal 
     muscle
     [Geistlinger et al., 2018](https://doi.org/10.1038/s41598-018-19782-4)
+
 - CNVs are associated with genomic architecture in a songbird 
     [da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)
 
@@ -63,7 +67,7 @@ SNP-chip data in a Brazilian cattle breed.
 ```{r readCalls}
 data.dir <- system.file("extdata", package="cnvAnalyzeR")
 call.file <- file.path(data.dir, "Silva16_PONE_CNV_calls.csv")
-calls <- read.csv(call.file)
+calls <- read.csv(call.file, as.is=TRUE)
 nrow(calls)
 head(calls)
 ```
@@ -74,8 +78,8 @@ In total, there are approx. 50,000 calls obtained for 723 samples.
 length(unique(calls[,"NE_id"]))
 ```
 
-We group the calls by sample ID, resulting in a `GRangesList` data structure.
-Each element of the list thus corresponds to a sample and contains the genomic 
+We group the calls by sample ID, resulting in a `GRangesList`.
+Each element of the list corresponds to a sample, and contains the genomic 
 coordinates of the CNV calls for this sample (along with the copy number state 
 in the `State` metadata column).  
 
@@ -85,11 +89,39 @@ grl <- makeGRangesListFromDataFrame(calls,
 grl
 ```
 
+The advantage of representing the CNV calls as a `GRangesList` is that it allows
+to leverage the comprehensive set of operations on genomic regions implemented 
+in the `r Biocpkg("GenomicRanges")` packages.
+
+For instance, sorting of the calls according to their genomic coordinates.
+
+```{r sortCalls}
+grl <- sort(grl)
+grl
+```
+
+An alternative matrix-like representation of the CNV calls can be obtained with 
+the `r Biocpkg("RaggedExperiment")` data class. 
+It resembles in many aspects the established `r Biocpkg("SummarizedExperiment")`
+data class for storing gene expression data as e.g. obtained with RNA-seq. 
+
+```{r RaggedExperiment}
+ra <- RaggedExperiment(grl)
+ra
+```
 
 # Summarizing individual CNV calls across a population
 
-Here, we use the approach from `CNVRuler` to summarize CNV calls to CNV regions. 
+Here, we use the approach from `CNVRuler` to summarize CNV calls to CNV regions.
+
+```{r cnvrs}
+cnvrs <- populationRanges(grl, density=0.1)
+cnvrs
+```
+
 We also provide an implementation of the _Reciprocal Overlap (RO)_ procedure.
+
+
 A `GISTIC`-like procedure for detecting recurrent CNVs is also in preparation.
 
 # Overlap analysis of CNVs with functional genomic regions

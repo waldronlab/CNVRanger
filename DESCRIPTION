@@ -5,7 +5,8 @@ Author: Vinicius Henrique da Silva and Ludwig Geistlinger
 Maintainer: Ludwig Geistlinger <Ludwig.Geistlinger@sph.cuny.edu>
 Depends: 
     R(>= 3.5.0), 
-    GenomicRanges
+    GenomicRanges,
+    RaggedExperiment
 Imports: 
     AnnotationDbi, 
     BiocParallel, 
