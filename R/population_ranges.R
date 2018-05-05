@@ -33,15 +33,54 @@
 #'
 #' CNVRuler procedure that trims region margins based on regional density
 #'
+#' In CNV analysis, it is often of interest to summarize invidual calls across 
+#' the population, (i.e. to define CNV regions), for subsequent association 
+#' analysis with e.g. phenotype data.
+#'
+#' In the simplest case, this just merges overlapping individual calls into 
+#' summarized regions.
+#' However, this typically inflates CNVR size and trimming low-density areas
+#' (usually <10% of the total contributing individual calls within a summarized 
+#' region) is advisable.
+#' 
+#' An illustration of the concept can be found here: 
+#' https://www.ncbi.nlm.nih.gov/pubmed/22539667 (Figure 1)
+#'
 #' @param grl A \code{\linkS4class{GRangesList}}.
 #' @param density Numeric. 
 #'
 #' @return A \code{\linkS4class{GRanges}} object containing the summarized
 #' genomic ranges. 
 #'
+#' @references 
+#' Kim JH et al. (2012) CNVRuler: a copy number variation-based case-control
+#' association analysis tool. Bioinformatics, 28(13):1790-2.
+#'
 #' @author Martin Morgan
 #' @seealso
 #' 
+#' @examples
+#'
+#' grl <- GRangesList(
+#'      sample1 = GRanges( c("chr1:1-10", "chr2:15-18", "chr2:25-34") ),
+#'      sample2 = GRanges( c("chr1:1-10", "chr2:11-18" , "chr2:25-36") ),
+#'      sample3 = GRanges( c("chr1:2-11", "chr2:14-18", "chr2:26-36") ),
+#'      sample4 = GRanges( c("chr1:1-12", "chr2:18-35" ) ),
+#'      sample5 = GRanges( c("chr1:1-12", "chr2:11-17" , "chr2:26-34") ) ,
+#'      sample6 = GRanges( c("chr1:1-12", "chr2:12-18" , "chr2:25-35") )
+#' )
+#'
+#' # default as chosen in the original CNVRuler procedure
+#' populationRanges(grl, density=0.1)
+#'
+#' # density = 0 merges all overlapping regions, 
+#' # equivalent to: reduce(unlist(grl))
+#' populationRanges(grl, density=0) 
+#'
+#' # density = 1 disjoins all overlapping regions, 
+#' # equivalent to: disjoin(unlist(grl))
+#' populationRanges(grl, density=1)
+#'
 #' @export
 populationRanges <- function(grl, density=0.1)
 {
