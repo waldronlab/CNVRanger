@@ -9,26 +9,6 @@
 # 
 ############################################################
 
-# roxygen template
-
-#' Title
-#' 
-#' Description
-#'
-#' Details
-#'
-#' @param
-#'
-#' @return
-#'
-#' @author
-#' @seealso
-#'
-#' @examples
-#
-#' @export
-
-
 #' Summarizing genomic ranges across a population
 #'
 #' CNVRuler procedure that trims region margins based on regional density
