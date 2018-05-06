@@ -60,8 +60,9 @@ library(cnvAnalyzeR)
 The `r Biocpkg("cnvAnalyzeR")` package uses `r Biocpkg("GenomicRanges")` and 
 `r Biocpkg("RaggedExperiment")` to represent, access, and manipulate CNV data.
 
-For demonstration, we consider CNV calls as obtained with `PennCNV` from 
-SNP-chip data in a Brazilian cattle breed. 
+For demonstration, we consider CNV calls as obtained with 
+[PennCNV](http://penncnv.openbioinformatics.org) from SNP-chip data in a 
+Brazilian cattle breed. 
 [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)
 
 ```{r readCalls}
@@ -72,7 +73,7 @@ nrow(calls)
 head(calls)
 ```
 
-In total, there are approx. 50,000 calls obtained for 723 samples. 
+In total, there are $\approx$50,000 calls obtained for 723 samples. 
 
 ```{r nrSamples}
 length(unique(calls[,"NE_id"]))
@@ -110,17 +111,60 @@ ra <- RaggedExperiment(grl)
 ra
 ```
 
+As apparent from the `dim` slot of the object, it stores the $\approx$50,000
+calls across the 723 samples. Note that the CN state is now represented  
+
+```{r RaggedExperiment}
+ra <- RaggedExperiment(grl)
+ra
+`
+
+
 # Summarizing individual CNV calls across a population
 
-Here, we use the approach from `CNVRuler` to summarize CNV calls to CNV regions.
+In CNV analysis, it is often of interest to summarize invidual calls across
+the population, (i.e. to define CNV regions), for subsequent association
+analysis with e.g. phenotype data.
+
+In the simplest case, this just merges overlapping individual calls into 
+summarized regions.
+
+However, this typically inflates CNV region size.
+
+The `r Biocpkg("cnvAnalyzeR")` package implements three frequently used
+approaches for summarizing CNV calls:
+
+1. The [CNVRuler](http://www.ircgp.com/CNVRuler) procedure that trims region 
+   margins based on regional density 
+   [Kim et al., 2012](https://doi.org/10.1093/bioinformatics/bts239), 
+2. the reciprocal overlap (RO) procedure that requires calls to sufficiently 
+   overlap with one another 
+   [Conrad et al., 2010](https://doi.org/10.1038/nature08516), and
+3. the [GISTIC](http://www.broadinstitute.org/cancer/cga/gistic) procedure that
+   identifies recurrent CNV regions 
+   [Mermel et al., 2011](https://doi.org/10.1186/gb-2011-12-4-r41).
+
+
+## Trimming low-density areas
+
+Here, we use the approach from [CNVRuler](http://www.ircgp.com/CNVRuler) 
+to summarize CNV calls to CNV regions (see 
+[Figure 1](https://academic.oup.com/view-large/figure/83392426/bts239f1.jpeg)
+in 
+[Kim et al., 2012](https://doi.org/10.1093/bioinformatics/bts239)
+an illustration of the approach). 
 
 ```{r cnvrs}
 cnvrs <- populationRanges(grl, density=0.1)
 cnvrs
 ```
 
+## Reciprocal overlap
+
 We also provide an implementation of the _Reciprocal Overlap (RO)_ procedure.
 
+
+## Identifying recurrent regions
 
 A `GISTIC`-like procedure for detecting recurrent CNVs is also in preparation.
 
