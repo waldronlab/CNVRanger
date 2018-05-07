@@ -73,7 +73,7 @@ nrow(calls)
 head(calls)
 ```
 
-In total, there are $\approx$50,000 calls obtained for 723 samples. 
+In total, there are roughly 50,000 calls obtained for 723 samples. 
 
 ```{r nrSamples}
 length(unique(calls[,"NE_id"]))
@@ -111,14 +111,30 @@ ra <- RaggedExperiment(grl)
 ra
 ```
 
-As apparent from the `dim` slot of the object, it stores the $\approx$50,000
-calls across the 723 samples. Note that the CN state is now represented  
+As apparent from the `dim` slot of the object, it stores the CNV calls in the 
+rows and the samples in the columns. 
+Note that the CN state is now represented as an assay matrix which can be 
+easily accessed and subsetted.   
 
-```{r RaggedExperiment}
-ra <- RaggedExperiment(grl)
-ra
-`
+```{r RaggedExperiment-assay}
+assay(ra[1:5,1:5])
+```
 
+As for a `r Biocpkg("SummarizedExperiment")`, additional information for 
+the samples are annotated in the `colData` slot.
+For example, we annotate the steer weight and its feed conversion ratio (FCR).
+Feed conversion ratio is the ratio of dry matter intake to live-weight gain. 
+A typical range of feed conversion ratios is 4.5 -7.5 with a lower number being 
+more desirable as it would indicate that a steer required less feed per pound of
+gain.
+
+```{r RaggedExperiment-colData}
+weight <- rnorm(ncol(ra), mean=1100, sd=100)
+fcr <- rnorm(ncol(ra), mean=6, sd=1.5)
+colData(ra)$weight <- round(weight, digits=2)
+colData(ra)$fcr <- round(fcr, digits=2)
+colData(ra)
+```
 
 # Summarizing individual CNV calls across a population
 
