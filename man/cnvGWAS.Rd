@@ -16,13 +16,13 @@ cnvGWAS(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01,
 
 \item{n.cor}{Number of cores to be used}
 
-\item{min.sim}{Minimum CNV genotype distribuition similarity among subsequent probes. Default is 0.95 = 95%}
+\item{min.sim}{Minimum CNV genotype distribuition similarity among subsequent probes. Default is 0.95 (i.e. 95\%)}
 
-\item{freq.cn}{Minimum CNV frequency where 1 = 100%, or all samples deviating from diploid state. Default 0.01 = 1%}
+\item{freq.cn}{Minimum CNV frequency where 1 (i.e. 100\%), or all samples deviating from diploid state. Default 0.01 (i.e. 1\%)}
 
 \item{snp.matrix}{Only FALSE implemented - If TRUE B allele frequencies (BAF) would be used to reconstruct CNV-SNP genotypes}
 
-\item{method.m.test}{Correction for multiple tests to be used. FDR is default, see \code{\link(p.adjust)} for
+\item{method.m.test}{Correction for multiple tests to be used. FDR is default, see \code{\link{(p.adjust)}} for
 other methods.}
 
 \item{lo.phe}{The phenotype to be analyzed in the PhenInfo$phenotypesSam data-frame}

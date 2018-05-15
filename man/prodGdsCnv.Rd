@@ -11,7 +11,7 @@ prodGdsCnv(phen.info, freq.cn = 0.01, snp.matrix = FALSE, n.cor = 1,
 \arguments{
 \item{phen.info}{Returned by \code{setupCnvAna}}
 
-\item{freq.cn}{Minimum frequency where 1 = 100%. Default 0.01 = 1%}
+\item{freq.cn}{Minimum frequency. Default is 0.01 (i.e. 1\%)}
 
 \item{snp.matrix}{Only FALSE implemented - If TRUE B allele frequencies (BAF) would be used to reconstruct CNV-SNP genotypes}
 

@@ -310,8 +310,8 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL,
     file.copy(phen.loc, file.path(all.paths[1], "/PhenoPop1.txt"), overwrite = TRUE)
     ## Import the PennCNV output from external folder
     file.copy(cnv.out.loc, file.path(all.paths[1], "/CNVOutPop1.txt"),  overwrite = TRUE)
-    pheno.file <- "Pheno.txt"
-    cnv.file <- "CNVOut.txt"
+    pheno.file <- "PhenoPop1.txt"
+    cnv.file <- "CNVOutPop1.txt"
   }
   
   ## Multiple populations
@@ -338,6 +338,16 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL,
     }
   }
   
+  ## Write phenotype names and merge CNV file for multiple populations
+  if(length(phen.loc) > 1 && length(cnv.out.loc) > 1){
+    pheno.file<-unlist(pheno.file.all)
+    all.cnvs <- lapply(cnv.file.all,.loadToMergeCNV, cnv.path=all.paths[1])
+    all.cnvs <- data.table::rbindlist(all.cnvs)
+    all.cnvs <- as.data.frame(all.cnvs)
+    write.table(all.cnvs, file.path(all.paths[1], "CNVOut.txt"), sep="\t",
+                col.names=TRUE, row.names = FALSE)
+  }
+  
   if(is.null(map.loc)){
     ## Import the probe map from external folder
     cnvs <- read.table(file.path(all.paths[1], "CNVOut.txt"), sep="", header=F) ### CNV table 
@@ -358,22 +368,11 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL,
     write.table(probe.like.map, file.path(all.paths[1], "/MapPenn.txt"), col.names = TRUE, row.names = FALSE,
                 quote = FALSE, sep="\t")
     
-  }
-  else{
+  }else{
     if(length(map.loc)>1){
       stop("The map should be unique. If multiple populations with different probe map use map.loc=NULL")  
     }
     file.copy(map.loc, file.path(all.paths[1], "/MapPenn.txt"), overwrite = TRUE)}
-  
-  ## Write phenotype names and merge CNV file for multiple populations
-  if(length(phen.loc) > 1 && length(cnv.out.loc) > 1){
-    pheno.file<-unlist(pheno.file.all)
-    all.cnvs <- lapply(cnv.file.all,.loadToMergeCNV, cnv.path=all.paths[1])
-    all.cnvs <- data.table::rbindlist(all.cnvs)
-    all.cnvs <- as.data.frame(all.cnvs)
-    write.table(all.cnvs, file.path(all.paths[1], "CNVOut.txt"), sep="\t",
-                col.names=TRUE, row.names = FALSE)
-  }
   
   phen.info <- .loadPhen(pheno.file, all.paths[1], pops.names=pops.names)
   
@@ -556,7 +555,7 @@ testit <- function(x)
 #'
 #'
 #' @param phen.info Returned by \code{setupCnvAna}
-#' @param freq.cn Minimum frequency where 1 = 100%. Default 0.01 = 1%
+#' @param freq.cn Minimum frequency. Default is 0.01 (i.e. 1\%)
 #' @param snp.matrix Only FALSE implemented - If TRUE B allele frequencies (BAF) would be used to reconstruct CNV-SNP genotypes
 #' @param n.cor Number of cores to be used
 #' @param lo.phe The phenotype to be analyzed in the PhenInfo$phenotypesSam data-frame 
@@ -1223,10 +1222,10 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 #'   
 #' @param phen.info Returned by \code{\link{setupCnvGWAS}}
 #' @param n.cor Number of cores to be used
-#' @param min.sim Minimum CNV genotype distribuition similarity among subsequent probes. Default is 0.95 = 95%
-#' @param freq.cn Minimum CNV frequency where 1 = 100%, or all samples deviating from diploid state. Default 0.01 = 1%
+#' @param min.sim Minimum CNV genotype distribuition similarity among subsequent probes. Default is 0.95 (i.e. 95\%)
+#' @param freq.cn Minimum CNV frequency where 1 (i.e. 100\%), or all samples deviating from diploid state. Default 0.01 (i.e. 1\%)
 #' @param snp.matrix Only FALSE implemented - If TRUE B allele frequencies (BAF) would be used to reconstruct CNV-SNP genotypes
-#' @param method.m.test Correction for multiple tests to be used. FDR is default, see \code{\link(p.adjust)} for
+#' @param method.m.test Correction for multiple tests to be used. FDR is default, see \code{\link{(p.adjust)}} for
 #' other methods.
 #' @param lo.phe The phenotype to be analyzed in the PhenInfo$phenotypesSam data-frame 
 #' @param chr.code.name A data-frame with the integer name in the first column and the original name for each chromosome  

@@ -208,8 +208,8 @@ are imported and all the necessary information is stored in the `phen.info` R ob
 folder.package <- system.file('extdata', package = 'cnvAnalyzeR')
 
 phen.info <- setupCnvGWAS(name="Example", phen.loc=file.path(folder.package, "Pheno.txt"), ## GEBV values
-cnv.out.loc <- file.path(folder.package, "CNVOut.txt"), ## CNV calls            
-map.loc <- file.path(folder.package, "MapPenn.txt")) ## Genomic positions of the SNPs used in the CNV call
+cnv.out.loc = file.path(folder.package, "CNVOut.txt"), ## CNV calls            
+map.loc = file.path(folder.package, "MapPenn.txt")) ## Genomic positions of the SNPs used in the CNV call
 
 ```
 
@@ -269,7 +269,7 @@ plotManhattan(all.paths, segs.pvalue.gr, "p-value", chr.size.order)
 
 ```
 
-Alternatively, the user can use the relative signal intensity (log R ratio - LRR) to perform the GWAS analysis. CNV detection using SNP-chip intensities and allele frequencies are usually challenging and can produce biased CNV frequencies [da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1). Thus, GWAS using LRR values directly may help to identify CNV segments which are possibly associated with phenotypes but have their frequency biased by the CNV calling procedure. Therefore, the `cnvGWAS` function allows the user to perform associations with LRR values instead absolute copy numbers. To perform the GWAS using LRR values is necessary to import the LRR/BAF values and state `run.lrr=TRUE` in the `cnvGWAS` function:
+Alternatively, the user can use the relative signal intensity (log R ratio - LRR) to perform a GWAS analysis. CNV detection using SNP-chip intensities and allele frequencies are usually challenging and can produce biased CNV frequencies [da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1). Thus, GWAS using LRR values directly may help to identify CNV segments which are possibly associated with phenotypes but have their frequency biased by the CNV calling procedure. Therefore, the `cnvGWAS` function allows the user to perform associations with LRR values instead absolute copy numbers. To perform the GWAS using LRR values is necessary to import the LRR/BAF values and state `run.lrr=TRUE` in the `cnvGWAS` function:
 
 ```{r importLRR}
 # List files to import LRR/BAF 
