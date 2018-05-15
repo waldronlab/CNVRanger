@@ -6,7 +6,8 @@ Maintainer: Ludwig Geistlinger <Ludwig.Geistlinger@sph.cuny.edu>
 Depends: 
     R(>= 3.5.0), 
     GenomicRanges,
-    RaggedExperiment
+    RaggedExperiment, 
+    lattice
 Imports: 
     AnnotationDbi, 
     BiocParallel, 
@@ -18,7 +19,8 @@ Imports:
     data.table, 
     doBy, 
     edgeR, 
-    rappdirs 
+    rappdirs,
+    qqman  
 Suggests: 
     BiocStyle,
     knitr,

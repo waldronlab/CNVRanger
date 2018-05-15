@@ -234,8 +234,7 @@ qqunif.plot<-function(pvalues,
 
 #' HELPER - Plot the distribuition of the response variable among CNV genotypes
 #' This function is limited from 0 to 4 copies.
-#' @example 
-#' .plotFreqViolin(all.paths, segs.pvalue.gr, rank.p=2)
+#'
 
 .plotFreqViolin  <- function(all.paths, segs.pvalue.gr, rank.p=1, phen.name=NULL, log.transform=FALSE){
   
@@ -244,8 +243,8 @@ qqunif.plot<-function(pvalues,
   probeX <- values(segs.pvalue.gr[rank.p])$NameProbe
   map <- as.data.frame(cbind(snp.id = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.id")), 
                              chr = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome")), 
-                               position = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.position")), 
-                               probes = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id"))
+                             position = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.position")), 
+                             probes = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id"))
   ))
   
   snp.id <- subset(map, probes==probeX)$snp.id
@@ -278,7 +277,7 @@ qqunif.plot<-function(pvalues,
   all.states <- names(table(sam.cnv$State))
   all.states <- as.numeric(all.states)+1
   color <- color[all.states]
-
+  
   
   #### Export figure
   pdf(file.path(all.paths[3], paste0(phen.name,"ViolinCNVGenotypes.pdf")))
@@ -304,13 +303,43 @@ qqunif.plot<-function(pvalues,
 }
 
 
-#' HELPER - Plot the manhattan
-#' @param regions Genomic ranges to produce the manhattan plot
+#' Plot the manhattan
+#' 
+#' Function to write a manhattan plot with the p-values from a CNV-GWAS run or Vst values. 
+#' 
+#' @param regions GRanges from CNV-GWAS run or Vst values to produce the manhattan plot
 #' @param type.regions 'p-value' or/and 'vst'
 #' @param chr.size.order Data-frame with two columns: (i) 'chr' have the chromosome names as character
 #' and (ii) 'size' with the length of the chromosome in basepairs
+#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
+#' @examples 
+#' 
+#' folder.package <- system.file('extdata', package = 'cnvAnalyzeR')
+#'
+#' phen.info <- setupCnvGWAS(name="Example", phen.loc=file.path(folder.package, "Pheno.txt"), ## GEBV values
+#'                          cnv.out.loc <- file.path(folder.package, "CNVOut.txt"), ## CNV calls            
+#'                          map.loc <- file.path(folder.package, "MapPenn.txt")) ## Genomic positions of the SNPs used in the CNV call
+#'
+#' all.paths <- phen.info$all.paths
+#'
+#' segs.pvalue.gr <- cnvGWAS(phen.info)
+#' 
+#' ## Define the chromosome order in the plot
+#' order.chrs <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "17", "18", "19",
+#'                "20", "21", "22", "23", "24", "25LG1", "25LG2", "26", "27", "28", "LGE22", "1A", "4A")
+#'
+#' ## Chromosome sizes
+#' chr.sizes <- c(114059860,150265477,111636321,68030631,61875929,34342011,37653027, 31324166,25106277,20202851,20315886,20466350,16480340,16193477,
+#'               13820886,10486032,11572643,9871655,14661763,7693166,4276343, 6655392,6808513,1092960,809223,6596997,4327975,5101010, 773534,71365269,19934923)
+#'
+#' chr.size.order <- cbind(as.data.frame(order.chrs, stringsAsFactors = FALSE),as.data.frame(chr.sizes,  stringsAsFactors = FALSE))
+#' colnames(chr.size.order) <- c("chr", "sizes")
+#'
+#' ## Plot a pdf file with a manhatthan within the 'Results' workfolder
+#' plotManhattan(all.paths, segs.pvalue.gr, "p-value", chr.size.order)
+#' 
 
-.plotMan <- function(all.paths, regions, type.regions, chr.size.order=NULL){
+plotManhattan <- function(all.paths, regions, type.regions, chr.size.order=NULL){
   
   ## Produce chromosome limits
   chr.size.order.start <- chr.size.order
@@ -332,7 +361,7 @@ qqunif.plot<-function(pvalues,
     gwasResults <- cbind("CHR"=as.character(seqnames(regions)), "BP"=start(regions),
                          "SNP"= values(regions)$SegName, "P"= values(regions)$MinPvalueAdjusted)
     
-    gwasResults <- as.data.frame(gwasResults)
+    gwasResults <- as.data.frame(gwasResults, stringsAsFactors = FALSE)
     gwasResults <- rbind(gwasResults, chr.all)
     
     ### turn chr to numeric
@@ -355,14 +384,14 @@ qqunif.plot<-function(pvalues,
   else if("vst" %in% type.regions){
     chr.all$P <- 0 
     
-    values(map.vst)$Populations
+    populations <- unique(values(regions)$Populations)
     
     gwasResults <- cbind("CHR"=as.character(seqnames(regions)), 
                          "BP"=start(regions),
                          "SNP"= values(regions)$NameProbe, 
                          "P"= values(regions)$vst.result)
     
-    gwasResults <- as.data.frame(gwasResults)
+    gwasResults <- as.data.frame(gwasResults, stringsAsFactors = FALSE)
     gwasResults <- rbind(gwasResults, chr.all)
     
     ### turn chr to numeric
@@ -377,7 +406,7 @@ qqunif.plot<-function(pvalues,
     gwasResults <- dplyr::arrange(gwasResults, CHR, BP)
     
     
-    pdf(file.path(all.paths[3], paste0("VSTManhattan.pdf")))  
+    pdf(file.path(all.paths[3], paste0(populations, "-VSTManhattan.pdf")))  
     
     qqman::manhattan(gwasResults, chr="CHR", bp="BP", snp="SNP", p="P", logp=FALSE, 
                      ylab = "Vst")
@@ -393,26 +422,31 @@ qqunif.plot<-function(pvalues,
 
 
 #' HELPER Upload all figures to dropbox 
+#'
+#' @param all.paths Object returned from \code{CreateFolderTree} function with the working folder tree 
+#' @param drop.path Folder name in the Dropbox website
+#' @param folder.to.upload Folder to upload. '1' to Inputs, '2' to PLINK and '3' to Results
+#' @param format Extension of the files to be uploaded
+#' @examples  
 #' 
-#' @param path.name Folder name in the Dropbox website
-#' @example 
-#' 
-#' Upload all '.pdf' figures 
+#' # Upload all '.pdf' figures 
 #' .uploadAllFigures(all.paths, "CNV_BreedingTime")
+#' 
+#' 
 
-.uploadAllFigures <- function(all.paths, drop.path, format=".pdf"){
-
-if(length(list.files(all.paths[1])[list.files(all.paths[1])=="token.rds"]) ==0){
-  stop("token.rds is not in the Inputs folder")
-}
+.uploadAllFigures <- function(all.paths, drop.path, folder.to.upload=3, format=".pdf"){
   
-x <- readRDS(file=file.path(all.paths[1], "token.rds"))
-
-all.fig <- list.files(all.paths[3], pattern=format)
-
-for(up in seq_len(length(all.fig))){
-rdrop2::drop_upload(file.path(all.paths[3], all.fig[up]), path = drop.path,  dtoken = x)}
-
+  if(length(list.files(all.paths[1])[list.files(all.paths[1])=="token.rds"]) ==0){
+    stop("token.rds is not in the Inputs folder")
+  }
+  
+  x <- readRDS(file=file.path(all.paths[1], "token.rds"))
+  
+  all.fig <- list.files(all.paths[folder.to.upload], pattern=format)
+  
+  for(up in seq_len(length(all.fig))){
+    rdrop2::drop_upload(file.path(all.paths[folder.to.upload], all.fig[up]), path = drop.path,  dtoken = x)}
+  
 }
 
 
