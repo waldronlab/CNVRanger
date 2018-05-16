@@ -994,7 +994,13 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 
 .runPLINK <- function(all.paths){
   
-  plinkPath <- paste0("\'", all.paths[2], "/plink\'")
+  if(rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac"){
+  plinkPath <- paste0("\'", all.paths[2], "/plink\'")}
+  
+  if(rappdirs:::get_os() == "win"){
+  plinkPath <- paste0(all.paths[2], "/plink")
+  plinkPath <- gsub("\\\\", "/", plinkPath)}
+  
   system(paste(plinkPath, "--gfile", file.path(all.paths[2], "mydata"), paste("--out", file.path(all.paths[2], "plink")), "--noweb"), wait=TRUE, intern = TRUE)
   
   (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=T, readonly=FALSE)) ## read GDS
