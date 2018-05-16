@@ -309,9 +309,9 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL,
     ## Import the phenotype and sample info from external folder
     file.copy(phen.loc, file.path(all.paths[1], "/PhenoPop1.txt"), overwrite = TRUE)
     ## Import the PennCNV output from external folder
-    file.copy(cnv.out.loc, file.path(all.paths[1], "/CNVOutPop1.txt"),  overwrite = TRUE)
+    file.copy(cnv.out.loc, file.path(all.paths[1], "/CNVOut.txt"),  overwrite = TRUE)
     pheno.file <- "PhenoPop1.txt"
-    cnv.file <- "CNVOutPop1.txt"
+    cnv.file <- "CNVOut.txt"
   }
   
   ## Multiple populations
@@ -340,7 +340,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL,
   
   ## Write phenotype names and merge CNV file for multiple populations
   if(length(phen.loc) > 1 && length(cnv.out.loc) > 1){
-    pheno.file<-unlist(pheno.file.all)
+    #pheno.file<-unlist(pheno.file.all)
     all.cnvs <- lapply(cnv.file.all,.loadToMergeCNV, cnv.path=all.paths[1])
     all.cnvs <- data.table::rbindlist(all.cnvs)
     all.cnvs <- as.data.frame(all.cnvs)
@@ -995,7 +995,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 .runPLINK <- function(all.paths){
   
   plinkPath <- paste0("\'", all.paths[2], "/plink\'")
-  system(paste(plinkPath, "--gfile", file.path(all.paths[2], "mydata"), paste("--out", file.path(all.paths[2], "plink")), "--noweb"), wait=TRUE)
+  system(paste(plinkPath, "--gfile", file.path(all.paths[2], "mydata"), paste("--out", file.path(all.paths[2], "plink")), "--noweb"), wait=TRUE, intern = TRUE)
   
   (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=T, readonly=FALSE)) ## read GDS
   sumphen <- paste0("plink.gvar.summary.",names(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "phenotype")))[[2]])
