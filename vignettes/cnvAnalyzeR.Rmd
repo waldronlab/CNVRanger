@@ -2,11 +2,19 @@
 title: "A comprehensive tool suite for CNV analysis"
 author:
     - name: Vinicius Henrique da Silva
-      affiliation: Animal Breeding and Genomics Center, Wageningen University
+      affiliation: a,b
+      #affiliation: Animal Breeding and Genetics, Swedish University of Agricultural Sciences
       email: vinicius.dasilva@wur.nl
     - name: Ludwig Geistlinger
-      affiliation: School of Public Health, City University of New York
+      affiliation: c
       email: ludwig.geistlinger@sph.cuny.edu
+address:
+  - code: a
+  address: Animal Breeding and Genomics, Wageningen University & Animal Breeding and Genetics, Swedish University of Agricultural Sciences
+  - code: b
+  address: Animal Breeding and Genetics, Swedish University of Agricultural Sciences
+  - code: c
+  address: School of Public Health, City University of New York
 package: cnvAnalyzeR
 abstract: > 
     The _cnvAnalyzeR_ package implements a comprehensive tool suite for CNV 
@@ -196,13 +204,7 @@ Here, we analyze differences in expression between CN states based on the
 # CNV-phenotype association analysis
 
 Here, we analyze the genome-wide association (GWAS) of CNVs with quantitative phenotypes
-using `PLINK` association analysis for copy number polymorphisms (http://zzz.bwh.harvard.edu/plink/gvar.shtml) and GDS files from `r Biocpkg("gdsfmt")` package. For demonstration we use
-CNV data of a wild population of songbirds [da Silva et al., 2018](https://doi.org/10.1371/journal.pone.0157711).
-The response variable is their breeding time which is represented as the genetic potential for laying date (i.e genomic estimated breeding values - GEBV). Here, the GEBV values are used 
-as the response variable in the `PLINK` linear model to pinpoint the genomic regions where the change in copy number is 
-associated with change in the genetic potential for breeding time. First, phenotypes, CNV calls and the probe map (if available) 
-are imported and all the necessary information is stored in the `phen.info` R object:
-
+using `PLINK` association analysis for copy number polymorphisms (http://zzz.bwh.harvard.edu/plink/gvar.shtml) and GDS files from `r Biocpkg("gdsfmt")` package. For demonstration we use CNV data of a wild population of songbirds [da Silva et al., 2018](https://doi.org/10.1371/journal.pone.0157711). The response variable is their breeding time which is represented as the genetic potential for laying date (i.e genomic estimated breeding values - GEBV). Here, the GEBV values are used as the response variable in the `PLINK` linear model to pinpoint the genomic regions where the change in copy number is associated with change in the genetic potential for breeding time. First, phenotypes, CNV calls and the probe map (if available) are imported and all the necessary information is stored in the `phen.info` R object:
 
 ```{r importPhen}
 folder.package <- system.file('extdata', package = 'cnvAnalyzeR')
@@ -213,8 +215,7 @@ map.loc = file.path(folder.package, "MapPenn.txt")) ## Genomic positions of the 
 
 ```
 
-The `phen.info` is a list which contains necessary information for the CNV-GWAS procedure itself. The last item of the list
-displays the working directory:
+The `phen.info` is a list which contains necessary information for the CNV-GWAS procedure itself. The last item of the list displays the working directory:
 
 ```{r Wdir}
 all.paths <- phen.info$all.paths
@@ -247,19 +248,17 @@ segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name)
 ```
 
 
-The CNV-GWAS uses the concept of CNV segments to define CNV loci. This procedure was originally proposed in our previous work in Nelore beef cattle [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711) and defines the CNV segments based on CNV genotype similarity of subsequent SNP probes. The default is `min.sim=0.95`, which will continuously add probes positions to a given CNV segment until the pairwise genotype similarity drops below 95%. Detailed up-down CNV genotype concordance that are used for the construction of CNV segments will look like the S12 Table in  [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711). Although this information is used for the construction of the CNV segments, this is not exported to the user. 
+The CNV-GWAS uses the concept of CNV segments to define CNV loci. This procedure was originally proposed in our previous work in Nelore beef cattle [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711) and defines the CNV segments based on CNV genotype similarity of subsequent SNP probes. The default is `min.sim=0.95`, which will continuously add probe positions to a given CNV segment until the pairwise genotype similarity drops below 95%. Detailed up-down CNV genotype concordance that are used for the construction of CNV segments will look like the S12 Table in  [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711). Although this information is used for the construction of the CNV segments, this is not exported to the user. 
 
 As the `PLINK` provides one separately p-value for each SNP probe, only one of the p-values of the probes overlapping each CNV segment is assigned as the segment p-value. The chosen probe/p-value can be based on the probe with lowest p-value (`assign.probe="min.pvalue"`, default) or the one with highest CNV frequency (`assign.probe="high.freq"`). Once all CNV segments have a p-value assigned, a correction for multiple testing is performed based on the number of CNV segments (FDR is default) and the results can therefore exported as a manhattan plot. 
 
 ```{r manh}
 
 ## Define the chromosome order in the plot
-order.chrs <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "17", "18", "19",
-                "20", "21", "22", "23", "24", "25LG1", "25LG2", "26", "27", "28", "LGE22", "1A", "4A")
+order.chrs <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "17", "18", "19", "20", "21", "22", "23", "24", "25LG1", "25LG2", "26", "27", "28", "LGE22", "1A", "4A")
 
 ## Chromosome sizes
-chr.sizes <- c(114059860,150265477,111636321,68030631,61875929,34342011,37653027, 31324166,25106277,20202851,20315886,20466350,16480340,16193477,
-13820886,10486032,11572643,9871655,14661763,7693166,4276343, 6655392,6808513,1092960,809223,6596997,4327975,5101010, 773534,71365269,19934923)
+chr.sizes <- c(114059860,150265477,111636321,68030631,61875929,34342011,37653027, 31324166,25106277,20202851,20315886,20466350,16480340,16193477, 13820886,10486032,11572643,9871655,14661763,7693166,4276343, 6655392,6808513,1092960,809223,6596997,4327975,5101010, 773534,71365269,19934923)
 
 chr.size.order <- cbind(as.data.frame(order.chrs, stringsAsFactors = FALSE),as.data.frame(chr.sizes,  stringsAsFactors = FALSE))
 colnames(chr.size.order) <- c("chr", "sizes")
@@ -277,18 +276,19 @@ list.of.files <- list.files(path = folder.package, pattern = "\\.cnv.txt.adjuste
 list.of.files <- as.data.frame(list.of.files)
 colnames(list.of.files)[1] <- "file.names"
 list.of.files$sample.names <- gsub(".cnv.txt.adjusted","", list.of.files$file.names)
+list.of.files$sample.names <- gsub("GT","", list.of.files$sample.names)
  
 # All missing samples will have LRR = '0' and BAF = '0.5' in all SNPs listed in the GDS file
-importLRR_BAF(all.paths, folder.package, list.of.files)
+importLRR_BAF(all.paths, path.files=folder.package, list.of.files)
 
 # Read the GDS to check if the LRR/BAF nodes were added
 (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=TRUE, readonly=FALSE)) ## read GDS
-
-# Run the CNV-GWAS
-segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, run.lrr=TRUE)
+gdsfmt::closefn.gds(genofile)
+# Run the CNV-GWAS with existent GDS
+segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, produce.gds=FALSE, run.lrr=TRUE)
 ```
 
-It is important to note that the `cnvGWAS` function uses the `CNV.gds` file which is stored in the `Inputs` folder (i.e. `all.paths[1]`), This GDS file is automatically generated during a GWAS run. Therefore, running a GWAS implies that any GDS file produced by previous analysis will be overwritten. To avoid overwriting, the user should include `produce.gds=FALSE` in the GWAS run. For convenience, is possible to produce a GDS file before the GWAS analysis with `prodGdsCnv` function, which will additionally retrieve a `GRanges` object containing the genomic positions, names and frequencies of each of the probes which will be used to construct the CNV segments during the GWAS analysis. Note that `probes.cnv.gr` object will hold the numeric chromosome names, such as the GDS file in disk. Only the object `segs.pvalue.gr`, which encloses the GWAS results, has the character names indicated for each chromosome.  
+It is important to note that the `cnvGWAS` function uses the `CNV.gds` file which is stored in the `Inputs` folder (i.e. `all.paths[1]`). This GDS file is automatically generated during a GWAS run. Therefore, running a GWAS implies that any GDS file produced by previous analysis will be overwritten. To avoid overwriting, the user should include `produce.gds=FALSE` in the GWAS run. For convenience, is possible to produce a GDS file before the GWAS analysis with `prodGdsCnv` function, which will additionally retrieve a `GRanges` object containing the genomic positions, names and frequencies of each of the probes which will be used to construct the CNV segments during the GWAS analysis. Note that `probes.cnv.gr` object will hold the numeric chromosome names, such as the GDS file in disk. Only the object `segs.pvalue.gr`, which encloses the GWAS results, has the character names indicated for each chromosome.  
 
 ```{r prodGDS}
 ## Create a GDS file in disk and export the SNP probe positions

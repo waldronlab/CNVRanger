@@ -400,7 +400,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL,
     state <- unique(substr(x=as.character(values(CNVSamByState[[slo]])$V4),
                            start=nchar(as.character(values(CNVSamByState[[slo]])$V4)),
                            stop=nchar(as.character(values(CNVSamByState[[slo]])$V4))))
-    SamCNVSNP <- values(subsetByOverlaps(probes.cnv.gr, CNVSamByState[[slo]]))$snp.id
+    SamCNVSNP <- values(suppressWarnings(subsetByOverlaps(probes.cnv.gr, CNVSamByState[[slo]])))$snp.id
     g[SamCNVSNP] <- state
   }
   g <- as.integer(g)
@@ -423,28 +423,28 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc=NULL, folder=NULL,
   # 0n 
   CNVsGr0n <- CNVsGr[which(values(CNVsGr)$sample == sampleX)]
   CNVsGr0n <- CNVsGr0n[which(values(CNVsGr0n)$type == "state1,cn=0")]
-  probes.cnv.gr.0n <- subsetByOverlaps(probes.cnv.gr, CNVsGr0n)
+  probes.cnv.gr.0n <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, CNVsGr0n))
   
   g[values(probes.cnv.gr.0n)$tag.snp] <- "0"
   
   # 1n
   CNVsGr1n <- CNVsGr[which(values(CNVsGr)$sample == sampleX)]
   CNVsGr1n <- CNVsGr1n[which(values(CNVsGr1n)$type == "state2,cn=1")]
-  probes.cnv.gr.1n <- subsetByOverlaps(probes.cnv.gr, CNVsGr1n)
+  probes.cnv.gr.1n <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, CNVsGr1n))
   
   g[values(probes.cnv.gr.1n)$tag.snp] <- "0"
   
   # 3n
   CNVsGr3n <- CNVsGr[which(values(CNVsGr)$sample == sampleX)]
   CNVsGr3n <- CNVsGr3n[which(values(CNVsGr3n)$type == "state5,cn=3")]
-  probes.cnv.gr.3n <- subsetByOverlaps(probes.cnv.gr, CNVsGr3n)
+  probes.cnv.gr.3n <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, CNVsGr3n))
   
   g[values(probes.cnv.gr.3n)$tag.snp] <- "2"
   
   # 4n
   CNVsGr4n <- CNVsGr[which(values(CNVsGr)$sample == sampleX)]
   CNVsGr4n <- CNVsGr4n[which(values(CNVsGr4n)$type == "state6,cn=4")]
-  probes.cnv.gr.4n <- subsetByOverlaps(probes.cnv.gr, CNVsGr4n)
+  probes.cnv.gr.4n <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, CNVsGr4n))
   
   g[values(probes.cnv.gr.4n)$tag.snp] <- "2"
   
@@ -648,8 +648,8 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   all.samples <- unique(as.character(values(CNVsGr)$V5))
   
   ###################### Select probes  within CNVs
-  probesCNV <- suppressWarnings(as.character(values(subsetByOverlaps(probesGr, 
-                                                                     CNVsGr))$Name))
+  probesCNV <- suppressWarnings(as.character(values(suppressWarnings(subsetByOverlaps(probesGr, 
+                                                                     CNVsGr)))$Name))
   probesCNV <- unique(unlist(probesCNV))
   probes.cnv.gr <- probesGr[values(probesGr)$Name %in% probesCNV]
   
@@ -831,8 +831,8 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   all.samples <- unique(as.character(values(CNVsGr)$V5))
   
   ###################### Select probes  within CNVs
-  probesCNV <- suppressWarnings(as.character(values(subsetByOverlaps(probesGr, 
-                                                                     CNVsGr))$Name))
+  probesCNV <- suppressWarnings(as.character(values(suppressWarnings(subsetByOverlaps(probesGr, 
+                                                                     CNVsGr)))$Name))
   probesCNV <- unique(unlist(probesCNV))
   probes.cnv.gr <- probesGr[values(probesGr)$Name %in% probesCNV]
   
@@ -857,7 +857,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 #' Gens <- .prodGvar(lo, genofile, sam.gen, snps, fam.id)
 
 .prodGvar <- function(lo, genofile, sam.gen, snps, fam.id, snp.matrix){
-  g <- as.numeric(SNPRelate::snpgdsGetGeno(genofile, sample.id=sam.gen[[lo]]))
+  g <- as.numeric(SNPRelate::suppressMessages(snpgdsGetGeno(genofile, sample.id=sam.gen[[lo]])))
   A <- rep("A", length(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), start=c(1,lo), count=c(length(g),1))))
   B <- rep("B", length(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), start=c(1,lo), count=c(length(g),1))))
   CNVg <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), start=c(1,lo), count=c(length(g),1))
@@ -886,7 +886,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 .prodGvarLRR <- function(lo, genofile, sam.gen, snps, fam.id, snp.matrix){
   
   ## Transform LRR calclulations into genotypes
-  g <- as.numeric(SNPRelate::snpgdsGetGeno(genofile, sample.id=sam.gen[[lo]]))
+  g <- as.numeric(suppressMessages(SNPRelate::snpgdsGetGeno(genofile, sample.id=sam.gen[[lo]])))
   A <- rep("A", length(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), start=c(1,lo), count=c(length(g),1))))
   B <- rep("B", length(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), start=c(1,lo), count=c(length(g),1))))
   LRRg <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "LRR"), start=c(1,lo), count=c(length(g),1))
@@ -995,11 +995,11 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
 .runPLINK <- function(all.paths){
   
   if(rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac"){
-  plinkPath <- paste0("\'", all.paths[2], "/plink\'")}
+    plinkPath <- paste0("\'", all.paths[2], "/plink\'")}
   
   if(rappdirs:::get_os() == "win"){
-  plinkPath <- paste0(all.paths[2], "/plink")
-  plinkPath <- gsub("\\\\", "/", plinkPath)}
+    plinkPath <- paste0(all.paths[2], "/plink")
+    plinkPath <- gsub("\\\\", "/", plinkPath)}
   
   system(paste(plinkPath, "--gfile", file.path(all.paths[2], "mydata"), paste("--out", file.path(all.paths[2], "plink")), "--noweb"), wait=TRUE, intern = TRUE)
   
@@ -1132,7 +1132,7 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
         LimPrx <-  max(BiocGenerics::start(probes.cnv.gr[GenomeInfoDb::seqnames(probes.cnv.gr) == GenomeInfoDb::seqnames(prx)]))
       }
       seqLar <- GRanges(as.character(GenomeInfoDb::seqnames(prx)), IRanges::IRanges(BiocGenerics::start(prx), LimPrx))
-      seqPrbs <- subsetByOverlaps(probes.cnv.gr,seqLar)
+      seqPrbs <- suppressWarnings(subsetByOverlaps(probes.cnv.gr,seqLar))
       seqx <- GRanges(as.character(GenomeInfoDb::seqnames(prx)), IRanges::IRanges(BiocGenerics::start(prx), BiocGenerics::start(seqPrbs[length(seqPrbs)])))
       all.segs.grX[[st]] <- seqx
     }
@@ -1178,15 +1178,15 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   if(assign.probe == "min.pvalue"){
     for(se in 1:length(segs.pvalue.gr)){
       if(length(subsetByOverlaps(resultspGr, segs.pvalue.gr[se]))>0){
-        values.all[[se]] <- min(values(subsetByOverlaps(resultspGr, segs.pvalue.gr[se]))$VALUE)
-        Prbx <- subsetByOverlaps(resultspGr, segs.pvalue.gr[se])
-        names.all[[se]] <- as.character(Prbx[values(Prbx)$VALUE %in% min(values(subsetByOverlaps(resultspGr, segs.pvalue.gr[se]))$VALUE)]$NAME[[1]])
-        probe.sel <- subsetByOverlaps(resultspGr, segs.pvalue.gr[se])
+        values.all[[se]] <- min(values(suppressWarnings(subsetByOverlaps(resultspGr, segs.pvalue.gr[se])))$VALUE)
+        Prbx <- suppressWarnings(subsetByOverlaps(resultspGr, segs.pvalue.gr[se]))
+        names.all[[se]] <- as.character(Prbx[values(Prbx)$VALUE %in% min(values(suppressWarnings(subsetByOverlaps(resultspGr, segs.pvalue.gr[se])))$VALUE)]$NAME[[1]])
+        probe.sel <- suppressWarnings(subsetByOverlaps(resultspGr, segs.pvalue.gr[se]))
         probe.sel <- probe.sel[order(values(probe.sel)$VALUE)][1] 
-        probe.sel <- subsetByOverlaps(probes.cnv.gr, probe.sel)
+        probe.sel <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, probe.sel))
         freqs.all[[se]] <- as.character(values(probe.sel)$freq[1])}
       else{
-        probe.sel <- subsetByOverlaps(probes.cnv.gr, segs.pvalue.gr[se])[1]
+        probe.sel <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, segs.pvalue.gr[se]))[1]
         values.all[[se]] <- 1
         names.all[[se]] <- as.character(values(probe.sel)$Name)
         freqs.all[[se]] <- as.character(values(probe.sel)$freq[1])}
@@ -1194,9 +1194,9 @@ prodGdsCnv <- function(phen.info, freq.cn=0.01, snp.matrix=FALSE, n.cor=1, lo.ph
   }
   else if(assign.probe == "high.freq"){
     for(se in 1:length(segs.pvalue.gr)){
-      probe.sel <- subsetByOverlaps(probes.cnv.gr, segs.pvalue.gr[se])
+      probe.sel <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, segs.pvalue.gr[se]))
       probe.sel <- probe.sel[rev(order(values(probe.sel)$freq))][1] 
-      resultX <- subsetByOverlaps(resultspGr, probe.sel)[1] ## Take the first probe if the position is duplicated
+      resultX <- suppressWarnings(subsetByOverlaps(resultspGr, probe.sel))[1] ## Take the first probe if the position is duplicated
       values.all[[se]] <- values(resultX)$VALUE
       names.all[[se]] <- as.character(values(probe.sel)$Name)
       freqs.all[[se]] <- as.character(values(probe.sel)$freq[1])
@@ -1506,6 +1506,61 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, n.cor=1){
   SNPRelate::snpgdsClose(genofile)
   
 }
+
+
+#' HELPER - Function to apply during LRR/BAF import
+#' @param lo loop number, based on the number of SNPs per turn
+#' @param list.filesLo Data-frame with two columns where the (i) is the path + file name with signals and (ii) is the 
+#' correspondent name of the sample in the gds file
+#' @param genofile loaded gds file
+#' @param all.samples All samples in the gds file
+#' @param nLRR Connection to write LRR values
+#' @param nBAF Connection to write BAF values
+#' @param snps.included All SNP probe names to be included
+
+.freadImport <- function(lo, list.filesLo, genofile, all.samples, nLRR=NULL, nBAF=NULL, snps.included){
+  
+  message(paste0("sample ", lo, " of ", length(all.samples)))
+  
+  file.x <- c(as.character(list.filesLo[lo,1]), as.character(list.filesLo[lo,2]))
+  
+  ### Import the sample file with fread
+  sig.x <- data.table::fread(file.x[1], skip=1L, header=FALSE)
+  sig.x <- as.data.frame(sig.x)
+  colnames(sig.x) <- c("name", "chr", "position", "lrr", "baf")
+  
+  ### Order the signal file as in the gds
+  sig.x <- subset(sig.x, name %in% snps.included)
+  
+  ### Include missing SNPs
+  missing.snps <- snps.included[-which(snps.included %in% sig.x$name)]
+  if(length(missing.snps)>0){
+    missing.snps <- as.data.frame(missing.snps)
+    missing.snps <- cbind(missing.snps, "chr"= "NoN", "position"= "NoN", "lrr"=NA, "baf"=NA)
+    colnames(missing.snps)[1] <- "name"
+    sig.x <- rbind(sig.x, missing.snps)
+  }
+  
+  sig.x <- sig.x[order(match(sig.x[,1],snps.included)),]
+  
+  ### Extract the LRR
+  LRR.x  <- sig.x$lrr
+  
+  ### Extract the BAF
+  BAF.x <- sig.x$baf
+  
+  ### Find the number of the sample 
+  sam.num <- which(all.samples == file.x[2])
+  
+  if(!is.null(nLRR)){
+    ### Write LRR value for sample x
+    gdsfmt::write.gdsn(nLRR, LRR.x, start=c(1,sam.num), count=c(length(snps.included),1))
+  }
+  else if(!is.null(nBAF)){
+    ### Write BAF value for sample x
+    gdsfmt::write.gdsn(nBAF, BAF.x, start=c(1,sam.num), count=c(length(snps.included),1))}
+  
+} ## BUG - Parallel not working
 
 
 #' HELPER Create the pairwise genotypes for epistasis analysis - TODO

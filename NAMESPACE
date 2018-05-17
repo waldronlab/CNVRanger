@@ -20,5 +20,6 @@ export(
     setupCnvGWAS,
     cnvGWAS, 
     prodGdsCnv,
-    plotManhattan
+    plotManhattan,
+    importLRR_BAF
 )
