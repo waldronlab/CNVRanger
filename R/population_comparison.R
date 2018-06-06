@@ -5,60 +5,6 @@
 # Code: CNVEVOPACK001
 ###################
 
-#' HELPER - Function to apply during LRR/BAF import
-#' @param lo loop number, based on the number of SNPs per turn
-#' @param list.filesLo Data-frame with two columns where the (i) is the path + file name with signals and (ii) is the 
-#' correspondent name of the sample in the gds file
-#' @param genofile loaded gds file
-#' @param all.samples All samples in the gds file
-#' @param nLRR Connection to write LRR values
-#' @param nBAF Connection to write BAF values
-#' @param snps.included All SNP probe names to be included
-
-.freadImport <- function(lo, list.filesLo, genofile, all.samples, nLRR=NULL, nBAF=NULL, snps.included){
-  
-  message(paste0("sample ", lo, " of ", length(all.samples)))
-  
-  file.x <- c(as.character(list.filesLo[lo,1]), as.character(list.filesLo[lo,2]))
-  
-  ### Import the sample file with fread
-  sig.x <- data.table::fread(file.x[1], skip=1L, header=FALSE)
-  sig.x <- as.data.frame(sig.x)
-  colnames(sig.x) <- c("name", "chr", "position", "lrr", "baf")
-  
-  ### Order the signal file as in the gds
-  sig.x <- subset(sig.x, name %in% snps.included)
-  
-  ### Include missing SNPs
-  missing.snps <- snps.included[-which(snps.included %in% sig.x$name)]
-  if(length(missing.snps)>0){
-    missing.snps <- as.data.frame(missing.snps)
-    missing.snps <- cbind(missing.snps, "chr"= "NoN", "position"= "NoN", "lrr"=NA, "baf"=NA)
-    colnames(missing.snps)[1] <- "name"
-    sig.x <- rbind(sig.x, missing.snps)
-  }
-  
-  sig.x <- sig.x[order(match(sig.x[,1],snps.included)),]
-  
-  ### Extract the LRR
-  LRR.x  <- sig.x$lrr
-  
-  ### Extract the BAF
-  BAF.x <- sig.x$baf
-  
-  ### Find the number of the sample 
-  sam.num <- which(all.samples == file.x[2])
-  
-  if(!is.null(nLRR)){
-    ### Write LRR value for sample x
-    gdsfmt::write.gdsn(nLRR, LRR.x, start=c(1,sam.num), count=c(length(snps.included),1))
-  }
-  else if(!is.null(nBAF)){
-    ### Write BAF value for sample x
-    gdsfmt::write.gdsn(nBAF, BAF.x, start=c(1,sam.num), count=c(length(snps.included),1))}
-  
-} ## BUG - Parallel not working
-
 #' HELPER - Formula to infer Vst
 #' 
 #' 

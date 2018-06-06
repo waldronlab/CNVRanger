@@ -1,26 +1,18 @@
 ---
 title: "A comprehensive tool suite for CNV analysis"
 author:
-    - name: Vinicius Henrique da Silva
-      affiliation: a,b
-      #affiliation: Animal Breeding and Genetics, Swedish University of Agricultural Sciences
-      email: vinicius.dasilva@wur.nl
-    - name: Ludwig Geistlinger
-      affiliation: c
-      email: ludwig.geistlinger@sph.cuny.edu
-address:
-  - code: a
-  address: Animal Breeding and Genomics, Wageningen University & Animal Breeding and Genetics, Swedish University of Agricultural Sciences
-  - code: b
-  address: Animal Breeding and Genetics, Swedish University of Agricultural Sciences
-  - code: c
-  address: School of Public Health, City University of New York
+  - name: Vinicius Henrique da Silva
+    affiliation:
+    - Animal Breeding and Genomics, Wageningen University & Research, Wageningen, The Netherlands
+    - Animal Breeding and Genetics, Swedish University of Agricultural Sciences, Uppsala, Sweden
+    - Netherlands Institute of Ecology (NIOO-KNAW), Wageningen, The Netherlands
+    email: vinicius.dasilva@wur.nl
+  - name: Ludwig Geistlinger
+    affiliation: School of Public Health, City University of New York
+    email: ludwig.geistlinger@sph.cuny.edu
 package: cnvAnalyzeR
-abstract: > 
-    The _cnvAnalyzeR_ package implements a comprehensive tool suite for CNV 
-    analysis. This includes CNV calling from SNP-chip genotype and 
-    next-generation sequencing data, CNV architecture, CNV-expression 
-    association, CNV-phenotype association, and CNV evolution.
+abstract: >
+  The _cnvAnalyzeR_ package implements a comprehensive tool suite for CNV analysis. The package aims aims to perform a downstream analysis of CNVs which were identified by NGS and SNP-chip allele intensities and frequencies. Once the CNVs for each individual of a given population are available, the user will be able to infer CNV hot-spots and their frequencies, perform a genome-wide association, population differentiation and infer gene expression underlie by copy number variation.
 output:
   BiocStyle::html_document:
     toc: true
@@ -224,7 +216,8 @@ all.paths <- phen.info$all.paths
 After creating the working directories and importing the necessary files, the CNV-GWAS can be performed as follows:
 
 ```{r CNVGWAS}
-segs.pvalue.gr <- cnvGWAS(phen.info)
+segs.pvalue.gr <- cnvGWAS(phen.info, verbose=TRUE)
+segs.pvalue.gr
 ```
 
 If the dataset contains chromosome names which are not numeric, they may be changed to numeric within the input files 
@@ -293,6 +286,7 @@ It is important to note that the `cnvGWAS` function uses the `CNV.gds` file whic
 ```{r prodGDS}
 ## Create a GDS file in disk and export the SNP probe positions
 probes.cnv.gr <- prodGdsCnv(phen.info, chr.code.name=chr.code.name)
+probes.cnv.gr
 
 ## Run GWAS with existent GDS file
 segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, produce.gds=FALSE)
