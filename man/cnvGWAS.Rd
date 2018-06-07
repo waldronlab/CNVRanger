@@ -9,7 +9,7 @@ cnvGWAS(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01,
   chr.code.name = NULL, genotype.nodes = "CNVGenotype",
   coding.translate = "all", path.files = NULL, list.of.files = NULL,
   produce.gds = TRUE, run.lrr = FALSE, assign.probe = "min.pvalue",
-  select.population = NULL)
+  select.population = NULL, verbose = FALSE)
 }
 \arguments{
 \item{phen.info}{Returned by \code{\link{setupCnvGWAS}}}
@@ -47,6 +47,8 @@ correspondent name of the sample in the gds file. Only if \sQuote{lrr} == TRUE}
 \item{assign.probe}{\sQuote{min.pvalue} or \sQuote{high.freq} to represent the CNV segment}
 
 \item{select.population}{Select a subset of populations to be used in the GWAS. Use the population name or names}
+
+\item{verbose}{Show progress in the analysis}
 
 \item{lrr}{logical. Import LRR/BAF values from external files}
 }

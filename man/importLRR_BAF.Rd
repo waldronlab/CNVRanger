@@ -4,7 +4,8 @@
 \alias{importLRR_BAF}
 \title{Import LRR and BAF from text files used in the CNV analysis}
 \usage{
-importLRR_BAF(all.paths, path.files, list.of.files, n.cor = 1)
+importLRR_BAF(all.paths, path.files, list.of.files, n.cor = 1,
+  verbose = FALSE)
 }
 \arguments{
 \item{all.paths}{Object returned from \code{CreateFolderTree} function with the working folder tree}
@@ -15,7 +16,9 @@ for each sample). Columns should contain (i) probe name, (ii) Chromosome, (iii) 
 \item{list.of.files}{Data-frame with two columns where the (i) is the file name with signals and (ii) is the 
 correspondent name of the sample in the gds file}
 
-\item{n.cor}{Number of cores to be used. Only one core implemented in this version.}
+\item{n.cor}{Number of cores to be used. Only one core implemented in this version}
+
+\item{verbose}{Print the samples while importing}
 }
 \description{
 This function imports the LRR/BAF values and create a node for each one in the GDS file at the working folder 'Inputs'
