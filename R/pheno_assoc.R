@@ -1,4 +1,4 @@
-{##################
+##################
 # Author: Vinicius Henrique da Silva
 # Script description: Functions related to CNV-GWAS
 # Date: April 12, 2018
@@ -1572,8 +1572,3 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, n.cor=1, verbose
 } ## BUG - Parallel not working
 
 
-#' HELPER Create the pairwise genotypes for epistasis analysis - TODO
-#' 
-#' 
-#' 
-}
