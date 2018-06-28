@@ -130,7 +130,7 @@
             pheno.na <- cbind(as.data.frame(all.samples), fam = NA, sex = NA)
             colnames(pheno.na)[1] <- "sample.id"
             pheno.na$sample.id <- as.character(pheno.na$sample.id)
-            pheno.na <- pheno.na[-which(pheno.na$sample.id %in% all$sample.id), ]
+            pheno.na <- pheno.na[!(pheno.na$sample.id %in% all$sample.id), ]
             
             all <- plyr::rbind.fill(all, pheno.na)
             all[is.na(all)] <- -9
@@ -427,29 +427,29 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
     g[seq_along(g)] <- "1"
     
     # 0n
-    CNVsGr0n <- CNVsGr[which(values(CNVsGr)$sample == sampleX)]
-    CNVsGr0n <- CNVsGr0n[which(values(CNVsGr0n)$type == "state1,cn=0")]
+    CNVsGr0n <- CNVsGr[values(CNVsGr)$sample == sampleX]
+    CNVsGr0n <- CNVsGr0n[values(CNVsGr0n)$type == "state1,cn=0"]
     probes.cnv.gr.0n <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, CNVsGr0n))
     
     g[values(probes.cnv.gr.0n)$tag.snp] <- "0"
     
     # 1n
-    CNVsGr1n <- CNVsGr[which(values(CNVsGr)$sample == sampleX)]
-    CNVsGr1n <- CNVsGr1n[which(values(CNVsGr1n)$type == "state2,cn=1")]
+    CNVsGr1n <- CNVsGr[values(CNVsGr)$sample == sampleX]
+    CNVsGr1n <- CNVsGr1n[values(CNVsGr1n)$type == "state2,cn=1"]
     probes.cnv.gr.1n <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, CNVsGr1n))
     
     g[values(probes.cnv.gr.1n)$tag.snp] <- "0"
     
     # 3n
-    CNVsGr3n <- CNVsGr[which(values(CNVsGr)$sample == sampleX)]
-    CNVsGr3n <- CNVsGr3n[which(values(CNVsGr3n)$type == "state5,cn=3")]
+    CNVsGr3n <- CNVsGr[values(CNVsGr)$sample == sampleX]
+    CNVsGr3n <- CNVsGr3n[values(CNVsGr3n)$type == "state5,cn=3"]
     probes.cnv.gr.3n <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, CNVsGr3n))
     
     g[values(probes.cnv.gr.3n)$tag.snp] <- "2"
     
     # 4n
-    CNVsGr4n <- CNVsGr[which(values(CNVsGr)$sample == sampleX)]
-    CNVsGr4n <- CNVsGr4n[which(values(CNVsGr4n)$type == "state6,cn=4")]
+    CNVsGr4n <- CNVsGr[values(CNVsGr)$sample == sampleX]
+    CNVsGr4n <- CNVsGr4n[values(CNVsGr4n)$type == "state6,cn=4"]
     probes.cnv.gr.4n <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, CNVsGr4n))
     
     g[values(probes.cnv.gr.4n)$tag.snp] <- "2"
@@ -1357,18 +1357,13 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     run.lrr = FALSE, assign.probe = "min.pvalue", select.population = NULL, verbose = FALSE) {
     
     if (!is.null(select.population)) {
-        phen.info$samplesPhen <- phen.info$samplesPhen[which(phen.info$pops.names %in% 
-            select.population)]
-        phen.info$phenotypesdf <- phen.info$phenotypesdf[which(phen.info$pops.names %in% 
-            select.population), ]
-        phen.info$phenotypesSam <- phen.info$phenotypesSam[which(phen.info$pops.names %in% 
-            select.population), ]
-        phen.info$FamID <- phen.info$FamID[which(phen.info$pops.names %in% select.population), 
-            ]
-        phen.info$SexIds <- phen.info$SexIds[which(phen.info$pops.names %in% select.population), 
-            ]
-        phen.info$pops.names <- phen.info$pops.names[which(phen.info$pops.names %in% 
-            select.population), ]
+        ind <- phen.info$pops.names %in% select.population
+        phen.info$samplesPhen <- phen.info$samplesPhen[ind, ]
+        phen.info$phenotypesdf <- phen.info$phenotypesdf[ind, ]
+        phen.info$phenotypesSam <- phen.info$phenotypesSam[ind, ]
+        phen.info$FamID <- phen.info$FamID[ind, ]
+        phen.info$SexIds <- phen.info$SexIds[ind, ]
+        phen.info$pops.names <- phen.info$pops.names[ind, ]
     }
     
     phenotypesSam <- phen.info$phenotypesSam
@@ -1379,76 +1374,54 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     #################################### Produce the GDS for a given phenotype
     
     if (produce.gds) {
-        if (verbose) {
-            message("Produce the GDS for a given phenotype")
-        }
-        
+        if (verbose) message("Produce the GDS for a given phenotype")
         probes.cnv.gr <- prodGdsCnv(phen.info = phen.info, freq.cn = freq.cn, snp.matrix = snp.matrix, 
             n.cor = n.cor, lo.phe = lo.phe, chr.code.name = chr.code.name, genotype.nodes = genotype.nodes, 
             coding.translate = coding.translate)
-    } else if (!produce.gds) {
-        if (verbose) {
-            message("Using existent gds file")
-        }
-        probes.cnv.gr <- .prodProbes(phen.info, lo.phe, freq.cn)
     } else {
-        stop("TRUE/FALSE needed")
-    }
+        if (verbose) message("Using existent gds file")
+        probes.cnv.gr <- .prodProbes(phen.info, lo.phe, freq.cn)
+    } 
     
     ##################################### Produce PLINK map ##################
-    if (verbose) {
-        message("Produce PLINK map")
-    }
+    if (verbose) message("Produce PLINK map")
     .prodPLINKmap(all.paths)
     
     ########################################### END #######################################
     
     ##################################### Produce gvar to use as PLINK input #########
-    if (verbose) {
-        message("Produce gvar to use as PLINK input")
-    }
+    if (verbose) message("Produce gvar to use as PLINK input")
     .prodPLINKgvar(all.paths, n.cor, snp.matrix, run.lrr)
     
     ########################################### END #######################################
     
     ##################################### Produce fam (phenotype) to use as PLINK input #############
-    if (verbose) {
-        message("Produce fam (phenotype) to use as PLINK input")
-    }
-    
+    if (verbose) message("Produce fam (phenotype) to use as PLINK input")
     .prodPLINKfam(all.paths)
     
     ########################################### END #######################################
     
     ##################################### Run PLINK #############
-    if (verbose) {
-        message("Run PLINK")
-    }
+    if (verbose) message("Run PLINK")
     .runPLINK(all.paths)
     
     ########################################### END #######################################
     
     ##################################### Produce CNV segments #############
-    if (verbose) {
-        message("Produce CNV segments")
-    }
+    if (verbose) message("Produce CNV segments")
     all.segs.gr <- .prodCNVseg(all.paths, probes.cnv.gr, min.sim)
     
     ########################################### END #######################################
     
     ##################################### Associate SNPs with CNV segments #############
-    if (verbose) {
-        message("Associate SNPs with CNV segments")
-    }
+    if (verbose) message("Associate SNPs with CNV segments")
     segs.pvalue.gr <- .assoPrCNV(all.paths, all.segs.gr, phenotypesSamX, method.m.test, 
         probes.cnv.gr, assign.probe)
     
     ######################################################## END ###########################################
     
     #################################### Plot the QQ-plot of the analysis
-    if (verbose) {
-        message("Plot the QQ-plot of the analysis")
-    }
+    if (verbose) message("Plot the QQ-plot of the analysis")
     
     pdf(file.path(all.paths[3], paste0(unique(values(segs.pvalue.gr)$Phenotype), 
         "-LRR-", run.lrr, "QQ-PLOT.pdf")))
@@ -1467,7 +1440,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
         chr.code.name <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "Chr.names"))
         
         segs.pvalue <- data.frame(segs.pvalue.gr)
-        segs.pvalue <- segs.pvalue[, -which(names(segs.pvalue) %in% c("strand"))]
+        segs.pvalue <- segs.pvalue[, !(names(segs.pvalue) %in% c("strand"))]
         
         for (lopN in seq_len(nrow(chr.code.name))) {
             segs.pvalue$seqnames <- gsub(chr.code.name[lopN, 1], chr.code.name[lopN, 
@@ -1475,7 +1448,6 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
         }
         
         segs.pvalue.gr <- makeGRangesFromDataFrame(segs.pvalue, keep.extra.columns = TRUE)
-        
         SNPRelate::snpgdsClose(genofile)
     }
     
@@ -1494,26 +1466,25 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 
 .snpgdsGetGenoCNV <- function(genofile, snp.id, node.to.extract = "CNVgenotype") {
     
-    map <- as.data.frame(cbind(snp.id = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, 
-        "snp.id")), chr = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome")), 
-        position = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.position")), 
-        probes = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id"))))
+    map <- data.frame(
+            snp.id = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.id")), 
+            chr = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome")), 
+            position = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.position")), 
+            probes = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id")))
     
     all.samples <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id"))
-    snp.id <- as.numeric(as.character(snp.id))
+    snp.id <- as.numeric(snp.id)
     
     if (node.to.extract == "CNVgenotype") {
-        gens <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), 
-            start = c(snp.id, 1), count = c(1, length(all.samples))))
+        gens <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), 
+            start = c(snp.id, 1), count = c(1, length(all.samples)))
     } else if (node.to.extract == "CNVgenotypeSNPlike") {
-        gens <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotypeSNPlike"), 
-            start = c(snp.id, 1), count = c(1, length(all.samples))))
+        gens <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotypeSNPlike"), 
+            start = c(snp.id, 1), count = c(1, length(all.samples)))
     } else {
         stop("Undefined node to extract CNV genotype")
-    }
-    
+    } 
     return(gens)
-    
 }
 
 
@@ -1565,8 +1536,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, n.cor = 1, verbo
     ### Create file path for all text files
     file.paths <- file.path(path.files, list.of.files[, 1])
     gds.names <- list.of.files[, 2]
-    list.filesLo <- cbind(add = file.paths, gds = gds.names)
-    list.filesLo <- as.data.frame(list.filesLo)
+    list.filesLo <- data.frame(add = file.paths, gds = gds.names)
     
     snps.included <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id")))
     snps.included <- as.character(snps.included)
@@ -1576,7 +1546,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, n.cor = 1, verbo
     
     ## Check if all files
     list.filesLo.back <- list.filesLo
-    list.filesLo <- list.filesLo[which(list.filesLo$gds %in% all.samples), ]
+    list.filesLo <- list.filesLo[list.filesLo$gds %in% all.samples, ]
     if (nrow(list.filesLo) != nrow(list.filesLo.back)) {
         message("Warning: list.of.files has different length of the list of samples from gds")
     }
@@ -1648,7 +1618,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, n.cor = 1, verbo
     sig.x <- subset(sig.x, name %in% snps.included)
     
     ### Include missing SNPs
-    missing.snps <- snps.included[-which(snps.included %in% sig.x$name)]
+    missing.snps <- snps.included[!(snps.included %in% sig.x$name)]
     if (length(missing.snps) > 0) {
         missing.snps <- as.data.frame(missing.snps)
         missing.snps <- cbind(missing.snps, chr = "NoN", position = "NoN", lrr = NA, 
