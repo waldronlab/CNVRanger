@@ -199,12 +199,14 @@ Here, we analyze the genome-wide association (GWAS) of CNVs with quantitative ph
 using `PLINK` association analysis for copy number polymorphisms (http://zzz.bwh.harvard.edu/plink/gvar.shtml) and GDS files from `r Biocpkg("gdsfmt")` package. For demonstration we use CNV data of a wild population of songbirds [da Silva et al., 2018](https://doi.org/10.1371/journal.pone.0157711). The response variable is their breeding time which is represented as the genetic potential for laying date (i.e genomic estimated breeding values - GEBV). Here, the GEBV values are used as the response variable in the `PLINK` linear model to pinpoint the genomic regions where the change in copy number is associated with change in the genetic potential for breeding time. First, phenotypes, CNV calls and the probe map (if available) are imported and all the necessary information is stored in the `phen.info` R object:
 
 ```{r importPhen}
-folder.package <- system.file('extdata', package = 'cnvAnalyzeR')
-
-phen.info <- setupCnvGWAS(name="Example", phen.loc=file.path(folder.package, "Pheno.txt"), ## GEBV values
-cnv.out.loc = file.path(folder.package, "CNVOut.txt"), ## CNV calls            
-map.loc = file.path(folder.package, "MapPenn.txt")) ## Genomic positions of the SNPs used in the CNV call
-
+## GEBV values
+phen.loc <- file.path(data.dir, "Pheno.txt")
+## CNV calls
+cnv.out.loc <- file.path(data.dir, "CNVOut.txt")
+## Genomic positions of the SNPs used in the CNV call
+map.loc <-  file.path(data.dir, "MapPenn.txt")
+phen.info <- setupCnvGWAS(name="example", 
+    phen.loc=phen.loc, cnv.out.loc=cnv.out.loc, map.loc=map.loc)             
 ```
 
 The `phen.info` is a list which contains necessary information for the CNV-GWAS procedure itself. The last item of the list displays the working directory:
@@ -265,14 +267,14 @@ Alternatively, the user can use the relative signal intensity (log R ratio - LRR
 
 ```{r importLRR}
 # List files to import LRR/BAF 
-list.of.files <- list.files(path = folder.package, pattern = "\\.cnv.txt.adjusted$")
+list.of.files <- list.files(path = data.dir, pattern = "\\.cnv.txt.adjusted$")
 list.of.files <- as.data.frame(list.of.files)
 colnames(list.of.files)[1] <- "file.names"
 list.of.files$sample.names <- gsub(".cnv.txt.adjusted","", list.of.files$file.names)
 list.of.files$sample.names <- gsub("GT","", list.of.files$sample.names)
  
 # All missing samples will have LRR = '0' and BAF = '0.5' in all SNPs listed in the GDS file
-importLRR_BAF(all.paths, path.files=folder.package, list.of.files)
+importLRR_BAF(all.paths, path.files=data.dir, list.of.files)
 
 # Read the GDS to check if the LRR/BAF nodes were added
 (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=TRUE, readonly=FALSE)) ## read GDS
