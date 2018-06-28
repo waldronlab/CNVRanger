@@ -33,7 +33,7 @@
 #' HELPER - Download and test PLINK 1.07
 #' @param all.paths Object returned from \code{CreateFolderTree} function with the working folder tree
 #' @param version PLINK version. Only 1.07 implemented
-#' @return A message of success (TRUE) of fail (FALSE) in running PLINK
+#' @return boolean. Success (TRUE) or fail (FALSE) in running PLINK
 
 .getPLINK <- function(plink.path, version = "1.07") {
     
@@ -681,12 +681,12 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, n.cor = 1,
     values(probes.cnv.gr)$snp.id <- seq_along(probes.cnv.gr)
     
     ###################### SNP genotype matrix not available
-    if (snp.matrix == "FALSE") {
+    if (!snp.matrix) {
         CNVBiMa <- matrix(2, nrow = length(probes.cnv.gr), ncol = length(all.samples))
     }
     
     ###################### SNP genotype matrix available - TODO
-    if (snp.matrix == "TRUE") {
+    else{
         ...  ## CHECK IF WE HAVE THE SAME SAMPLES - INCLUDE NA FOR SAMPLES WITH ONLY ONE GENOTYPE TYPE? (i.e CNV or SNP)
     }
     
@@ -904,14 +904,14 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, n.cor = 1,
     CNVg[CNVg == -1] <- 0
     B[CNVg == 1] <- "A"
     
-    if (snp.matrix == "FALSE") {
+    if (!snp.matrix) {
         df <- as.data.frame(cbind(as.character(fam.id[[lo]]), sam.gen[[lo]], snps, 
             A, CNVg, B, Dose1))
         colnames(df) <- c("FID", "IID", "NAME", "ALLELE1", "DOSAGE1", "ALLELE2", 
             "DOSAGE2")
     }
     
-    if (snp.matrix == "TRUE") {
+    else {
         #### TODO - To implement
         ...
     }
@@ -940,14 +940,14 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, n.cor = 1,
     Dose1 <- rep(0, length(CNVg))
     
     
-    if (snp.matrix == "FALSE") {
+    if (!snp.matrix) {
         df <- as.data.frame(cbind(as.character(fam.id[[lo]]), sam.gen[[lo]], snps, 
             A, CNVg, B, Dose1))
         colnames(df) <- c("FID", "IID", "NAME", "ALLELE1", "DOSAGE1", "ALLELE2", 
             "DOSAGE2")
     }
     
-    if (snp.matrix == "TRUE") {
+    else {
         #### TODO - To implement
         ...
     }
@@ -982,7 +982,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, n.cor = 1,
     fam.id <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "FamID"))  ## Extract family
     
     ## Produce gvar file in parallel processing Identify the SO
-    if (run.lrr == TRUE) {
+    if (run.lrr) {
         if (rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac") {
             multicoreParam <- BiocParallel::MulticoreParam(workers = n.cor)
             Gens <- suppressMessages(BiocParallel::bplapply(1:length(sam.gen), .prodGvarLRR, 
@@ -1378,16 +1378,16 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     
     #################################### Produce the GDS for a given phenotype
     
-    if (produce.gds == TRUE) {
-        if (verbose == TRUE) {
+    if (produce.gds) {
+        if (verbose) {
             message("Produce the GDS for a given phenotype")
         }
         
         probes.cnv.gr <- prodGdsCnv(phen.info = phen.info, freq.cn = freq.cn, snp.matrix = snp.matrix, 
             n.cor = n.cor, lo.phe = lo.phe, chr.code.name = chr.code.name, genotype.nodes = genotype.nodes, 
             coding.translate = coding.translate)
-    } else if (produce.gds == FALSE) {
-        if (verbose == TRUE) {
+    } else if (!produce.gds) {
+        if (verbose) {
             message("Using existent gds file")
         }
         probes.cnv.gr <- .prodProbes(phen.info, lo.phe, freq.cn)
@@ -1396,7 +1396,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     }
     
     ##################################### Produce PLINK map ##################
-    if (verbose == TRUE) {
+    if (verbose) {
         message("Produce PLINK map")
     }
     .prodPLINKmap(all.paths)
@@ -1404,7 +1404,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     ########################################### END #######################################
     
     ##################################### Produce gvar to use as PLINK input #########
-    if (verbose == TRUE) {
+    if (verbose) {
         message("Produce gvar to use as PLINK input")
     }
     .prodPLINKgvar(all.paths, n.cor, snp.matrix, run.lrr)
@@ -1412,7 +1412,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     ########################################### END #######################################
     
     ##################################### Produce fam (phenotype) to use as PLINK input #############
-    if (verbose == TRUE) {
+    if (verbose) {
         message("Produce fam (phenotype) to use as PLINK input")
     }
     
@@ -1421,7 +1421,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     ########################################### END #######################################
     
     ##################################### Run PLINK #############
-    if (verbose == TRUE) {
+    if (verbose) {
         message("Run PLINK")
     }
     .runPLINK(all.paths)
@@ -1429,7 +1429,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     ########################################### END #######################################
     
     ##################################### Produce CNV segments #############
-    if (verbose == TRUE) {
+    if (verbose) {
         message("Produce CNV segments")
     }
     all.segs.gr <- .prodCNVseg(all.paths, probes.cnv.gr, min.sim)
@@ -1437,7 +1437,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     ########################################### END #######################################
     
     ##################################### Associate SNPs with CNV segments #############
-    if (verbose == TRUE) {
+    if (verbose) {
         message("Associate SNPs with CNV segments")
     }
     segs.pvalue.gr <- .assoPrCNV(all.paths, all.segs.gr, phenotypesSamX, method.m.test, 
@@ -1446,7 +1446,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     ######################################################## END ###########################################
     
     #################################### Plot the QQ-plot of the analysis
-    if (verbose == TRUE) {
+    if (verbose) {
         message("Plot the QQ-plot of the analysis")
     }
     
@@ -1594,7 +1594,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, n.cor = 1, verbo
     
     if (rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac") {
         multicoreParam <- BiocParallel::MulticoreParam(workers = n.cor)
-        if (verbose == TRUE) {
+        if (verbose) {
             message("Start the parallel import of LRR/BAF values")
         }
         BiocParallel::bplapply(1:nrow(list.filesLo), .freadImport, BPPARAM = multicoreParam, 
@@ -1604,7 +1604,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, n.cor = 1, verbo
     }
     
     if (rappdirs:::get_os() == "win") {
-        if (verbose == TRUE) {
+        if (verbose) {
             message("Start the parallel import of LRR/BAF values")
         }
         param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
@@ -1632,7 +1632,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, n.cor = 1, verbo
 .freadImport <- function(lo, list.filesLo, genofile, all.samples, nLRR = NULL, nBAF = NULL, 
     snps.included, verbose) {
     
-    if (verbose == TRUE) {
+    if (verbose) {
         message(paste0("sample ", lo, " of ", length(all.samples)))
     }
     
