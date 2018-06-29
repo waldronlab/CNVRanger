@@ -21,9 +21,12 @@ Imports:
     edgeR, 
     rappdirs,
     qqman  
-Suggests: 
+Suggests:
+    AnnotationHub,
+    BSgenome.Btaurus.UCSC.bosTau6.masked, 
     BiocStyle,
     knitr,
+    regioneR,
     rmarkdown 
 Description: CNV calling from SNP-chip genotype and next-generation 
     sequencing data, CNV architecture, CNV-expression association, 

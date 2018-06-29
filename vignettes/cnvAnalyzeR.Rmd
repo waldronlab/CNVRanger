@@ -25,6 +25,9 @@ vignette: >
 ```{r setup, echo=FALSE}
 suppressPackageStartupMessages({ 
     library(cnvAnalyzeR)
+    library(AnnotationHub)
+    library(regioneR)
+    library(BSgenome.Btaurus.UCSC.bosTau6.masked)
 })
 ```
 
@@ -188,6 +191,39 @@ A `GISTIC`-like procedure for detecting recurrent CNVs is also in preparation.
 
 Here, we compare the CNV overlap with distinct features in the genome using the `r Biocpkg("regioneR")` package.
 
+Check for available _Bos taurus_ annotation from Ensembl: 
+```{r getBtGenes}
+library(AnnotationHub)
+ah <- AnnotationHub()
+ahDb <- query(ah, pattern = c("Bos taurus", "EnsDb"))
+ahDb
+```
+
+Get genomic coordinates of genes for UMD3.1 assembly (Ensembl 92):
+```{r getBtGenes2}
+ahEdb <- ahDb[["AH60948"]]
+bt.genes <- genes(ahEdb)
+bt.genes
+```
+
+Select only genes on chromosome 1 and 2 for demonstration:
+```{r formatBtGenes}
+sel.genes <- bt.genes[seqnames(bt.genes) %in% c("1","2")]
+sel.genes <- sel.genes[sel.genes$gene_biotype == "protein_coding"]
+seqlevels(sel.genes) <- paste0("chr", seqlevels(sel.genes))
+sel.genes
+```
+
+Perform overlap permutation test:
+```{r ovlpTest}
+library(regioneR)
+library(BSgenome.Btaurus.UCSC.bosTau6.masked)
+sel.cnvrs <- cnvrs[seqnames(cnvrs) %in% c("chr1", "chr2")]
+res <- overlapPermTest(A=sel.cnvrs, B=sel.genes, ntimes=100, 
+    genome="bosTau6", mask=NA, per.chromosome=TRUE, count.once=TRUE)
+res
+```
+
 # CNV-expression association analysis
 
 Here, we analyze differences in expression between CN states based on the
@@ -293,6 +329,5 @@ probes.cnv.gr
 ## Run GWAS with existent GDS file
 segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, produce.gds=FALSE)
 ```
-
 
 
