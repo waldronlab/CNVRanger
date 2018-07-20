@@ -12,7 +12,7 @@ author:
     email: ludwig.geistlinger@sph.cuny.edu
 package: cnvAnalyzeR
 abstract: >
-  The _cnvAnalyzeR_ package implements a comprehensive tool suite for CNV analysis. The package aims aims to perform a downstream analysis of CNVs which were identified by NGS and SNP-chip allele intensities and frequencies. Once the CNVs for each individual of a given population are available, the user will be able to infer CNV hot-spots and their frequencies, perform a genome-wide association, population differentiation and infer gene expression underlie by copy number variation.
+  The _cnvAnalyzeR_ package implements a comprehensive tool suite for CNV analysis. The package aims aims to perform a downstream analysis of CNVs which were identified by NGS and SNP-chip allele intensities and frequencies. Once the CNVs for each individual of a given population are available, the user will be able to infer CNV hot-spots and their frequencies, perform a genome-wide association and infer gene expression underlie by copy number variation.
 output:
   BiocStyle::html_document:
     toc: true
@@ -40,10 +40,6 @@ Some papers that we want to cite:
 - Genome-wide detection of CNVs and their association with meat tenderness in 
     Nelore cattle
     [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)
-
-- Distribution and functionality of copy number variation across European cattle
-    populations
-    [Upadhyay et al., 2017](https://doi.org/10.3389/fgene.2017.00108)
 
 - Widespread modulation of gene expression by copy number variation in skeletal 
     muscle
