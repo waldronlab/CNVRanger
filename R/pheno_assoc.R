@@ -1,13 +1,13 @@
 ################## Author: Vinicius Henrique da Silva Script description: Functions related to
-################## CNV-GWAS Date: April 12, 2018 Code: CNVASSOPACK002
+################## CNV-GWAS Date: July 20, 2018 Code: CNVASSOPACK002
 
-#' HELPER - Create the folder tree to keep necessary files during and after the analysis 
-#' @param name String with a project code or name (e.g. "Project1")
-#' @param folder Choose manually the project folder (i.e. path as the root folder). If NULL, a standard program folder
-#' will be chosen. 
-#' @return List with paths placed to store the files produced by subsequent analysis 
-#' @examples 
-#' all.paths <- createFolderTree('Project_name')
+# HELPER - Create the folder tree to keep necessary files during and after the analysis 
+# @param name String with a project code or name (e.g. "Project1")
+# @param folder Choose manually the project folder (i.e. path as the root folder). If NULL, a standard program folder
+# will be chosen. 
+# @return List with paths placed to store the files produced by subsequent analysis 
+# @examples 
+# all.paths <- createFolderTree('Project_name')
 
 .createFolderTree <- function(name, folder = NULL) {
   
@@ -31,10 +31,10 @@
   return(all.paths)
 }
 
-#' HELPER - Download and test PLINK 1.07
-#' @param all.paths Object returned from \code{CreateFolderTree} function with the working folder tree
-#' @param version PLINK version. Only 1.07 implemented
-#' @return boolean. Success (TRUE) or fail (FALSE) in running PLINK
+# HELPER - Download and test PLINK 1.07
+# @param all.paths Object returned from \code{CreateFolderTree} function with the working folder tree
+# @param version PLINK version. Only 1.07 implemented
+# @return boolean. Success (TRUE) or fail (FALSE) in running PLINK
 
 .getPLINK <- function(plink.path, version = "1.07") {
   
@@ -68,16 +68,16 @@
   return(res)
 }
 
-#' HELPER - Load phenotypes for each of the samples to be analyzed
-#'
-#' @param file.nam Name of the file to be imported
-#' @param pheno.path First item of the list returned by \code{CreateFolderTree} function
-#' @param pops.names Indicate the name of the populations. Only used if more than one population exists
-#' @return List \sQuote{phen.info} with \sQuote{samplesPhen}, \sQuote{phenotypes}, \sQuote{phenotypesdf}, 
-#' \sQuote{phenotypesSam}, \sQuote{FamID} and \sQuote{SexIds} and \sQuote{pops.names} (if more than one population)
-#' @examples
-#' phen.info <- loadPhen('/home/.../Phen.txt')
-#' sapply(phen.info, class)
+# HELPER - Load phenotypes for each of the samples to be analyzed
+#
+# @param file.nam Name of the file to be imported
+# @param pheno.path First item of the list returned by \code{CreateFolderTree} function
+# @param pops.names Indicate the name of the populations. Only used if more than one population exists
+# @return List \sQuote{phen.info} with \sQuote{samplesPhen}, \sQuote{phenotypes}, \sQuote{phenotypesdf}, 
+# \sQuote{phenotypesSam}, \sQuote{FamID} and \sQuote{SexIds} and \sQuote{pops.names} (if more than one population)
+# @examples
+# phen.info <- loadPhen('/home/.../Phen.txt')
+# sapply(phen.info, class)
 
 .loadPhen <- function(file.nam, pheno.path, pops.names = NULL) {
   
@@ -165,8 +165,10 @@
   phenotypesdf <- as.data.frame(phenotypesdf)
   phenotypesSam <- data.table::rbindlist(phenotypesSam.all)
   phenotypesSam <- as.data.frame(phenotypesSam)
-  phenotypesSam[, colnames(phenotypesSam) == phenotypes] <- suppressWarnings(as.numeric(as.character(phenotypesSam[, 
-                                                                                                                   colnames(phenotypesSam) == phenotypes])))
+  phenotypesSam[, colnames(phenotypesSam) == 
+                  phenotypes] <- suppressWarnings(as.numeric
+                  (as.character(phenotypesSam[, 
+                 colnames(phenotypesSam) == phenotypes])))
   phenotypesSam[is.na(phenotypesSam)] <- -9
   FamID <- data.table::rbindlist(FamID.all)
   FamID <- as.data.frame(FamID)
@@ -191,12 +193,12 @@
   return(phen.info)
 }
 
-#' HELPER - Check and convert CNV input
-#' @param cnvs Data-frame with the CNVs to be analyzed. From (i) PennCNV, (ii) SNP-chip general format 
-#' or (iii) sequencing general format
-#' 
+# HELPER - Check and convert CNV input
+# @param cnvs Data-frame with the CNVs to be analyzed. From (i) PennCNV, (ii) SNP-chip general format 
+# or (iii) sequencing general format
+# 
 
-.checkConvertCNVs <- function(cnvs) {
+.checkConvertCNVs <- function(cnvs){
   
   ## If PennCNV file
   if (unique(sub("^([[:alpha:]]*).*", "\\1", cnvs$V2))[[1]] == "numsnp") {
@@ -239,9 +241,69 @@
   } else if (all(as.character(as.matrix(cnvs[1, ])) == c("chr", "start", "end", "sample.id", 
                                                          "state"))) {
     cnvs <- as.data.frame(cnvs)
+    
+    ### Include artificial probe tags in the 
+    #"num.snps", "start.probe", "end.probe"
+    
+    cnvs.seq <- cnvs
+    the.names <- as.character(as.matrix(cnvs.seq[1, ]))
+    cnvs.seq <- cnvs.seq[-1, ]
+    colnames(cnvs.seq) <- the.names
+    cnv.seq.gr <- makeGRangesFromDataFrame(cnvs.seq)
+    chr.seq <- as.character(seqnames(cnv.seq.gr))
+    start.seq <- start(cnv.seq.gr)
+    start.seq <- as.data.frame(cbind("chr"=chr.seq, "position"=start.seq), 
+                             stringsAsFactors=FALSE)
+    end.seq <-  end(cnv.seq.gr)
+    end.seq <- as.data.frame(cbind("chr"=chr.seq, "position"=end.seq), 
+                             stringsAsFactors=FALSE)
+    dif <- end(cnv.seq.gr)-start(cnv.seq.gr)
+    middle.seq <- end(cnv.seq.gr)-dif
+    middle.seq <- as.data.frame(cbind("chr"=chr.seq, "position"=middle.seq),  
+                             stringsAsFactors=FALSE)
+    arti.pr <- rbind(start.seq, end.seq, middle.seq) # Bind all artifical probes
+    arti.pr <- makeGRangesFromDataFrame(arti.pr, seqnames.field = "chr", 
+                                        start.field="position", end.field = "position")
+    arti.pr <- reduce(arti.pr) ## Exclude duplicated positions
+    arti.pr <- sortSeqlevels(arti.pr)
+    arti.pr <- sort(arti.pr)
+    
+    probe.like.map <- as.data.frame(arti.pr)
+    probe.like.map$Name <- paste0("probe.like_", seq(from = 1, to = nrow(probe.like.map)))
+    probe.like.map <- subset(probe.like.map, select = c(Name, seqnames, start))
+    colnames(probe.like.map) <- c("Name", "Chr", "Position")
+    probe.like.map$Chr <- gsub("chr", "", probe.like.map$Chr)
+    write.table(probe.like.map, file.path(all.paths[1], "/MapPenn.txt"), col.names = TRUE, 
+                row.names = FALSE, quote = FALSE, sep = "\t")
+    
+    ## Associate artificial probes to CNVs
+    
+    
+    
+    
     ## Convert to PennCNV
     
-    ## TODO
+    the.names <- as.character(as.matrix(cnvs[1, ]))
+    cnvs <- cnvs[-1, ]
+    colnames(cnvs) <- the.names
+    cnvs <- as.data.frame(cnvs)
+    cnvs$start <- as.numeric(cnvs$start)
+    cnvs$end <- as.numeric(cnvs$end)
+    ## Convert to PennCNV format
+    cnvs$V1 <- paste0(cnvs$chr, ":", cnvs$start, "-", cnvs$end)
+    cnvs$length <- (cnvs$end - cnvs$start) + 1
+    cnvs$length <- paste0("length=", cnvs$length)
+    
+    cnvs$num.snps <- paste0("numsnp=", cnvs$length)
+    
+    cnvs$start.probe <- paste0("startSNP=", cnvs$start.probe)
+    cnvs$end.probe <- paste0("endSNP=", cnvs$end.probe)
+    
+    cnvs <- subset(cnvs, select = c(chr, start, end, V1, num.snps, length, state, 
+                                    sample.id, start.probe, end.probe))
+    colnames(cnvs) <- c("chr", "start", "end", "V1", "V2", "V3", "V4", "V5", 
+                        "V6", "V7")
+    CNVs <- cnvs
     
     
   } else stop("Unexpected CNV input format - is it tab delimited?")
@@ -249,9 +311,9 @@
   return(CNVs)
 }
 
-#' HELPER - Load multiple CNV inputs
-#' @param cnv.file.all CNV file name
-#' @param cnv.path CNV path name
+# HELPER - Load multiple CNV inputs
+# @param cnv.file.all CNV file name
+# @param cnv.path CNV path name
 
 .loadToMergeCNV <- function(cnv.file.all, cnv.path) {
   ## Load and merge CNV files from multiple populations
@@ -349,22 +411,23 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
     ## Import the probe map from external folder
     cnvs <- read.table(file.path(all.paths[1], "CNVOut.txt"), sep = "", header = F)  ### CNV table 
     CNVs <- .checkConvertCNVs(cnvs)
+    
     CGr <- makeGRangesFromDataFrame(CNVs)
-    startP <- cbind(CNVs$chr, start(CGr))
-    endP <- cbind(CNVs$chr, end(CGr))
-    middleP <- cbind(CNVs$chr, end(CGr) - (width(CGr)/2))
-    probe.like.map <- rbind(startP, endP, middleP)
-    probe.like.map <- as.data.frame(probe.like.map)
-    plGr <- makeGRangesFromDataFrame(probe.like.map, start.field = "V2", end.field = "V2", 
-                                     seqnames.field = "V1")
-    plGr <- BiocGenerics::unique(plGr)
-    probe.like.map <- as.data.frame(plGr)
-    probe.like.map$Name <- paste0("probe.like_", seq(from = 1, to = nrow(probe.like.map)))
-    probe.like.map <- subset(probe.like.map, select = c(Name, seqnames, start))
-    colnames(probe.like.map) <- c("Name", "Chr", "Position")
-    probe.like.map$Chr <- gsub("chr", "", probe.like.map$Chr)
-    write.table(probe.like.map, file.path(all.paths[1], "/MapPenn.txt"), col.names = TRUE, 
-                row.names = FALSE, quote = FALSE, sep = "\t")
+    #startP <- cbind(CNVs$chr, start(CGr))
+    #endP <- cbind(CNVs$chr, end(CGr))
+    #middleP <- cbind(CNVs$chr, end(CGr) - (width(CGr)/2))
+    #probe.like.map <- rbind(startP, endP, middleP)
+    #probe.like.map <- as.data.frame(probe.like.map)
+    #plGr <- makeGRangesFromDataFrame(probe.like.map, start.field = "V2", end.field = "V2", 
+    #                                 seqnames.field = "V1")
+    #plGr <- BiocGenerics::unique(plGr)
+    #probe.like.map <- as.data.frame(plGr)
+    #probe.like.map$Name <- paste0("probe.like_", seq(from = 1, to = nrow(probe.like.map)))
+    #probe.like.map <- subset(probe.like.map, select = c(Name, seqnames, start))
+    #colnames(probe.like.map) <- c("Name", "Chr", "Position")
+    #probe.like.map$Chr <- gsub("chr", "", probe.like.map$Chr)
+    #write.table(probe.like.map, file.path(all.paths[1], "/MapPenn.txt"), col.names = TRUE, 
+    #            row.names = FALSE, quote = FALSE, sep = "\t")
     
   } else {
     if (length(map.loc) > 1) 
@@ -384,11 +447,12 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
   all.paths[2] <- dirname(plink.bin)
   
   phen.info$all.paths <- all.paths
+  phen.info$phenotypesSam$samplesPhen <- as.character(phen.info$phenotypesSam$samplesPhen)
   return(phen.info)
 }
 
-#' HELPER - Write CNV-genotype in a dosage-like fashion
-#' 
+# HELPER - Write CNV-genotype in a dosage-like fashion
+# 
 
 .writeProbesCNV <- function(lo, all.samples, genofile, CNVsGr, probes.cnv.gr, n) {
   sampleX <- all.samples[[lo]]
@@ -407,11 +471,11 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
   gdsfmt::write.gdsn(n, g, start = c(1, lo), count = c(length(g), 1))
 }
 
-#' HELPER - Write CNV-genotype in a SNP-like fashion
-#' @param lo loop number
-#' @param genofile loaded gds file
-#' @param n is the object from \code{gdsfmt::add.gdsn}
-#' @param ranges.gr is the CNVs of each sample
+# HELPER - Write CNV-genotype in a SNP-like fashion
+# @param lo loop number
+# @param genofile loaded gds file
+# @param n is the object from \code{gdsfmt::add.gdsn}
+# @param ranges.gr is the CNVs of each sample
 
 .replaceSNPtoCNV <- function(lo, all.samples, genofile, CNVsGr, probes.cnv.gr, n) {
   sampleX <- all.samples[[lo]]
@@ -456,13 +520,13 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
   
 }
 
-#' HELPER - Write CNV-genotype in SNP-like fashion in biallelic loci 
-#' @param lo loop number, based on the number of SNPs per turn
-#' @param genofile loaded gds file
-#' @param n is the object from \code{gdsfmt::add.gdsn}
-#' @param chunk Intervals of SNP to import and convert
-#' @param coding.translate For 'CNVgenotypeSNPlike'. If NULL or unrecognized string use only biallelic CNVs. 
-#' If 'all' code multiallelic CNVs as 0 for loss; 1 for 2n and 2 for gain.  
+# HELPER - Write CNV-genotype in SNP-like fashion in biallelic loci 
+# @param lo loop number, based on the number of SNPs per turn
+# @param genofile loaded gds file
+# @param n is the object from \code{gdsfmt::add.gdsn}
+# @param chunk Intervals of SNP to import and convert
+# @param coding.translate For 'CNVgenotypeSNPlike'. If NULL or unrecognized string use only biallelic CNVs. 
+# If 'all' code multiallelic CNVs as 0 for loss; 1 for 2n and 2 for gain.  
 
 .recodeCNVgenotype <- function(lo, genofile, all.samples, n, chunk, coding.translate) {
   
@@ -542,8 +606,8 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
   }
 }
 
-#' HELPER Wait x seconds
-#' # from https://stat.ethz.ch/R-manual/R-devel/library/base/html/Sys.sleep.html
+# HELPER Wait x seconds
+# # from https://stat.ethz.ch/R-manual/R-devel/library/base/html/Sys.sleep.html
 
 testit <- function(x) {
   p1 <- proc.time()
@@ -784,9 +848,9 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   return(probes.cnv.gr)
   }
 
-#' HELPER - Produce the probes.cnv.gr
-#' 
-#' 
+# HELPER - Produce the probes.cnv.gr
+# 
+# 
 
 .prodProbes <- function(phen.info, lo.phe = 1, freq.cn = 0.01) {
   
@@ -855,9 +919,9 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   }
 
 
-#' HELPER - Internal function of parallel implementation to produce the .gvar file (absolute copy number) requested for the CNV-GWAS in PLINK
-#' @examples
-#' Gens <- .prodGvar(lo, genofile, sam.gen, snps, fam.id)
+# HELPER - Internal function of parallel implementation to produce the .gvar file (absolute copy number) requested for the CNV-GWAS in PLINK
+# @examples
+# Gens <- .prodGvar(lo, genofile, sam.gen, snps, fam.id)
 
 .prodGvar <- function(lo, genofile, sam.gen, snps, fam.id, snp.matrix) {
   g <- as.numeric(SNPRelate::snpgdsGetGeno(genofile, sample.id = sam.gen[[lo]], 
@@ -888,9 +952,9 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
 }
 
 
-#' HELPER - Internal function of parallel implementation to produce the .gvar file (LRR) requested for the CNV-GWAS in PLINK
-#' @examples
-#' Gens <- .prodGvarLRR(lo, genofile, sam.gen, snps, fam.id)
+# HELPER - Internal function of parallel implementation to produce the .gvar file (LRR) requested for the CNV-GWAS in PLINK
+# @examples
+# Gens <- .prodGvarLRR(lo, genofile, sam.gen, snps, fam.id)
 
 .prodGvarLRR <- function(lo, genofile, sam.gen, snps, fam.id, snp.matrix) {
   
@@ -922,9 +986,8 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   return(df)
 }
 
-
-#' HELPER - Produce PLINK probe map in disk
-#' 
+# HELPER - Produce PLINK probe map in disk
+# 
 
 .prodPLINKmap <- function(all.paths) {
   (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork = TRUE))
@@ -939,8 +1002,8 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   SNPRelate::snpgdsClose(genofile)
 }
 
-#' HELPER - Produce the PLINK .gvar file in disk
-#' 
+# HELPER - Produce the PLINK .gvar file in disk
+# 
 
 .prodPLINKgvar <- function(all.paths, n.cor, snp.matrix, run.lrr = FALSE) {
   
@@ -992,8 +1055,8 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
 }
 
 
-#' HELPER - Produce the PLINK fam file in disk
-#' 
+# HELPER - Produce the PLINK fam file in disk
+# 
 
 .prodPLINKfam <- function(all.paths) {
   
@@ -1014,8 +1077,8 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   SNPRelate::snpgdsClose(genofile)
 }
 
-#' HELPER - Run PLINK
-#' 
+# HELPER - Run PLINK
+# 
 
 .runPLINK <- function(all.paths) {
   
@@ -1024,9 +1087,9 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   mydata <- paste0("\'", mydata, "\'")
   plink <- file.path(all.paths[2], "plink")
   plink <- paste0("\'", plink, "\'")
-  args <- c("--gfile", mydata, "--out", plink, "--noweb")    
+  args <- c("--gfile", mydata, "--out", plink, "--noweb", "--allow-no-sex")    
   
-  system2(plink.path, args=args)
+  system2(plink.path, args=args, minimized=TRUE)
   
   cnv.gds <- file.path(all.paths[1], "CNV.gds")
   genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
@@ -1038,10 +1101,10 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   SNPRelate::snpgdsClose(genofile)
 }
 
-#' HELPER - Produce CNV segments
-#' 
+# HELPER - Produce CNV segments
+# 
 
-.prodCNVseg <- function(all.paths, probes.cnv.gr, min.sim) {
+.prodCNVseg <- function(all.paths, probes.cnv.gr, min.sim, both.up.down) {
   
   (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork = TRUE, 
                                      readonly = FALSE))  ## read GDS
@@ -1055,7 +1118,57 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   chrx$V1 <- factor(chrx$V1, levels = unique(chrx$V1))
   chrx.split <- split(chrx, chrx$V1)
   
-  ### Find similarity between subsequent probes
+  ### Find similarity between subsequent probes Upstream
+  #g1 <- apply(g1,2,rev)
+  #g2 <- apply(g2,2,rev)
+  SimiLar.all <- NULL
+  for (lo in seq_along(chrx.split)) {
+    snpindex <- as.numeric(as.character(chrx.split[[lo]]$V2))
+    
+    g1x <- g1[snpindex, ]
+    g1x <- apply(g1x,2,rev)
+    
+    if (length(snpindex) == 1) {
+      SimiLar.all[[lo]] <- "UNIQUE"
+      next
+    }
+    
+    if (length(snpindex) == 2) {
+      g1x <- rbind(g1x, rep(2, ncol(g1x)))  # If only two SNPs input a 2n row
+    }
+    
+    g1xM <- g1x[-(nrow(g1x)), ]
+    
+    
+    g1CN <- apply(g1xM, 1, function(x) sum(table(x)[names(table(x)) != 2]))
+    g1x <- as.data.frame(t(sapply(1:nrow(g1x), function(i) replace(g1x[i, ], 
+                                                                   g1x[i, ] == 2, paste0(i, "R")))))
+    
+    g2x <- g2[snpindex, ]
+    g2x <- apply(g2x,2,rev)
+    
+    if (length(snpindex) == 2) {
+      g2x <- rbind(g2x, rep(2, ncol(g2x)))  # If only two SNPs input a 2n row
+    }
+    
+    g2x <- as.data.frame(t(sapply(1:nrow(g2x), function(i) replace(g2x[i, ], 
+                                                                   g2x[i, ] == 2, paste0(i, "R")))))
+    g1x <- g1x[-(nrow(g1x)), ]
+    g2x <- g2x[-1, ]
+    ftma <- g1x == g2x
+    SimiLar <- apply(ftma, 1, function(x) as.numeric(table(x)["TRUE"]))
+    SimiLar[is.na(SimiLar)] <- 0
+    
+    simX <- as.numeric(SimiLar)/g1CN
+    if (length(snpindex) == 2) {
+      simX <- simX[-2]
+    }
+    
+    SimiLar.all[[lo]] <- simX  ### CNV genotype similarity between subsequent SNPs
+  }
+  SimiLar.all.Up <- SimiLar.all
+  
+  ### Find similarity between subsequent probes Downstream
   SimiLar.all <- NULL
   for (lo in seq_along(chrx.split)) {
     snpindex <- as.numeric(as.character(chrx.split[[lo]]$V2))
@@ -1099,7 +1212,15 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
     
     SimiLar.all[[lo]] <- simX  ### CNV genotype similarity between subsequent SNPs
   }
+  SimiLar.all.Down <- SimiLar.all
   
+  if(both.up.down){
+  for(lo in seq_along(SimiLar.all)){
+    SimiLar.all[[lo]] <- pmin(SimiLar.all.Up[[lo]], SimiLar.all.Down[[lo]])
+  }
+}
+
+  ### Produce segments
   all.segs <- NULL
   for (ch in seq_along(SimiLar.all)) {
     SimiLarX <- SimiLar.all[[ch]]
@@ -1184,8 +1305,8 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
 }
 
 
-#' HELPER - Associate probes with CNV segments and draw p-values
-#' 
+# HELPER - Associate probes with CNV segments and draw p-values
+# 
 
 .assoPrCNV <- function(all.paths, all.segs.gr, phenotypesSamX, method.m.test, probes.cnv.gr, 
                        assign.probe = "min.pvalue", correct.inflation) {
@@ -1207,11 +1328,13 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   #### p-values
   resultsp <- resultsp[grep("P\\(CNP\\)", resultsp$FIELD), ]
   resultsp$VALUE <- as.numeric(as.character(resultsp$VALUE))
+  resultsp$VALUE <- round(resultsp$VALUE, digits=5)
   
   #### Correct for genomic inflation
+  all.samples <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id"))
   if(correct.inflation){
     chisq.n <- qchisq(resultsp$VALUE,1,lower.tail = FALSE)   #### Calculating chi-square distribution based on original P-values
-    lambda <- GenABEL::estlambda(resultsp$VALUE)$estimate ### Estimating genomic inflation factor
+    lambda <- GenABEL::estlambda(resultsp$VALUE, filter=FALSE)$estimate ### Estimating genomic inflation factor
     chisq_corr=chisq.n/lambda   ###correcting the qui-square distribution with lambda
     resultsp$VALUE= pchisq(chisq_corr,1,lower.tail = FALSE) ####re-calculating corrected P values
   }
@@ -1251,6 +1374,29 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
     for (se in seq_along(segs.pvalue.gr)) {
       probe.sel <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, segs.pvalue.gr[se]))
       probe.sel <- probe.sel[rev(order(values(probe.sel)$freq))][1]
+      resultX <- suppressWarnings(subsetByOverlaps(resultspGr, probe.sel))[1]  ## Take the first probe if the position is duplicated
+      values.all[[se]] <- values(resultX)$VALUE
+      names.all[[se]] <- as.character(values(probe.sel)$Name)
+      freqs.all[[se]] <- as.character(values(probe.sel)$freq[1])
+    }
+  }
+  
+  if (assign.probe == "median") {
+    for (se in seq_along(segs.pvalue.gr)) {
+      probe.sel <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, segs.pvalue.gr[se]))
+      #probe.sel <- probe.sel[rev(order(values(probe.sel)$freq))][1]
+      probe.sel <- probe.sel[which.min(abs(values(probe.sel)$freq - median(values(probe.sel)$freq)))[1]]
+      resultX <- suppressWarnings(subsetByOverlaps(resultspGr, probe.sel))[1]  ## Take the first probe if the position is duplicated
+      values.all[[se]] <- values(resultX)$VALUE
+      names.all[[se]] <- as.character(values(probe.sel)$Name)
+      freqs.all[[se]] <- as.character(values(probe.sel)$freq[1])
+    }
+  }
+  
+  if (assign.probe == "mean") {
+    for (se in seq_along(segs.pvalue.gr)) {
+      probe.sel <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, segs.pvalue.gr[se]))
+      probe.sel <- probe.sel[which.min(abs(values(probe.sel)$freq - mean(values(probe.sel)$freq)))[1]]
       resultX <- suppressWarnings(subsetByOverlaps(resultspGr, probe.sel))[1]  ## Take the first probe if the position is duplicated
       values.all[[se]] <- values(resultX)$VALUE
       names.all[[se]] <- as.character(values(probe.sel)$Name)
@@ -1305,6 +1451,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
 #' @param select.population Select a subset of populations to be used in the GWAS. Use the population name or names
 #' @param correct.inflation logical. Estimate lambda from raw p-values and correct for genomic inflation.
 #' Used with \code{\link{method.m.test}} can be generate strict p-values. 
+#' @param both.up.down Check for CNV genotype similarity in both directions. Default is FALSE (i.e. only downstream)
 #' @param verbose Show progress in the analysis
 #' @return The CNV segments and the representative probes and their respective p-value
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
@@ -1335,16 +1482,20 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
                     method.m.test = "fdr", lo.phe = 1, chr.code.name = NULL, genotype.nodes = "CNVGenotype", 
                     coding.translate = "all", path.files = NULL, list.of.files = NULL, produce.gds = TRUE, 
                     run.lrr = FALSE, assign.probe = "min.pvalue", select.population = NULL, 
-                    correct.inflation=TRUE, verbose = FALSE) {
+                    correct.inflation=TRUE, both.up.down=FALSE, verbose = FALSE) {
   
   if (!is.null(select.population)) {
+    if(produce.gds){
     ind <- phen.info$pops.names %in% select.population
-    phen.info$samplesPhen <- phen.info$samplesPhen[ind, ]
+    phen.info$samplesPhen <- phen.info$samplesPhen[ind]
     phen.info$phenotypesdf <- phen.info$phenotypesdf[ind, ]
     phen.info$phenotypesSam <- phen.info$phenotypesSam[ind, ]
     phen.info$FamID <- phen.info$FamID[ind, ]
     phen.info$SexIds <- phen.info$SexIds[ind, ]
-    phen.info$pops.names <- phen.info$pops.names[ind, ]
+    phen.info$pops.names <- phen.info$pops.names[ind]}
+    else{
+    stop("Select population/s is only implemented with produce.gds = TRUE")  
+    }
   }
   
   phenotypesSam <- phen.info$phenotypesSam
@@ -1384,13 +1535,13 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
   
   ##################################### Run PLINK #############
   if (verbose) message("Run PLINK")
-  .runPLINK(all.paths)
+  suppressMessages(.runPLINK(all.paths))
   
   ########################################### END #######################################
   
   ##################################### Produce CNV segments #############
   if (verbose) message("Produce CNV segments")
-  all.segs.gr <- .prodCNVseg(all.paths, probes.cnv.gr, min.sim)
+  all.segs.gr <- .prodCNVseg(all.paths, probes.cnv.gr, min.sim, both.up.down)
   
   ########################################### END #######################################
   
@@ -1572,16 +1723,16 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose = FALSE)
 }
 
 
-#' HELPER - Function to apply during LRR/BAF import
-#' @param lo loop number, based on the number of SNPs per turn
-#' @param list.filesLo Data-frame with two columns where the (i) is the path + file name with signals and (ii) is the 
-#' correspondent name of the sample in the gds file
-#' @param genofile loaded gds file
-#' @param all.samples All samples in the gds file
-#' @param nLRR Connection to write LRR values
-#' @param nBAF Connection to write BAF values
-#' @param snps.included All SNP probe names to be included
-#' @param verbose Print the samples while importing
+# HELPER - Function to apply during LRR/BAF import
+# @param lo loop number, based on the number of SNPs per turn
+# @param list.filesLo Data-frame with two columns where the (i) is the path + file name with signals and (ii) is the 
+# correspondent name of the sample in the gds file
+# @param genofile loaded gds file
+# @param all.samples All samples in the gds file
+# @param nLRR Connection to write LRR values
+# @param nBAF Connection to write BAF values
+# @param snps.included All SNP probe names to be included
+# @param verbose Print the samples while importing
 
 .freadImport <- function(lo, list.filesLo, genofile, all.samples, nLRR = NULL, nBAF = NULL, 
                          snps.included, verbose) {
