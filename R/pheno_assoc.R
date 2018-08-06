@@ -1082,14 +1082,20 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
 
 .runPLINK <- function(all.paths) {
   
+  if(rappdirs:::get_os() == "win" | rappdirs:::get_os() == "unix"){
+    plinkPath <- paste0(all.paths[2], "/plink")
+    plinkPath <- gsub("\\\\", "/", plinkPath)
+    system(paste(plinkPath, "--gfile", file.path(all.paths[2], "mydata"), 
+                 paste("--out", file.path(all.paths[2], "plink")), "--noweb"), wait=TRUE, intern = TRUE)}
+  
+  if(rappdirs:::get_os() == "mac"){
   plink.path <- file.path(all.paths[2], "plink")
   mydata <- file.path(all.paths[2], "mydata")
   mydata <- paste0("\'", mydata, "\'")
   plink <- file.path(all.paths[2], "plink")
   plink <- paste0("\'", plink, "\'")
   args <- c("--gfile", mydata, "--out", plink, "--noweb", "--allow-no-sex")    
-  
-  system2(plink.path, args=args, minimized=TRUE)
+  system2(plink.path, args=args, minimized=TRUE)}
   
   cnv.gds <- file.path(all.paths[1], "CNV.gds")
   genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
@@ -1125,13 +1131,13 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   for (lo in seq_along(chrx.split)) {
     snpindex <- as.numeric(as.character(chrx.split[[lo]]$V2))
     
-    g1x <- g1[snpindex, ]
-    g1x <- apply(g1x,2,rev)
-    
     if (length(snpindex) == 1) {
       SimiLar.all[[lo]] <- "UNIQUE"
       next
     }
+    
+    g1x <- g1[snpindex, ]
+    g1x <- apply(g1x,2,rev)
     
     if (length(snpindex) == 2) {
       g1x <- rbind(g1x, rep(2, ncol(g1x)))  # If only two SNPs input a 2n row
@@ -1173,12 +1179,12 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   for (lo in seq_along(chrx.split)) {
     snpindex <- as.numeric(as.character(chrx.split[[lo]]$V2))
     
-    g1x <- g1[snpindex, ]
-    
     if (length(snpindex) == 1) {
       SimiLar.all[[lo]] <- "UNIQUE"
       next
     }
+    
+    g1x <- g1[snpindex, ]
     
     if (length(snpindex) == 2) {
       g1x <- rbind(g1x, rep(2, ncol(g1x)))  # If only two SNPs input a 2n row

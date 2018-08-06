@@ -9,7 +9,8 @@ cnvGWAS(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01,
   chr.code.name = NULL, genotype.nodes = "CNVGenotype",
   coding.translate = "all", path.files = NULL, list.of.files = NULL,
   produce.gds = TRUE, run.lrr = FALSE, assign.probe = "min.pvalue",
-  select.population = NULL, verbose = FALSE)
+  select.population = NULL, correct.inflation = TRUE,
+  both.up.down = FALSE, verbose = FALSE)
 }
 \arguments{
 \item{phen.info}{Returned by \code{\link{setupCnvGWAS}}}
@@ -48,6 +49,11 @@ correspondent name of the sample in the gds file. Only if \sQuote{lrr} == TRUE}
 
 \item{select.population}{Select a subset of populations to be used in the GWAS. Use the population name or names}
 
+\item{correct.inflation}{logical. Estimate lambda from raw p-values and correct for genomic inflation.
+Used with \code{\link{method.m.test}} can be generate strict p-values.}
+
+\item{both.up.down}{Check for CNV genotype similarity in both directions. Default is FALSE (i.e. only downstream)}
+
 \item{verbose}{Show progress in the analysis}
 
 \item{lrr}{logical. Import LRR/BAF values from external files}
@@ -69,16 +75,16 @@ CNV-GWAS analysis using linear model implemented in PLINK (http://zzz.bwh.harvar
 
 folder.package <- system.file('extdata', package = 'cnvAnalyzeR')
 
-phen.info <- setupCnvGWAS(name="Example", phen.loc=file.path(folder.package, "Pheno.txt"), 
-cnv.out.loc = file.path(folder.package, "CNVOut.txt"), 
-map.loc = file.path(folder.package, "MapPenn.txt"))
+phen.info <- setupCnvGWAS(name='Example', phen.loc=file.path(folder.package, 'Pheno.txt'), 
+cnv.out.loc = file.path(folder.package, 'CNVOut.txt'), 
+map.loc = file.path(folder.package, 'MapPenn.txt'))
 
 # Define chr correspondence to numeric, if necessary
-df <- "16 1A
+df <- '16 1A
 25 4A
 29 25LG1
 30 25LG2
-31 LGE22"
+31 LGE22'
 
 chr.code.name <- read.table(text=df, header=F)
 

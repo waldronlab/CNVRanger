@@ -8,15 +8,16 @@ setupCnvGWAS(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = NULL,
   pops.names = NULL)
 }
 \arguments{
-\item{name}{String with a project code or name}
+\item{name}{String with a project code or name (e.g. "Project1")}
 
-\item{phen.loc}{Path/paths to the tab separated text file cointaining phenotype and sample info. Using more than one population, if a given population
-don't have phenotypes include the string "INEXISTENT" instead.}
+\item{phen.loc}{Path/paths to the tab separated text file cointaining phenotype and sample info. When using more than one population, 
+for populations without phenotypes include the string 'INEXISTENT' instead the path for a file.}
 
 \item{cnv.out.loc}{Path/paths to the CNV analysis output (i.e. PennCNV output, SNP-chip general format or sequencing general format)}
 
 \item{map.loc}{Path to the probe map (e.g. used in PennCNV analysis). Column names containing probe name, 
-chromosome and coordinate must be named as: Name, Chr and Position. Tab delimited.}
+chromosome and coordinate must be named as: Name, Chr and Position. Tab delimited. If NULL, artificial probes
+will be generated based on the CNV breakpoints.}
 
 \item{folder}{Choose manually the project folder (i.e. path as the root folder). Otherwise, user-specific data dir
 will be used automatically.}
@@ -37,21 +38,10 @@ locations in disk.
 folder.package <- system.file('extdata', package = 'cnvAnalyzeR')
 
 ## One population
-phen.info <- setupCnvGWAS(name="Example", phen.loc=file.path(folder.package, "Pheno.txt"), 
-cnv.out.loc <- file.path(folder.package, "CNVOut.txt"), 
-map.loc <- file.path(folder.package, "MapPenn.txt"))
+phen.info <- setupCnvGWAS(name='Example', phen.loc=file.path(folder.package, 'Pheno.txt'), 
+cnv.out.loc <- file.path(folder.package, 'CNVOut.txt'), 
+map.loc <- file.path(folder.package, 'MapPenn.txt'))
 
-## Multiple populations
-phen.loc <- c(".../PhenoPop1.txt", ".../PhenoPop2.txt")
-map.loc <- ".../Map.txt"
-cnv.out.loc <- c(".../CNVOutputPop1.txt", ".../CNVOutputPop2.txt")
-phen.info <- setupCnvGWAS(name, phen.loc, cnv.out.loc, map.loc)
-
-## Multiple populations where one is lacking phenotypes - always phenotyped populations first
-phen.loc <- c(".../PhenoPop1.txt", "INEXISTENT")
-map.loc <- ".../Map.txt"
-cnv.out.loc <- c(".../CNVOutputPop1.txt", ".../CNVOutputPop2.txt")
-phen.info <- setupCnvGWAS(name, phen.loc, cnv.out.loc, map.loc)
 
 }
 \author{

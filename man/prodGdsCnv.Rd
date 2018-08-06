@@ -4,35 +4,37 @@
 \alias{prodGdsCnv}
 \title{Produce CNV-GDS for the phenotyped samples}
 \usage{
-prodGdsCnv(phen.info, freq.cn = 0.01, snp.matrix = FALSE, n.cor = 1,
-  lo.phe = 1, chr.code.name = NULL, genotype.nodes = "CNVGenotype",
+prodGdsCnv(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1,
+  chr.code.name = NULL, genotype.nodes = "CNVGenotype",
   coding.translate = NULL, path.files = NULL, list.of.files = NULL)
 }
 \arguments{
-\item{phen.info}{Returned by \code{setupCnvAna}}
+\item{phen.info}{Returned by \code{setupCnvGWAS}}
 
 \item{freq.cn}{Minimum frequency. Default is 0.01 (i.e. 1\%)}
 
-\item{snp.matrix}{Only FALSE implemented - If TRUE B allele frequencies (BAF) would be used to reconstruct CNV-SNP genotypes}
-
-\item{n.cor}{Number of cores to be used}
+\item{snp.matrix}{Only FALSE implemented. If TRUE, B allele frequencies (BAF) and SNP genotypes 
+would be used to reconstruct CNV-SNP genotypes - under development}
 
 \item{lo.phe}{The phenotype to be analyzed in the PhenInfo$phenotypesSam data-frame}
 
-\item{chr.code.name}{A data-frame with the integer name in the first column and the original name for each chromosome}
+\item{chr.code.name}{A data-frame with the integer name in the first column and the original name in the second
+for each chromosome previously converted to numeric}
 
-\item{genotype.nodes}{Expression data type. Nodes with CNV genotypes to be produced in the gds file. 
-Use 'CNVGenotype' for dosage-like genotypes (i.e. from 0 to Inf). Use 'CNVgenotypeSNPlike' alonside for SNP-like 
-CNV genotype in a separated node (i.e.  '0, 1, 2, 3, 4' as '0/0, 0/1, 1/1, 1/2, 2/2').}
+\item{genotype.nodes}{Nodes with CNV genotypes to be produced in the gds file. Use 'CNVGenotype' for dosage-like 
+genotypes (i.e. from 0 to Inf). Use 'CNVgenotypeSNPlike' alonside for SNP-like CNV genotype in a separated 
+node (i.e.  '0, 1, 2, 3, 4' as '0/0, 0/1, 1/1, 1/2, 2/2').}
 
-\item{coding.translate}{For 'CNVgenotypeSNPlike'. If NULL or unrecognized string use only biallelic CNVs. If 'all' code multiallelic CNVs as 0 
-for loss; 1 for 2n and 2 for gain.}
+\item{coding.translate}{For 'CNVgenotypeSNPlike'. If NULL or unrecognized string use only biallelic CNVs. If 'all' code 
+multiallelic CNVs as 0 for loss; 1 for 2n and 2 for gain.}
 
 \item{path.files}{Folder containing the input CNV files used for the CNV calling (i.e. one text file with 5 collumns 
-for each sample). Columns should contain (i) probe name, (ii) Chromosome, (iii) Position, (iv) LRR and (v) BAF. Only if lrr = TRUE}
+for each sample). Columns should contain (i) probe name, (ii) Chromosome, (iii) Position, (iv) LRR and (v) BAF. 
+Only if lrr = TRUE}
 
 \item{list.of.files}{Data-frame with two columns where the (i) is the file name with signals and (ii) is the 
-correspondent name of the sample in the gds file. Only if lrr = TRUE}
+correspondent name of the sample in the gds file. 
+Only if lrr = TRUE}
 
 \item{lrr}{logical. Import LRR/BAF values from external files}
 }
@@ -42,7 +44,8 @@ probes.cnv.gr object with information about all probes to be used in the downstr
 \description{
 Function to produce the GDS file in a probe-wise fashion for CNV genotypes. The GDS file which is produced
 also incorporates one phenotype to be analyzed. If several phenotypes are enclosed in the \sQuote{phen.info}
-object, the user may specify the phenotype to be analyzed with the \sQuote{lo.phe} parameter.
+object, the user may specify the phenotype to be analyzed with the \sQuote{lo.phe} parameter. Only diploid
+chromosomes should be included.
 }
 \examples{
 
@@ -50,18 +53,18 @@ object, the user may specify the phenotype to be analyzed with the \sQuote{lo.ph
 
 folder.package <- system.file('extdata', package = 'cnvAnalyzeR')
 
-phen.info <- setupCnvGWAS(name="Example", phen.loc=file.path(folder.package, "Pheno.txt"), 
-cnv.out.loc <- file.path(folder.package, "CNVOut.txt"), 
-map.loc <- file.path(folder.package, "MapPenn.txt"))
+phen.info <- setupCnvGWAS(name='Example', phen.loc=file.path(folder.package, 'Pheno.txt'), 
+cnv.out.loc <- file.path(folder.package, 'CNVOut.txt'), 
+map.loc <- file.path(folder.package, 'MapPenn.txt'))
 
 # Construct the data-frame with integer and original chromosome names 
  
 # Define chr correspondence to numeric, if necessary
-df <- "16 1A
+df <- '16 1A
 25 4A
 29 25LG1
 30 25LG2
-31 LGE22"
+31 LGE22'
 
 chr.code.name <- read.table(text=df, header=F)
 

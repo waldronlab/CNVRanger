@@ -4,8 +4,7 @@
 \alias{importLRR_BAF}
 \title{Import LRR and BAF from text files used in the CNV analysis}
 \usage{
-importLRR_BAF(all.paths, path.files, list.of.files, n.cor = 1,
-  verbose = FALSE)
+importLRR_BAF(all.paths, path.files, list.of.files, verbose = FALSE)
 }
 \arguments{
 \item{all.paths}{Object returned from \code{CreateFolderTree} function with the working folder tree}
@@ -15,8 +14,6 @@ for each sample). Columns should contain (i) probe name, (ii) Chromosome, (iii) 
 
 \item{list.of.files}{Data-frame with two columns where the (i) is the file name with signals and (ii) is the 
 correspondent name of the sample in the gds file}
-
-\item{n.cor}{Number of cores to be used. Only one core implemented in this version}
 
 \item{verbose}{Print the samples while importing}
 }
@@ -31,24 +28,24 @@ an alternative to copy number dosage
 
 folder.package <- system.file('extdata', package = 'cnvAnalyzeR')
 
-phen.info <- setupCnvGWAS(name="Example", phen.loc=file.path(folder.package, "Pheno.txt"), 
-cnv.out.loc = file.path(folder.package, "CNVOut.txt"), 
-map.loc = file.path(folder.package, "MapPenn.txt"))
+phen.info <- setupCnvGWAS(name='Example', phen.loc=file.path(folder.package, 'Pheno.txt'), 
+cnv.out.loc = file.path(folder.package, 'CNVOut.txt'), 
+map.loc = file.path(folder.package, 'MapPenn.txt'))
 
 # Extract path names
 all.paths <- phen.info$all.paths
 
 # List files to import LRR/BAF 
-list.of.files <- list.files(path = folder.package, pattern = "\\\\.cnv.txt.adjusted$")
+list.of.files <- list.files(path = folder.package, pattern = '\\\\.cnv.txt.adjusted$')
 list.of.files <- as.data.frame(list.of.files)
-colnames(list.of.files)[1] <- "file.names"
-list.of.files$sample.names <- gsub(".cnv.txt.adjusted","", list.of.files$file.names)
+colnames(list.of.files)[1] <- 'file.names'
+list.of.files$sample.names <- gsub('.cnv.txt.adjusted','', list.of.files$file.names)
 
 # All missing samples will have LRR = '0' and BAF = '0.5' in all SNPs listed in the GDS file
 importLRR_BAF(all.paths, folder.package, list.of.files)
 
 # Read the GDS to check if the LRR/BAF nodes were added
-(genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=TRUE, readonly=FALSE)) ## read GDS
+(genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], 'CNV.gds'), allow.fork=TRUE, readonly=FALSE)) ## read GDS
 
 }
 \author{

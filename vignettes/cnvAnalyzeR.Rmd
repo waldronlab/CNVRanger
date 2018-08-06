@@ -291,7 +291,7 @@ chr.size.order <- cbind(as.data.frame(order.chrs, stringsAsFactors = FALSE),as.d
 colnames(chr.size.order) <- c("chr", "sizes")
 
 ## Plot a pdf file with a manhatthan within the 'Results' workfolder
-plotManhattan(all.paths, segs.pvalue.gr, "p-value", chr.size.order)
+plotManhattan(all.paths, segs.pvalue.gr, chr.size.order)
 
 ```
 
