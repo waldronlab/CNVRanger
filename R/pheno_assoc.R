@@ -1475,22 +1475,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
                     method.m.test = "fdr", lo.phe = 1, chr.code.name = NULL, genotype.nodes = "CNVGenotype", 
                     coding.translate = "all", path.files = NULL, list.of.files = NULL, produce.gds = TRUE, 
                     run.lrr = FALSE, assign.probe = "min.pvalue", 
-                    #select.population = NULL, 
                     correct.inflation=FALSE, both.up.down=FALSE, verbose = FALSE) {
-  
-  #if (!is.null(select.population)) {
-  #  if(produce.gds){
-  #  ind <- phen.info$pops.names %in% select.population
-  #  phen.info$samplesPhen <- phen.info$samplesPhen[ind]
-  #  phen.info$phenotypesdf <- phen.info$phenotypesdf[ind, ]
-  #  phen.info$phenotypesSam <- phen.info$phenotypesSam[ind, ]
-  #  phen.info$FamID <- phen.info$FamID[ind, ]
-  #  phen.info$SexIds <- phen.info$SexIds[ind, ]
-  #  phen.info$pops.names <- phen.info$pops.names[ind]}
-  #  else{
-  #  stop("Select population/s is only implemented with produce.gds = TRUE")  
-  #  }
-  #}
   
   phenotypesSam <- phen.info$phenotypesSam
   phenotypesSamX <- phenotypesSam[, c(1, (lo.phe + 1))]
