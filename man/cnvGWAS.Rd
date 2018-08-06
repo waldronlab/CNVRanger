@@ -9,8 +9,7 @@ cnvGWAS(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01,
   chr.code.name = NULL, genotype.nodes = "CNVGenotype",
   coding.translate = "all", path.files = NULL, list.of.files = NULL,
   produce.gds = TRUE, run.lrr = FALSE, assign.probe = "min.pvalue",
-  select.population = NULL, correct.inflation = TRUE,
-  both.up.down = FALSE, verbose = FALSE)
+  correct.inflation = FALSE, both.up.down = FALSE, verbose = FALSE)
 }
 \arguments{
 \item{phen.info}{Returned by \code{\link{setupCnvGWAS}}}
@@ -35,19 +34,11 @@ other methods.}
 \item{coding.translate}{For 'CNVgenotypeSNPlike'. If NULL or unrecognized string use only biallelic CNVs. If 'all' code multiallelic CNVs as 0 
 for loss; 1 for 2n and 2 for gain.}
 
-\item{path.files}{Folder containing the input CNV files used for the CNV calling (i.e. one text file with 5 collumns 
-for each sample). Columns should contain (i) probe name, (ii) Chromosome, (iii) Position, (iv) LRR and (v) BAF. Only if \sQuote{lrr} == TRUE}
-
-\item{list.of.files}{Data-frame with two columns where the (i) is the file name with signals and (ii) is the 
-correspondent name of the sample in the gds file. Only if \sQuote{lrr} == TRUE}
-
 \item{produce.gds}{logical. If TRUE produce a new gds, if FALSE use gds previously created}
 
 \item{run.lrr}{If TRUE use LRR values instead absolute copy numbers in the association}
 
 \item{assign.probe}{\sQuote{min.pvalue} or \sQuote{high.freq} to represent the CNV segment}
-
-\item{select.population}{Select a subset of populations to be used in the GWAS. Use the population name or names}
 
 \item{correct.inflation}{logical. Estimate lambda from raw p-values and correct for genomic inflation.
 Used with \code{\link{method.m.test}} can be generate strict p-values.}
@@ -55,8 +46,6 @@ Used with \code{\link{method.m.test}} can be generate strict p-values.}
 \item{both.up.down}{Check for CNV genotype similarity in both directions. Default is FALSE (i.e. only downstream)}
 
 \item{verbose}{Show progress in the analysis}
-
-\item{lrr}{logical. Import LRR/BAF values from external files}
 }
 \value{
 The CNV segments and the representative probes and their respective p-value
