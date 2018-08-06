@@ -634,14 +634,7 @@ testit <- function(x) {
 #' node (i.e.  '0, 1, 2, 3, 4' as '0/0, 0/1, 1/1, 1/2, 2/2').
 #' @param coding.translate For 'CNVgenotypeSNPlike'. If NULL or unrecognized string use only biallelic CNVs. If 'all' code 
 #' multiallelic CNVs as 0 for loss; 1 for 2n and 2 for gain. 
-#' @param lrr logical. Import LRR/BAF values from external files
-#' @param path.files Folder containing the input CNV files used for the CNV calling (i.e. one text file with 5 collumns 
-#' for each sample). Columns should contain (i) probe name, (ii) Chromosome, (iii) Position, (iv) LRR and (v) BAF. 
-#' Only if lrr = TRUE
-#' @param list.of.files Data-frame with two columns where the (i) is the file name with signals and (ii) is the 
-#' correspondent name of the sample in the gds file. 
-#' Only if lrr = TRUE
-#' @return probes.cnv.gr object with information about all probes to be used in the downstream CNV-GWAS
+#' @return probes.cnv.gr Object with information about all probes to be used in the downstream CNV-GWAS. Only numeric chromosomes
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @examples
 #' 
@@ -671,7 +664,7 @@ testit <- function(x) {
 
 prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
                        lo.phe = 1, chr.code.name = NULL, genotype.nodes = "CNVGenotype", 
-                       coding.translate = NULL, path.files = NULL, list.of.files = NULL) {
+                       coding.translate = NULL) {
   
   phenotypesSam <- phen.info$phenotypesSam
   samplesPhen <- phen.info$samplesPhen
@@ -1446,15 +1439,9 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
 #' @param genotype.nodes Expression data type. Nodes with CNV genotypes to be produced in the gds file. 
 #' @param coding.translate For 'CNVgenotypeSNPlike'. If NULL or unrecognized string use only biallelic CNVs. If 'all' code multiallelic CNVs as 0 
 #' for loss; 1 for 2n and 2 for gain.
-#' @param lrr logical. Import LRR/BAF values from external files
-#' @param path.files Folder containing the input CNV files used for the CNV calling (i.e. one text file with 5 collumns 
-#' for each sample). Columns should contain (i) probe name, (ii) Chromosome, (iii) Position, (iv) LRR and (v) BAF. Only if \sQuote{lrr} == TRUE
-#' @param list.of.files Data-frame with two columns where the (i) is the file name with signals and (ii) is the 
-#' correspondent name of the sample in the gds file. Only if \sQuote{lrr} == TRUE
 #' @param produce.gds logical. If TRUE produce a new gds, if FALSE use gds previously created   
 #' @param run.lrr If TRUE use LRR values instead absolute copy numbers in the association
 #' @param assign.probe \sQuote{min.pvalue} or \sQuote{high.freq} to represent the CNV segment
-#' @param select.population Select a subset of populations to be used in the GWAS. Use the population name or names
 #' @param correct.inflation logical. Estimate lambda from raw p-values and correct for genomic inflation.
 #' Used with \code{\link{method.m.test}} can be generate strict p-values. 
 #' @param both.up.down Check for CNV genotype similarity in both directions. Default is FALSE (i.e. only downstream)
@@ -1487,22 +1474,23 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
 cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.matrix = FALSE, 
                     method.m.test = "fdr", lo.phe = 1, chr.code.name = NULL, genotype.nodes = "CNVGenotype", 
                     coding.translate = "all", path.files = NULL, list.of.files = NULL, produce.gds = TRUE, 
-                    run.lrr = FALSE, assign.probe = "min.pvalue", select.population = NULL, 
-                    correct.inflation=TRUE, both.up.down=FALSE, verbose = FALSE) {
+                    run.lrr = FALSE, assign.probe = "min.pvalue", 
+                    #select.population = NULL, 
+                    correct.inflation=FALSE, both.up.down=FALSE, verbose = FALSE) {
   
-  if (!is.null(select.population)) {
-    if(produce.gds){
-    ind <- phen.info$pops.names %in% select.population
-    phen.info$samplesPhen <- phen.info$samplesPhen[ind]
-    phen.info$phenotypesdf <- phen.info$phenotypesdf[ind, ]
-    phen.info$phenotypesSam <- phen.info$phenotypesSam[ind, ]
-    phen.info$FamID <- phen.info$FamID[ind, ]
-    phen.info$SexIds <- phen.info$SexIds[ind, ]
-    phen.info$pops.names <- phen.info$pops.names[ind]}
-    else{
-    stop("Select population/s is only implemented with produce.gds = TRUE")  
-    }
-  }
+  #if (!is.null(select.population)) {
+  #  if(produce.gds){
+  #  ind <- phen.info$pops.names %in% select.population
+  #  phen.info$samplesPhen <- phen.info$samplesPhen[ind]
+  #  phen.info$phenotypesdf <- phen.info$phenotypesdf[ind, ]
+  #  phen.info$phenotypesSam <- phen.info$phenotypesSam[ind, ]
+  #  phen.info$FamID <- phen.info$FamID[ind, ]
+  #  phen.info$SexIds <- phen.info$SexIds[ind, ]
+  #  phen.info$pops.names <- phen.info$pops.names[ind]}
+  #  else{
+  #  stop("Select population/s is only implemented with produce.gds = TRUE")  
+  #  }
+  #}
   
   phenotypesSam <- phen.info$phenotypesSam
   phenotypesSamX <- phenotypesSam[, c(1, (lo.phe + 1))]
