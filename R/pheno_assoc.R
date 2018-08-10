@@ -73,14 +73,16 @@
 # @param file.nam Name of the file to be imported
 # @param pheno.path First item of the list returned by \code{CreateFolderTree} function
 # @param pops.names Indicate the name of the populations. Only used if more than one population exists
+# @param n.cor Number of cores
 # @return List \sQuote{phen.info} with \sQuote{samplesPhen}, \sQuote{phenotypes}, \sQuote{phenotypesdf}, 
 # \sQuote{phenotypesSam}, \sQuote{FamID} and \sQuote{SexIds} and \sQuote{pops.names} (if more than one population)
 # @examples
 # phen.info <- loadPhen('/home/.../Phen.txt')
 # sapply(phen.info, class)
 
-.loadPhen <- function(file.nam, pheno.path, pops.names = NULL) {
+.loadPhen <- function(file.nam, all.paths, pops.names = NULL, n.cor=1) {
   
+  pheno.path <- all.paths[1]
   samplesPhen.all <- NULL
   phenotypes.all <- NULL
   phenotypesdf.all <- NULL
@@ -95,7 +97,7 @@
       cnv.file <- paste0("CNVOutPop", npop, ".txt")
       
       cnvs <- read.table(file.path(pheno.path, cnv.file), sep = "", header = F)  ### - adapt to multiple populations 
-      CNVs <- .checkConvertCNVs(cnvs)
+      CNVs <- .checkConvertCNVs(cnvs, all.paths, n.cor)
       all.samples <- as.character(CNVs$V5)
       all.samples <- unique(all.samples)
       samplesPhen <- all.samples
@@ -124,7 +126,7 @@
       cnv.file <- paste0("CNVOutPop", npop, ".txt")
       
       cnvs <- read.table(file.path(pheno.path, cnv.file), sep = "", header = F)
-      CNVs <- .checkConvertCNVs(cnvs)
+      CNVs <- .checkConvertCNVs(cnvs, all.paths, n.cor)
       all.samples <- as.character(CNVs$V5)
       all.samples <- unique(all.samples)
       
@@ -198,7 +200,7 @@
 # or (iii) sequencing general format
 # 
 
-.checkConvertCNVs <- function(cnvs){
+.checkConvertCNVs <- function(cnvs, all.paths, n.cor=1){
   
   ## If PennCNV file
   if (unique(sub("^([[:alpha:]]*).*", "\\1", cnvs$V2))[[1]] == "numsnp") {
@@ -213,8 +215,8 @@
     CNVs <- cnvs
     
     ## If general format
-  } else if (all(as.character(as.matrix(cnvs[1, ])) == c("chr", "start", "end", "sample.id", 
-                                                         "state", "num.snps", "start.probe", "end.probe"))) {
+  } else if (suppressWarnings(all(as.character(as.matrix(cnvs[1, ])) == c("chr", "start", "end", "sample.id", 
+                                  "state", "num.snps", "start.probe", "end.probe")))) {
     the.names <- as.character(as.matrix(cnvs[1, ]))
     cnvs <- cnvs[-1, ]
     colnames(cnvs) <- the.names
@@ -226,7 +228,7 @@
     cnvs$length <- (cnvs$end - cnvs$start) + 1
     cnvs$length <- paste0("length=", cnvs$length)
     
-    cnvs$num.snps <- paste0("numsnp=", cnvs$length)
+    cnvs$num.snps <- paste0("numsnp=", cnvs$num.snps)
     
     cnvs$start.probe <- paste0("startSNP=", cnvs$start.probe)
     cnvs$end.probe <- paste0("endSNP=", cnvs$end.probe)
@@ -249,7 +251,7 @@
     the.names <- as.character(as.matrix(cnvs.seq[1, ]))
     cnvs.seq <- cnvs.seq[-1, ]
     colnames(cnvs.seq) <- the.names
-    cnv.seq.gr <- makeGRangesFromDataFrame(cnvs.seq)
+    cnv.seq.gr <- makeGRangesFromDataFrame(cnvs.seq, keep.extra.columns = TRUE)
     chr.seq <- as.character(seqnames(cnv.seq.gr))
     start.seq <- start(cnv.seq.gr)
     start.seq <- as.data.frame(cbind("chr"=chr.seq, "position"=start.seq), 
@@ -279,14 +281,52 @@
     ## Associate artificial probes to CNVs
     
     
+    probe.like.map.gr <- makeGRangesFromDataFrame(probe.like.map, seqnames.field="Chr", 
+                                                  start.field="Position", 
+                                                  end.field="Position",  
+                                                  keep.extra.columns = TRUE)
     
+    ### HELPER - associate probes-like regions with CNVs
+    .probeToCNVs <- function(lo, cnv.seq.gr, probe.like.map.gr){
+    cnvx <- cnv.seq.gr[lo]  
+    ov.pr <- subsetByOverlaps(probe.like.map.gr, cnvx)
+    num.snps <- length(ov.pr)
+    start.probe <- values(ov.pr)$Name[1]
+    end.probe <- values(ov.pr)$Name[length(ov.pr)]
+    return(c(num.snps, start.probe, end.probe))
+    }
     
+    if(rappdirs:::get_os() == "win"){
+      param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
+      cnvs.probes <- suppressMessages(BiocParallel::bplapply(1:length(cnv.seq.gr), 
+                                                           .probeToCNVs, BPPARAM = param, 
+                                                           cnv.seq.gr=cnv.seq.gr,
+                                                           probe.like.map.gr=probe.like.map.gr))
+    }
+    if(rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac"){
+      multicoreParam <- BiocParallel::MulticoreParam(workers = n.cor)
+      cnvs.probes <- suppressMessages(BiocParallel::bplapply(1:length(cnv.seq.gr), 
+                                                           .probeToCNVs, BPPARAM = multicoreParam, 
+                                                           cnv.seq.gr=cnv.seq.gr,
+                                                           probe.like.map.gr=probe.like.map.gr))
+    }
+    #cnv.seq.gr.split  <- split(cnv.seq.gr, as.factor(cnv.seq.gr))
+    #subsetByOverlaps(probe.like.map.gr, cnv.seq.gr.split) 
+    cnv.p.df <- t(as.data.frame(cnvs.probes))
+    values(cnv.seq.gr)$num.snps <- as.numeric(as.character(cnv.p.df[,1]))
+    values(cnv.seq.gr)$start.probe <- as.character(cnv.p.df[,2])
+    values(cnv.seq.gr)$end.probe <- as.character(cnv.p.df[,3])
+    
+    cnv.seq <- as.data.frame(cnv.seq.gr)
+    cnv.seq <- cnv.seq[, c(1:3, 6:10)]
+    colnames(cnv.seq)[1] <- "chr"
     ## Convert to PennCNV
     
-    the.names <- as.character(as.matrix(cnvs[1, ]))
-    cnvs <- cnvs[-1, ]
-    colnames(cnvs) <- the.names
-    cnvs <- as.data.frame(cnvs)
+    #the.names <- as.character(as.matrix(cnvs[1, ]))
+    #the.names <- colnames(cnv.seq)
+    #cnvs <- cnvs[-1, ]
+    #colnames(cnvs) <- the.names
+    cnvs <- cnv.seq
     cnvs$start <- as.numeric(cnvs$start)
     cnvs$end <- as.numeric(cnvs$end)
     ## Convert to PennCNV format
@@ -294,7 +334,7 @@
     cnvs$length <- (cnvs$end - cnvs$start) + 1
     cnvs$length <- paste0("length=", cnvs$length)
     
-    cnvs$num.snps <- paste0("numsnp=", cnvs$length)
+    cnvs$num.snps <- paste0("numsnp=", cnvs$num.snps)
     
     cnvs$start.probe <- paste0("startSNP=", cnvs$start.probe)
     cnvs$end.probe <- paste0("endSNP=", cnvs$end.probe)
@@ -340,6 +380,7 @@
 #' @param folder Choose manually the project folder (i.e. path as the root folder). Otherwise, user-specific data dir
 #' will be used automatically.  
 #' @param pops.names Indicate the name of the populations, if using more than one
+#' @param n.cor Number of cores
 #' @return List \sQuote{phen.info} with \sQuote{samplesPhen}, \sQuote{phenotypes}, \sQuote{phenotypesdf}, 
 #' \sQuote{phenotypesSam}, \sQuote{FamID}, \sQuote{SexIds}, \sQuote{pops.names} (if more than one population) and \sQuote{all.paths}
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
@@ -356,7 +397,7 @@
 #' @export
 
 setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = NULL, 
-                         pops.names = NULL) {
+                         pops.names = NULL, n.cor=1) {
   
   ## Create the folder structure for all subsequent analysis
   all.paths <- .createFolderTree(name, folder)
@@ -410,7 +451,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
   if (is.null(map.loc)) {
     ## Import the probe map from external folder
     cnvs <- read.table(file.path(all.paths[1], "CNVOut.txt"), sep = "", header = F)  ### CNV table 
-    CNVs <- .checkConvertCNVs(cnvs)
+    CNVs <- .checkConvertCNVs(cnvs, all.paths, n.cor)
     
     CGr <- makeGRangesFromDataFrame(CNVs)
     #startP <- cbind(CNVs$chr, start(CGr))
@@ -435,7 +476,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
     file.copy(map.loc, file.path(all.paths[1], "/MapPenn.txt"), overwrite = TRUE)
   }
   
-  phen.info <- .loadPhen(pheno.file, all.paths[1], pops.names = pops.names)
+  phen.info <- .loadPhen(pheno.file, all.paths, pops.names = pops.names, n.cor)
   plink.dir <- dir(all.paths[2], pattern = "plink-1*")
   plink.bin <- file.path(all.paths[2], plink.dir, "plink")
   
@@ -634,6 +675,7 @@ testit <- function(x) {
 #' node (i.e.  '0, 1, 2, 3, 4' as '0/0, 0/1, 1/1, 1/2, 2/2').
 #' @param coding.translate For 'CNVgenotypeSNPlike'. If NULL or unrecognized string use only biallelic CNVs. If 'all' code 
 #' multiallelic CNVs as 0 for loss; 1 for 2n and 2 for gain. 
+#' @param n.cor Number of cores
 #' @return probes.cnv.gr Object with information about all probes to be used in the downstream CNV-GWAS. Only numeric chromosomes
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @examples
@@ -664,7 +706,7 @@ testit <- function(x) {
 
 prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
                        lo.phe = 1, chr.code.name = NULL, genotype.nodes = "CNVGenotype", 
-                       coding.translate = NULL) {
+                       coding.translate = NULL, n.cor=1) {
   
   phenotypesSam <- phen.info$phenotypesSam
   samplesPhen <- phen.info$samplesPhen
@@ -678,7 +720,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   
   cnvs <- data.table::fread(file.path(all.paths[1], "CNVOut.txt"), sep = "\t", 
                             header = FALSE)  ### CNV table 
-  CNVs <- .checkConvertCNVs(cnvs)
+  CNVs <- .checkConvertCNVs(cnvs, all.paths, n.cor)
   
   ####################### Check if the chromosomes are numeric
   
@@ -859,7 +901,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   
   cnvs <- data.table::fread(file.path(all.paths[1], "CNVOut.txt"), sep = "\t", 
                             header = FALSE)  ### CNV table 
-  CNVs <- .checkConvertCNVs(cnvs)
+  CNVs <- .checkConvertCNVs(cnvs, all.paths, n.cor)
   
   ####################### Check if the chromosomes are numeric
   
