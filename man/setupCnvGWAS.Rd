@@ -5,7 +5,7 @@
 \title{Setup the folders and files to run CNV-GWAS analysis}
 \usage{
 setupCnvGWAS(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = NULL,
-  pops.names = NULL)
+  pops.names = NULL, n.cor = 1)
 }
 \arguments{
 \item{name}{String with a project code or name (e.g. "Project1")}
@@ -23,6 +23,8 @@ will be generated based on the CNV breakpoints.}
 will be used automatically.}
 
 \item{pops.names}{Indicate the name of the populations, if using more than one}
+
+\item{n.cor}{Number of cores}
 }
 \value{
 List \sQuote{phen.info} with \sQuote{samplesPhen}, \sQuote{phenotypes}, \sQuote{phenotypesdf}, 

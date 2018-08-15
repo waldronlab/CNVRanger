@@ -4,13 +4,15 @@
 \alias{plotManhattan}
 \title{Plot the manhattan}
 \usage{
-plotManhattan(all.paths, regions, chr.size.order = NULL)
+plotManhattan(all.paths, regions, chr.size.order = NULL, plot.pdf = TRUE)
 }
 \arguments{
 \item{regions}{GRanges from CNV-GWAS run to produce the manhattan plot}
 
 \item{chr.size.order}{Data-frame with two columns: (i) 'chr' have the chromosome names as character
 and (ii) 'size' with the length of the chromosome in basepairs}
+
+\item{plot.pdf}{Produce a pdf file}
 }
 \description{
 Function to write a manhattan plot with the p-values from a CNV-GWAS.

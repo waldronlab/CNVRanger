@@ -215,8 +215,8 @@ Perform overlap permutation test:
 library(regioneR)
 library(BSgenome.Btaurus.UCSC.bosTau6.masked)
 sel.cnvrs <- cnvrs[seqnames(cnvrs) %in% c("chr1", "chr2")]
-res <- overlapPermTest(A=sel.cnvrs, B=sel.genes, ntimes=100, 
-    genome="bosTau6", mask=NA, per.chromosome=TRUE, count.once=TRUE)
+res <- suppressWarnings(overlapPermTest(A=sel.cnvrs, B=sel.genes, ntimes=100, 
+    genome="bosTau6", mask=NA, per.chromosome=TRUE, count.once=TRUE))
 res
 ```
 
@@ -247,14 +247,7 @@ The `phen.info` is a list which contains necessary information for the CNV-GWAS 
 all.paths <- phen.info$all.paths
 ```
 
-After creating the working directories and importing the necessary files, the CNV-GWAS can be performed as follows:
-
-```{r CNVGWAS}
-segs.pvalue.gr <- cnvGWAS(phen.info, verbose=TRUE)
-segs.pvalue.gr
-```
-
-If the dataset contains chromosome names which are not numeric, they may be changed to numeric within the input files 
+After creating the working directories and importing the necessary files, the CNV-GWAS can be performed. If the dataset contains chromosome names which are not numeric, they may be changed to numeric within the input files 
 containing the CNV calls and probe positions (i.e. SNP map). Thus, the user may provide a data-frame with 
 the correspondent character names. In the example, as the great tits don't have the chromosome 16 this number was used for the
 chromosome 1A and numbers above 28 were then used to tag the other non-numeric chromosome names. In doing so, the results will output the 
@@ -270,14 +263,15 @@ df <- "16 1A
  
 chr.code.name <- read.table(text=df, header=FALSE)
 
-# Run the CNV-GWAS
-segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name)
+# Run the CNV-GWAS without correction for multiple testing - Only for exemplification
+# Multiple test correction is recommended in real analyses
+segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, method.m.test="none")
 ```
 
 
 The CNV-GWAS uses the concept of CNV segments to define CNV loci. This procedure was originally proposed in our previous work in Nelore beef cattle [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711) and defines the CNV segments based on CNV genotype similarity of subsequent SNP probes. The default is `min.sim=0.95`, which will continuously add probe positions to a given CNV segment until the pairwise genotype similarity drops below 95%. Detailed up-down CNV genotype concordance that are used for the construction of CNV segments will look like the S12 Table in  [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711). Although this information is used for the construction of the CNV segments, this is not exported to the user. 
 
-As the `PLINK` provides one separately p-value for each SNP probe, only one of the p-values of the probes overlapping each CNV segment is assigned as the segment p-value. The chosen probe/p-value can be based on the probe with lowest p-value (`assign.probe="min.pvalue"`, default) or the one with highest CNV frequency (`assign.probe="high.freq"`). Once all CNV segments have a p-value assigned, a correction for multiple testing is performed based on the number of CNV segments (FDR is default) and the results can therefore exported as a manhattan plot. 
+As the `PLINK` provides one separately p-value for each SNP probe, only one of the p-values of the probes overlapping each CNV segment is assigned as the segment p-value. The chosen probe/p-value can be based on the probe with lowest p-value (`assign.probe="min.pvalue"`, default) or the one with highest CNV frequency (`assign.probe="high.freq"`). Once all CNV segments have a p-value assigned, a correction for multiple testing is performed based on the number of CNV segments (FDR is default) and the results can therefore exported as a manhattan plot (pdf file). 
 
 ```{r manh}
 
@@ -287,12 +281,10 @@ order.chrs <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "
 ## Chromosome sizes
 chr.sizes <- c(114059860,150265477,111636321,68030631,61875929,34342011,37653027, 31324166,25106277,20202851,20315886,20466350,16480340,16193477, 13820886,10486032,11572643,9871655,14661763,7693166,4276343, 6655392,6808513,1092960,809223,6596997,4327975,5101010, 773534,71365269,19934923)
 
-chr.size.order <- cbind(as.data.frame(order.chrs, stringsAsFactors = FALSE),as.data.frame(chr.sizes,  stringsAsFactors = FALSE))
-colnames(chr.size.order) <- c("chr", "sizes")
+chr.size.order <- as.data.frame(cbind("chr"=order.chrs, "sizes"=chr.sizes), stringsAsFactors = FALSE)
 
 ## Plot a pdf file with a manhatthan within the 'Results' workfolder
-plotManhattan(all.paths, segs.pvalue.gr, chr.size.order)
-
+plotManhattan(all.paths, regions=segs.pvalue.gr, chr.size.order, plot.pdf=FALSE)
 ```
 
 Alternatively, the user can use the relative signal intensity (log R ratio - LRR) to perform a GWAS analysis. CNV detection using SNP-chip intensities and allele frequencies are usually challenging and can produce biased CNV frequencies [da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1). Thus, GWAS using LRR values directly may help to identify CNV segments which are possibly associated with phenotypes but have their frequency biased by the CNV calling procedure. Therefore, the `cnvGWAS` function allows the user to perform associations with LRR values instead absolute copy numbers. To perform the GWAS using LRR values is necessary to import the LRR/BAF values and state `run.lrr=TRUE` in the `cnvGWAS` function:

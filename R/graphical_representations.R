@@ -127,6 +127,7 @@ qqunif.plot<-function(pvalues,
 #' @param regions GRanges from CNV-GWAS run to produce the manhattan plot
 #' @param chr.size.order Data-frame with two columns: (i) 'chr' have the chromosome names as character
 #' and (ii) 'size' with the length of the chromosome in basepairs
+#' @param plot.pdf Produce a pdf file
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @examples 
 #' 
@@ -157,7 +158,8 @@ qqunif.plot<-function(pvalues,
 #' @export
 #'  
 
-plotManhattan <- function(all.paths, regions, chr.size.order=NULL){
+plotManhattan <- function(all.paths, regions, chr.size.order=NULL, 
+                          plot.pdf=TRUE){
   
   ## Produce chromosome limits
   chr.size.order.start <- chr.size.order
@@ -170,11 +172,11 @@ plotManhattan <- function(all.paths, regions, chr.size.order=NULL){
   
   chr.size.order$chr.numeric <- seq_len(nrow(chr.size.order))
   
-  chr.all$P <- 1 
+    chr.all$P <- 1 
     phen.name <- values(regions)$Phenotype
     phen.name <- unique(phen.name)
     
-    pdf(file.path(all.paths[3], paste0(phen.name,"-Manhattan.pdf")))
+
     gwasResults <- cbind("CHR"=as.character(seqnames(regions)), "BP"=start(regions),
                          "SNP"= values(regions)$SegName, "P"= values(regions)$MinPvalueAdjusted)
     
@@ -192,10 +194,19 @@ plotManhattan <- function(all.paths, regions, chr.size.order=NULL){
     gwasResults$P <- as.numeric(gwasResults$P)
     gwasResults <- dplyr::arrange(gwasResults, CHR, BP)
     
+    if(plot.pdf){
+      pdf(file.path(all.paths[3], paste0(phen.name,"-Manhattan.pdf")))
     qqman::manhattan(gwasResults, chr="CHR", bp="BP", snp="SNP", p="P",
                      chrlabs=chr.size.order$chr, suggestiveline =-log10(0.10),
                      genomewideline = -log10(0.05))
     dev.off()
+    }else{
+      qqman::manhattan(gwasResults, chr="CHR", bp="BP", snp="SNP", p="P",
+                       chrlabs=chr.size.order$chr, suggestiveline =-log10(0.10),
+                       genomewideline = -log10(0.05))
+    
+    }
+    
   
 }
 

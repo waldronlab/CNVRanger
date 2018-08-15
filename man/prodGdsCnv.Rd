@@ -6,7 +6,7 @@
 \usage{
 prodGdsCnv(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1,
   chr.code.name = NULL, genotype.nodes = "CNVGenotype",
-  coding.translate = NULL)
+  coding.translate = NULL, n.cor = 1)
 }
 \arguments{
 \item{phen.info}{Returned by \code{setupCnvGWAS}}
@@ -27,6 +27,8 @@ node (i.e.  '0, 1, 2, 3, 4' as '0/0, 0/1, 1/1, 1/2, 2/2').}
 
 \item{coding.translate}{For 'CNVgenotypeSNPlike'. If NULL or unrecognized string use only biallelic CNVs. If 'all' code 
 multiallelic CNVs as 0 for loss; 1 for 2n and 2 for gain.}
+
+\item{n.cor}{Number of cores}
 }
 \value{
 probes.cnv.gr Object with information about all probes to be used in the downstream CNV-GWAS. Only numeric chromosomes
