@@ -75,40 +75,60 @@ populationRanges <- function(grl, density=0.1)
 }
 
 
-#
-# Reciprocal overlap procedure
-#
-
-# reciprocal overlap (RO) approach (e.g. Conrad et al, Nature, 2010)
-#
-# reciprocal overlap of 0.51 between two CNV calls A and B:
-#
-# requires that B overlap at least 51% of A, 
-#   *and* that A also overlaps at least 51% of B
-
-# Approach:
-#
-# At the top level of the hierarchy, all contiguous bases overlapping at least 
-# 1bp of a CNV call are merged into a “CNV region” (CNVR). 
-# Within each CNVR we further define CNVs with the following algorithm:
-#
-# 1.   Calculate reciprocal overlap (RO) between all remaining calls.
-#
-# 2.   Identify pair of calls with greatest RO. If RO > threshold, merge and 
-#       create a new CNV. If not, exit.
-#
-# 3.    Continue adding unclustered calls to the CNV, in order of best overlap. 
-#       In order to add a call, the new call must have > threshold to all calls 
-#       within CNV to be added. When no additional calls may be added, move to 
-#       next step.
-#
-# 4.   If calls remain, return to 1. Otherwise exit.
-#
-# A typical reciprocal overlap threshold value is 0.5 for constructing CNVs
-
-# this clustering procedure is then invoked on each initial cluster, which are, 
-# according to the procedure outlined by Conrad et al., constructed by merging 
-# all calls with >= 1 bp overlap.
+#' Summarizing genomic ranges based on reciprocal overlap across a population
+#'
+#' Reciprocal overlap (RO) approach (e.g. Conrad et al., Nature, 2010)
+#'
+#' Reciprocal overlap of 0.51 between two genomic regions A and B:
+#'
+#' requires that B overlap at least 51% of A, 
+#'   *and* that A also overlaps at least 51% of B
+#'
+#' Approach:
+#'
+#' At the top level of the hierarchy, all contiguous bases overlapping at least 
+#' 1bp of indvidual calls are merged into one region. 
+#' Within each region, we further define reciprocally overlapping regions with 
+#' the following algorithm:
+#'
+#' \itemize{
+#' \item Calculate reciprocal overlap (RO) between all remaining calls.
+#' \item Identify pair of calls with greatest RO. If RO > threshold, merge and 
+#'       create a new CNV. If not, exit.
+#' \item Continue adding unclustered calls to the region, in order of best overlap. 
+#'       In order to add a call, the new call must have > threshold to all calls 
+#'       within the region to be added. When no additional calls may be added, 
+#'       move to next step.
+#' \item If calls remain, return to 1. Otherwise exit.
+#' }
+#' @param grl A \code{\linkS4class{GRangesList}}.
+#' @param density Numeric. 
+#'
+#' @return A \code{\linkS4class{GRanges}} object containing the summarized
+#' genomic ranges. 
+#'
+#' @references 
+#' Conrad et al. (2010) Origins and functional impact of copy number variation 
+#' in the human genome. Nature, 464(7289):704-12.
+#'
+#' @author Ludwig Geistlinger
+#' @seealso
+#' 
+#' @examples
+#'
+#' grl <- GRangesList(
+#'      sample1 = GRanges( c("chr1:1-10", "chr2:15-18", "chr2:25-34") ),
+#'      sample2 = GRanges( c("chr1:1-10", "chr2:11-18" , "chr2:25-36") ),
+#'      sample3 = GRanges( c("chr1:2-11", "chr2:14-18", "chr2:26-36") ),
+#'      sample4 = GRanges( c("chr1:1-12", "chr2:18-35" ) ),
+#'      sample5 = GRanges( c("chr1:1-12", "chr2:11-17" , "chr2:26-34") ) ,
+#'      sample6 = GRanges( c("chr1:1-12", "chr2:12-18" , "chr2:25-35") )
+#' )
+#'
+#' # default as chosen in the original CNVRuler procedure
+#' populationRanges(grl, ro.thresh=0.5)
+#'
+#' @export
 populationRangesRO <- function(grl, ro.thresh=0.5, multi.assign=FALSE)
 {
     gr <- unlist(grl)
