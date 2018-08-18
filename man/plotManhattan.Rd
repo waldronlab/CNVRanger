@@ -4,7 +4,8 @@
 \alias{plotManhattan}
 \title{Plot the manhattan}
 \usage{
-plotManhattan(all.paths, regions, chr.size.order = NULL, plot.pdf = TRUE)
+plotManhattan(all.paths, regions, chr.size.order = NULL,
+  plot.pdf = TRUE)
 }
 \arguments{
 \item{regions}{GRanges from CNV-GWAS run to produce the manhattan plot}

@@ -7,20 +7,23 @@
 importLRR_BAF(all.paths, path.files, list.of.files, verbose = FALSE)
 }
 \arguments{
-\item{all.paths}{Object returned from \code{CreateFolderTree} function with the working folder tree}
+\item{all.paths}{Object returned from \code{CreateFolderTree} function with 
+the working folder tree}
 
-\item{path.files}{Folder containing the input CNV files used for the CNV calling (i.e. one text file with 5 collumns 
-for each sample). Columns should contain (i) probe name, (ii) Chromosome, (iii) Position, (iv) LRR and (v) BAF}
+\item{path.files}{Folder containing the input CNV files used for the CNV 
+calling (i.e. one text file with 5 collumns for each sample). Columns should 
+contain (i) probe name, (ii) Chromosome, (iii) Position, (iv) LRR, and (v) BAF.}
 
-\item{list.of.files}{Data-frame with two columns where the (i) is the file name with signals and (ii) is the 
-correspondent name of the sample in the gds file}
+\item{list.of.files}{Data-frame with two columns where the (i) is the file 
+name with signals and (ii) is the correspondent name of the sample in the gds file}
 
 \item{verbose}{Print the samples while importing}
 }
 \description{
-This function imports the LRR/BAF values and create a node for each one in the GDS file at the working folder 'Inputs'
-created by the \code{\link{setupCnvGWAS}} function. Once imported, the LRR values can be used to perform a GWAS directly as
-an alternative to copy number dosage
+This function imports the LRR/BAF values and create a node for each one in 
+the GDS file at the working folder 'Inputs' created by the 
+\code{\link{setupCnvGWAS}} function. Once imported, the LRR values can be 
+used to perform a GWAS directly as an alternative to copy number dosage
 }
 \examples{
 

@@ -16,22 +16,28 @@ cnvGWAS(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01,
 
 \item{n.cor}{Number of cores to be used}
 
-\item{min.sim}{Minimum CNV genotype distribuition similarity among subsequent probes. Default is 0.95 (i.e. 95\%)}
+\item{min.sim}{Minimum CNV genotype distribuition similarity among subsequent
+probes. Default is 0.95 (i.e. 95\%)}
 
-\item{freq.cn}{Minimum CNV frequency where 1 (i.e. 100\%), or all samples deviating from diploid state. Default 0.01 (i.e. 1\%)}
+\item{freq.cn}{Minimum CNV frequency where 1 (i.e. 100\%), or all samples 
+deviating from diploid state. Default 0.01 (i.e. 1\%)}
 
-\item{snp.matrix}{Only FALSE implemented - If TRUE B allele frequencies (BAF) would be used to reconstruct CNV-SNP genotypes}
+\item{snp.matrix}{Only FALSE implemented - If TRUE B allele frequencies (BAF)
+would be used to reconstruct CNV-SNP genotypes}
 
-\item{method.m.test}{Correction for multiple tests to be used. FDR is default, see \code{\link{(p.adjust)}} for
-other methods.}
+\item{method.m.test}{Correction for multiple tests to be used. FDR is default, 
+see \code{\link{(p.adjust)}} for other methods.}
 
 \item{lo.phe}{The phenotype to be analyzed in the PhenInfo$phenotypesSam data-frame}
 
-\item{chr.code.name}{A data-frame with the integer name in the first column and the original name for each chromosome}
+\item{chr.code.name}{A data-frame with the integer name in the first column 
+and the original name for each chromosome}
 
-\item{genotype.nodes}{Expression data type. Nodes with CNV genotypes to be produced in the gds file.}
+\item{genotype.nodes}{Expression data type. Nodes with CNV genotypes to be 
+produced in the gds file.}
 
-\item{coding.translate}{For 'CNVgenotypeSNPlike'. If NULL or unrecognized string use only biallelic CNVs. If 'all' code multiallelic CNVs as 0 
+\item{coding.translate}{For 'CNVgenotypeSNPlike'. If NULL or unrecognized 
+string use only biallelic CNVs. If 'all' code multiallelic CNVs as 0 
 for loss; 1 for 2n and 2 for gain.}
 
 \item{produce.gds}{logical. If TRUE produce a new gds, if FALSE use gds previously created}
@@ -43,7 +49,8 @@ for loss; 1 for 2n and 2 for gain.}
 \item{correct.inflation}{logical. Estimate lambda from raw p-values and correct for genomic inflation.
 Used with \code{\link{method.m.test}} can be generate strict p-values.}
 
-\item{both.up.down}{Check for CNV genotype similarity in both directions. Default is FALSE (i.e. only downstream)}
+\item{both.up.down}{Check for CNV genotype similarity in both directions. 
+Default is FALSE (i.e. only downstream)}
 
 \item{verbose}{Show progress in the analysis}
 }
@@ -51,12 +58,15 @@ Used with \code{\link{method.m.test}} can be generate strict p-values.}
 The CNV segments and the representative probes and their respective p-value
 }
 \description{
-Wraps all the necessary functions to run a CNV-GWAS using the output of \code{\link{setupCnvGWAS}} function
+Wraps all the necessary functions to run a CNV-GWAS using the output of 
+\code{\link{setupCnvGWAS}} function
  
 (i) Produces the GDS file containing the genotype information  (if produce.gds == TRUE),
-(ii) Produces the requested inputs for a PLINK analysis, (iii) run a 
-CNV-GWAS analysis using linear model implemented in PLINK (http://zzz.bwh.harvard.edu/plink/gvar.shtml) and 
-(iv) export a QQ-plot displaying the adjusted p-values. In this release only the p-value for the copy number is available  (i.e. 'P(CNP)').
+(ii) Produces the requested inputs for a PLINK analysis, 
+(iii) run a CNV-GWAS analysis using linear model implemented in PLINK 
+(http://zzz.bwh.harvard.edu/plink/gvar.shtml), and 
+(iv) export a QQ-plot displaying the adjusted p-values. 
+In this release only the p-value for the copy number is available  (i.e. 'P(CNP)').
 }
 \examples{
 

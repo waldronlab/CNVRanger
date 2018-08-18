@@ -9,9 +9,10 @@ qqunif.plot(pvalues, should.thin = T, thin.obs.places = 2,
   thin.exp.places = 2, xlab = expression(paste("Expected (", -log[10],
   " p-value)")), ylab = expression(paste("Observed (", -log[10],
   " p-value)")), draw.conf = TRUE, conf.points = 1000,
-  conf.col = "lightgray", conf.alpha = 0.05, already.transformed = FALSE,
-  pch = 20, aspect = "iso", prepanel = prepanel.qqunif,
-  par.settings = list(superpose.symbol = list(pch = pch)), ...)
+  conf.col = "lightgray", conf.alpha = 0.05,
+  already.transformed = FALSE, pch = 20, aspect = "iso",
+  prepanel = prepanel.qqunif, par.settings = list(superpose.symbol =
+  list(pch = pch)), ...)
 }
 \description{
 HELPER - Plot QQ-plot using non-log p-values 

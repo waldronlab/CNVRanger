@@ -4,36 +4,47 @@
 \alias{setupCnvGWAS}
 \title{Setup the folders and files to run CNV-GWAS analysis}
 \usage{
-setupCnvGWAS(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = NULL,
-  pops.names = NULL, n.cor = 1)
+setupCnvGWAS(name, phen.loc, cnv.out.loc, map.loc = NULL,
+  folder = NULL, pops.names = NULL, n.cor = 1)
 }
 \arguments{
 \item{name}{String with a project code or name (e.g. "Project1")}
 
-\item{phen.loc}{Path/paths to the tab separated text file cointaining phenotype and sample info. When using more than one population, 
-for populations without phenotypes include the string 'INEXISTENT' instead the path for a file.}
+\item{phen.loc}{Path/paths to the tab separated text file cointaining phenotype 
+and sample info. When using more than one population, for populations without
+phenotypes include the string 'INEXISTENT' instead the path for a file.}
 
-\item{cnv.out.loc}{Path/paths to the CNV analysis output (i.e. PennCNV output, SNP-chip general format or sequencing general format)}
+\item{cnv.out.loc}{Path(s) to the CNV analysis output (i.e. PennCNV output, 
+SNP-chip general format or sequencing general format)}
 
-\item{map.loc}{Path to the probe map (e.g. used in PennCNV analysis). Column names containing probe name, 
-chromosome and coordinate must be named as: Name, Chr and Position. Tab delimited. If NULL, artificial probes
-will be generated based on the CNV breakpoints.}
+\item{map.loc}{Path to the probe map (e.g. used in PennCNV analysis). Column 
+names containing probe name, chromosome and coordinate must be named as: Name, 
+Chr and Position. Tab delimited. If NULL, artificial probes will be generated 
+based on the CNV breakpoints.}
 
-\item{folder}{Choose manually the project folder (i.e. path as the root folder). Otherwise, user-specific data dir
-will be used automatically.}
+\item{folder}{Choose manually the project folder (i.e. path as the root folder). 
+Otherwise, user-specific data dir will be used automatically.}
 
-\item{pops.names}{Indicate the name of the populations, if using more than one}
+\item{pops.names}{Indicate the name of the populations, if using more than one.}
 
 \item{n.cor}{Number of cores}
 }
 \value{
-List \sQuote{phen.info} with \sQuote{samplesPhen}, \sQuote{phenotypes}, \sQuote{phenotypesdf}, 
-\sQuote{phenotypesSam}, \sQuote{FamID}, \sQuote{SexIds}, \sQuote{pops.names} (if more than one population) and \sQuote{all.paths}
+List \sQuote{phen.info} with \sQuote{samplesPhen}, \sQuote{phenotypes}, 
+\sQuote{phenotypesdf}, \sQuote{phenotypesSam}, \sQuote{FamID}, \sQuote{SexIds}, 
+\sQuote{pops.names} (if more than one population) and \sQuote{all.paths}
 }
 \description{
-This function creates the (i) necessary folders in disk to perform downstream analysis on CNV genome-wide
-association and (ii) import the necessary input files (i.e phenotypes, probe map and CNV list) from other 
-locations in disk.
+This function creates the (i) necessary folders in disk to perform downstream 
+analysis on CNV genome-wide association and (ii) import the necessary input 
+files (i.e. phenotypes, probe map and CNV list) from other locations in disk.
+}
+\details{
+The user can import several phenotypes at once. All information will be 
+stored in the list returned by this function. 
+The user should be aware although several phenotypes can be imported, the 
+\code{\link{cnvGWAS}} or \code{\link{prodGdsCnv}} functions will handle only 
+one phenotype per run.
 }
 \examples{
 

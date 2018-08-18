@@ -32,6 +32,7 @@ Description: CNV calling from SNP-chip genotype and next-generation
     sequencing data, CNV architecture, CNV-expression association, 
     CNV-phenotype association, and CNV evolution 
 License: Artistic-2.0
+Encoding: UTF-8
 VignetteBuilder: knitr
 biocViews: 
     CopyNumberVariation,
@@ -42,4 +43,4 @@ biocViews:
     Microarray, 
     RNASeq,
     SNP 
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.0

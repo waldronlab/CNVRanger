@@ -1,5 +1,9 @@
-################## Author: Vinicius Henrique da Silva Script description: Functions related to
-################## CNV-GWAS Date: July 20, 2018 Code: CNVASSOPACK002
+################## 
+# Author: Vinicius Henrique da Silva 
+# Script description: Functions related to CNV-GWAS 
+# Date: July 20, 2018 
+# Code: CNVASSOPACK002
+################## 
 
 # HELPER - Create the folder tree to keep necessary files during and after the analysis 
 # @param name String with a project code or name (e.g. "Project1")
@@ -362,27 +366,33 @@
 
 #' Setup the folders and files to run CNV-GWAS analysis
 #'
-#' This function creates the (i) necessary folders in disk to perform downstream analysis on CNV genome-wide
-#' association and (ii) import the necessary input files (i.e phenotypes, probe map and CNV list) from other 
-#' locations in disk. 
+#' This function creates the (i) necessary folders in disk to perform downstream 
+#' analysis on CNV genome-wide association and (ii) import the necessary input 
+#' files (i.e. phenotypes, probe map and CNV list) from other locations in disk.
 #' 
-#' The user can import several phenotypes at once. All information will be stored in the list returned by this function. 
-#' The user should be aware although several phenotypes can be imported, the \code{\link{cnvGWAS} or \code{\link{prodGdsCnv} functions
-#' will handle only one phenotype per run. 
+#' The user can import several phenotypes at once. All information will be 
+#' stored in the list returned by this function. 
+#' The user should be aware although several phenotypes can be imported, the 
+#' \code{\link{cnvGWAS}} or \code{\link{prodGdsCnv}} functions will handle only 
+#' one phenotype per run. 
 #' 
 #' @param name String with a project code or name (e.g. "Project1")
-#' @param phen.loc Path/paths to the tab separated text file cointaining phenotype and sample info. When using more than one population, 
-#' for populations without phenotypes include the string 'INEXISTENT' instead the path for a file.
-#' @param cnv.out.loc Path/paths to the CNV analysis output (i.e. PennCNV output, SNP-chip general format or sequencing general format)
-#' @param map.loc Path to the probe map (e.g. used in PennCNV analysis). Column names containing probe name, 
-#' chromosome and coordinate must be named as: Name, Chr and Position. Tab delimited. If NULL, artificial probes
-#' will be generated based on the CNV breakpoints.
-#' @param folder Choose manually the project folder (i.e. path as the root folder). Otherwise, user-specific data dir
-#' will be used automatically.  
-#' @param pops.names Indicate the name of the populations, if using more than one
+#' @param phen.loc Path/paths to the tab separated text file cointaining phenotype 
+#' and sample info. When using more than one population, for populations without
+#' phenotypes include the string 'INEXISTENT' instead the path for a file.
+#' @param cnv.out.loc Path(s) to the CNV analysis output (i.e. PennCNV output, 
+#' SNP-chip general format or sequencing general format)
+#' @param map.loc Path to the probe map (e.g. used in PennCNV analysis). Column 
+#' names containing probe name, chromosome and coordinate must be named as: Name, 
+#' Chr and Position. Tab delimited. If NULL, artificial probes will be generated 
+#' based on the CNV breakpoints.
+#' @param folder Choose manually the project folder (i.e. path as the root folder). 
+#' Otherwise, user-specific data dir will be used automatically.  
+#' @param pops.names Indicate the name of the populations, if using more than one.
 #' @param n.cor Number of cores
-#' @return List \sQuote{phen.info} with \sQuote{samplesPhen}, \sQuote{phenotypes}, \sQuote{phenotypesdf}, 
-#' \sQuote{phenotypesSam}, \sQuote{FamID}, \sQuote{SexIds}, \sQuote{pops.names} (if more than one population) and \sQuote{all.paths}
+#' @return List \sQuote{phen.info} with \sQuote{samplesPhen}, \sQuote{phenotypes}, 
+#' \sQuote{phenotypesdf}, \sQuote{phenotypesSam}, \sQuote{FamID}, \sQuote{SexIds}, 
+#' \sQuote{pops.names} (if more than one population) and \sQuote{all.paths}
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @examples
 #' 
@@ -658,25 +668,29 @@ testit <- function(x) {
 
 #' Produce CNV-GDS for the phenotyped samples
 #'
-#' Function to produce the GDS file in a probe-wise fashion for CNV genotypes. The GDS file which is produced
-#' also incorporates one phenotype to be analyzed. If several phenotypes are enclosed in the \sQuote{phen.info}
-#' object, the user may specify the phenotype to be analyzed with the \sQuote{lo.phe} parameter. Only diploid
-#' chromosomes should be included.  
+#' Function to produce the GDS file in a probe-wise fashion for CNV genotypes. 
+#' The GDS file which is produced also incorporates one phenotype to be analyzed. 
+#' If several phenotypes are enclosed in the \sQuote{phen.info} object, the user 
+#' may specify the phenotype to be analyzed with the \sQuote{lo.phe} parameter. 
+#' Only diploid chromosomes should be included.  
 #'
 #' @param phen.info Returned by \code{setupCnvGWAS}
 #' @param freq.cn Minimum frequency. Default is 0.01 (i.e. 1\%)
-#' @param snp.matrix Only FALSE implemented. If TRUE, B allele frequencies (BAF) and SNP genotypes 
-#' would be used to reconstruct CNV-SNP genotypes - under development
-#' @param lo.phe The phenotype to be analyzed in the PhenInfo$phenotypesSam data-frame 
-#' @param chr.code.name A data-frame with the integer name in the first column and the original name in the second
-#' for each chromosome previously converted to numeric
-#' @param genotype.nodes Nodes with CNV genotypes to be produced in the gds file. Use 'CNVGenotype' for dosage-like 
-#' genotypes (i.e. from 0 to Inf). Use 'CNVgenotypeSNPlike' alonside for SNP-like CNV genotype in a separated 
+#' @param snp.matrix Only FALSE implemented. If TRUE, B allele frequencies (BAF) 
+#' and SNP genotypes would be used to reconstruct CNV-SNP genotypes - under development
+#' @param lo.phe The phenotype to be analyzed in the PhenInfo$phenotypesSam dataframe 
+#' @param chr.code.name A data-frame with the integer name in the first column 
+#' and the original name in the second for each chromosome previously converted to numeric
+#' @param genotype.nodes Nodes with CNV genotypes to be produced in the gds file. 
+#' Use 'CNVGenotype' for dosage-like genotypes (i.e. from 0 to Inf). 
+#' Use 'CNVgenotypeSNPlike' alonside for SNP-like CNV genotype in a separated 
 #' node (i.e.  '0, 1, 2, 3, 4' as '0/0, 0/1, 1/1, 1/2, 2/2').
-#' @param coding.translate For 'CNVgenotypeSNPlike'. If NULL or unrecognized string use only biallelic CNVs. If 'all' code 
-#' multiallelic CNVs as 0 for loss; 1 for 2n and 2 for gain. 
+#' @param coding.translate For 'CNVgenotypeSNPlike'. If NULL or unrecognized 
+#' string use only biallelic CNVs. If 'all' code multiallelic CNVs as 0 for loss; 
+#' 1 for 2n and 2 for gain. 
 #' @param n.cor Number of cores
-#' @return probes.cnv.gr Object with information about all probes to be used in the downstream CNV-GWAS. Only numeric chromosomes
+#' @return probes.cnv.gr Object with information about all probes to be used in 
+#' the downstream CNV-GWAS. Only numeric chromosomes
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @examples
 #' 
@@ -699,7 +713,6 @@ testit <- function(x) {
 #' 
 #' chr.code.name <- read.table(text=df, header=F)
 #' 
-#'
 #' probes.cnv.gr <- prodGdsCnv(phen.info, chr.code.name=chr.code.name)
 #' 
 #'@export
@@ -1461,32 +1474,41 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
 
 #' Run the CNV-GWAS 
 #'
-#' Wraps all the necessary functions to run a CNV-GWAS using the output of \code{\link{setupCnvGWAS}} function
+#' Wraps all the necessary functions to run a CNV-GWAS using the output of 
+#' \code{\link{setupCnvGWAS}} function
 #'  
 #' (i) Produces the GDS file containing the genotype information  (if produce.gds == TRUE),
-#' (ii) Produces the requested inputs for a PLINK analysis, (iii) run a 
-#' CNV-GWAS analysis using linear model implemented in PLINK (http://zzz.bwh.harvard.edu/plink/gvar.shtml) and 
-#' (iv) export a QQ-plot displaying the adjusted p-values. In this release only the p-value for the copy number is available  (i.e. 'P(CNP)'). 
-#'
+#' (ii) Produces the requested inputs for a PLINK analysis, 
+#' (iii) run a CNV-GWAS analysis using linear model implemented in PLINK 
+#' (http://zzz.bwh.harvard.edu/plink/gvar.shtml), and 
+#' (iv) export a QQ-plot displaying the adjusted p-values. 
+#' In this release only the p-value for the copy number is available  (i.e. 'P(CNP)'). 
 #'   
 #' @param phen.info Returned by \code{\link{setupCnvGWAS}}
 #' @param n.cor Number of cores to be used
-#' @param min.sim Minimum CNV genotype distribuition similarity among subsequent probes. Default is 0.95 (i.e. 95\%)
-#' @param freq.cn Minimum CNV frequency where 1 (i.e. 100\%), or all samples deviating from diploid state. Default 0.01 (i.e. 1\%)
-#' @param snp.matrix Only FALSE implemented - If TRUE B allele frequencies (BAF) would be used to reconstruct CNV-SNP genotypes
-#' @param method.m.test Correction for multiple tests to be used. FDR is default, see \code{\link{(p.adjust)}} for
-#' other methods.
+#' @param min.sim Minimum CNV genotype distribuition similarity among subsequent
+#' probes. Default is 0.95 (i.e. 95\%)
+#' @param freq.cn Minimum CNV frequency where 1 (i.e. 100\%), or all samples 
+#' deviating from diploid state. Default 0.01 (i.e. 1\%)
+#' @param snp.matrix Only FALSE implemented - If TRUE B allele frequencies (BAF)
+#' would be used to reconstruct CNV-SNP genotypes
+#' @param method.m.test Correction for multiple tests to be used. FDR is default, 
+#' see \code{\link{(p.adjust)}} for other methods.
 #' @param lo.phe The phenotype to be analyzed in the PhenInfo$phenotypesSam data-frame 
-#' @param chr.code.name A data-frame with the integer name in the first column and the original name for each chromosome  
-#' @param genotype.nodes Expression data type. Nodes with CNV genotypes to be produced in the gds file. 
-#' @param coding.translate For 'CNVgenotypeSNPlike'. If NULL or unrecognized string use only biallelic CNVs. If 'all' code multiallelic CNVs as 0 
+#' @param chr.code.name A data-frame with the integer name in the first column 
+#' and the original name for each chromosome  
+#' @param genotype.nodes Expression data type. Nodes with CNV genotypes to be 
+#' produced in the gds file. 
+#' @param coding.translate For 'CNVgenotypeSNPlike'. If NULL or unrecognized 
+#' string use only biallelic CNVs. If 'all' code multiallelic CNVs as 0 
 #' for loss; 1 for 2n and 2 for gain.
 #' @param produce.gds logical. If TRUE produce a new gds, if FALSE use gds previously created   
 #' @param run.lrr If TRUE use LRR values instead absolute copy numbers in the association
 #' @param assign.probe \sQuote{min.pvalue} or \sQuote{high.freq} to represent the CNV segment
 #' @param correct.inflation logical. Estimate lambda from raw p-values and correct for genomic inflation.
 #' Used with \code{\link{method.m.test}} can be generate strict p-values. 
-#' @param both.up.down Check for CNV genotype similarity in both directions. Default is FALSE (i.e. only downstream)
+#' @param both.up.down Check for CNV genotype similarity in both directions. 
+#' Default is FALSE (i.e. only downstream)
 #' @param verbose Show progress in the analysis
 #' @return The CNV segments and the representative probes and their respective p-value
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
@@ -1647,17 +1669,20 @@ snpgdsGetGenoCNV <- function(genofile, snp.id, node.to.extract = "CNVgenotype") 
 
 #' Import LRR and BAF from text files used in the CNV analysis
 #' 
-#' This function imports the LRR/BAF values and create a node for each one in the GDS file at the working folder 'Inputs'
-#' created by the \code{\link{setupCnvGWAS}} function. Once imported, the LRR values can be used to perform a GWAS directly as
-#' an alternative to copy number dosage
+#' This function imports the LRR/BAF values and create a node for each one in 
+#' the GDS file at the working folder 'Inputs' created by the 
+#' \code{\link{setupCnvGWAS}} function. Once imported, the LRR values can be 
+#' used to perform a GWAS directly as an alternative to copy number dosage
 #'
-#' @param all.paths Object returned from \code{CreateFolderTree} function with the working folder tree 
-#' @param path.files Folder containing the input CNV files used for the CNV calling (i.e. one text file with 5 collumns 
-#' for each sample). Columns should contain (i) probe name, (ii) Chromosome, (iii) Position, (iv) LRR and (v) BAF
-#' @param list.of.files Data-frame with two columns where the (i) is the file name with signals and (ii) is the 
-#' correspondent name of the sample in the gds file
+#' @param all.paths Object returned from \code{CreateFolderTree} function with 
+#' the working folder tree 
+#' @param path.files Folder containing the input CNV files used for the CNV 
+#' calling (i.e. one text file with 5 collumns for each sample). Columns should 
+#' contain (i) probe name, (ii) Chromosome, (iii) Position, (iv) LRR, and (v) BAF.
+#' @param list.of.files Data-frame with two columns where the (i) is the file 
+#' name with signals and (ii) is the correspondent name of the sample in the gds file
 #' @param verbose Print the samples while importing
-#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
+#' @author Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
 #' @examples
 #' 
 #' # Load phenotype-CNV information
