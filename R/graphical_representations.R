@@ -6,11 +6,11 @@
 ###################
 
 
-#' HELPER - Plot QQ-plot using non-log p-values 
-#' Originally published in: https://genome.sph.umich.edu/wiki/Code_Sample:_Generating_QQ_Plots_in_R By Matthew Flickinger
-#' @import lattice
+# HELPER - Plot QQ-plot using non-log p-values 
+# Originally published in: https://genome.sph.umich.edu/wiki/Code_Sample:_Generating_QQ_Plots_in_R By Matthew Flickinger
+# @import lattice
 
-qqunif.plot<-function(pvalues, 
+.qqunifPlot<-function(pvalues, 
                       should.thin=T, thin.obs.places=2, thin.exp.places=2, 
                       xlab=expression(paste("Expected (",-log[10], " p-value)")),
                       ylab=expression(paste("Observed (",-log[10], " p-value)")), 
@@ -123,7 +123,8 @@ qqunif.plot<-function(pvalues,
 #' Plot the manhattan
 #' 
 #' Function to write a manhattan plot with the p-values from a CNV-GWAS.
-#' 
+#'
+#' @param all.paths TODO. 
 #' @param regions GRanges from CNV-GWAS run to produce the manhattan plot
 #' @param chr.size.order Data-frame with two columns: (i) 'chr' have the chromosome names as character
 #' and (ii) 'size' with the length of the chromosome in basepairs

@@ -9,7 +9,11 @@ populationRangesRO(grl, ro.thresh = 0.5, multi.assign = FALSE)
 \arguments{
 \item{grl}{A \code{\linkS4class{GRangesList}}.}
 
-\item{density}{Numeric.}
+\item{ro.thresh}{Numeric. Threshold for reciprocal overlap required for merging
+two overlapping regions. Defaults to 0.5.}
+
+\item{multi.assign}{Logical. Allow regions to be assigned to several region clusters?
+Defaults to FALSE.}
 }
 \value{
 A \code{\linkS4class{GRanges}} object containing the summarized
@@ -62,7 +66,7 @@ Conrad et al. (2010) Origins and functional impact of copy number variation
 in the human genome. Nature, 464(7289):704-12.
 }
 \seealso{
-
+\code{\link{subsetByOverlaps}}
 }
 \author{
 Ludwig Geistlinger

@@ -26,7 +26,7 @@ deviating from diploid state. Default 0.01 (i.e. 1\%)}
 would be used to reconstruct CNV-SNP genotypes}
 
 \item{method.m.test}{Correction for multiple tests to be used. FDR is default, 
-see \code{\link{(p.adjust)}} for other methods.}
+see \code{\link{p.adjust}} for other methods.}
 
 \item{lo.phe}{The phenotype to be analyzed in the PhenInfo$phenotypesSam data-frame}
 
@@ -40,6 +40,10 @@ produced in the gds file.}
 string use only biallelic CNVs. If 'all' code multiallelic CNVs as 0 
 for loss; 1 for 2n and 2 for gain.}
 
+\item{path.files}{TODO}
+
+\item{list.of.files}{TODO}
+
 \item{produce.gds}{logical. If TRUE produce a new gds, if FALSE use gds previously created}
 
 \item{run.lrr}{If TRUE use LRR values instead absolute copy numbers in the association}
@@ -47,7 +51,7 @@ for loss; 1 for 2n and 2 for gain.}
 \item{assign.probe}{\sQuote{min.pvalue} or \sQuote{high.freq} to represent the CNV segment}
 
 \item{correct.inflation}{logical. Estimate lambda from raw p-values and correct for genomic inflation.
-Used with \code{\link{method.m.test}} can be generate strict p-values.}
+Use with argument \code{method.m.test} to generate strict p-values.}
 
 \item{both.up.down}{Check for CNV genotype similarity in both directions. 
 Default is FALSE (i.e. only downstream)}
@@ -85,7 +89,7 @@ df <- '16 1A
 30 25LG2
 31 LGE22'
 
-chr.code.name <- read.table(text=df, header=F)
+chr.code.name <- read.table(text=df, header=FALSE)
 
 segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name)
  

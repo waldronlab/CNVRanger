@@ -8,6 +8,8 @@ plotManhattan(all.paths, regions, chr.size.order = NULL,
   plot.pdf = TRUE)
 }
 \arguments{
+\item{all.paths}{TODO.}
+
 \item{regions}{GRanges from CNV-GWAS run to produce the manhattan plot}
 
 \item{chr.size.order}{Data-frame with two columns: (i) 'chr' have the chromosome names as character

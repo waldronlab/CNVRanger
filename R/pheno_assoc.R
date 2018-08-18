@@ -810,7 +810,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
     gdsfmt::read.gdsn(n)
     
     if(rappdirs:::get_os() == 'unix' | rappdirs:::get_os() == 'mac'){
-      multicoreParam <-BiocParallel::SnowParam(workers = 1, type = 'SOCK')
+      multicoreParam <- BiocParallel::SnowParam(workers = 1, type = 'SOCK')
       BiocParallel::bplapply(1:length(all.samples), .writeProbesCNV, BPPARAM =
                                multicoreParam, all.samples=all.samples, genofile=genofile, CNVsGr=CNVsGr,
                              probes.cnv.gr=probes.cnv.gr, n=n) } 
@@ -1493,7 +1493,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
 #' @param snp.matrix Only FALSE implemented - If TRUE B allele frequencies (BAF)
 #' would be used to reconstruct CNV-SNP genotypes
 #' @param method.m.test Correction for multiple tests to be used. FDR is default, 
-#' see \code{\link{(p.adjust)}} for other methods.
+#' see \code{\link{p.adjust}} for other methods.
 #' @param lo.phe The phenotype to be analyzed in the PhenInfo$phenotypesSam data-frame 
 #' @param chr.code.name A data-frame with the integer name in the first column 
 #' and the original name for each chromosome  
@@ -1502,16 +1502,18 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
 #' @param coding.translate For 'CNVgenotypeSNPlike'. If NULL or unrecognized 
 #' string use only biallelic CNVs. If 'all' code multiallelic CNVs as 0 
 #' for loss; 1 for 2n and 2 for gain.
+#' @param path.files TODO
+#' @param list.of.files TODO
 #' @param produce.gds logical. If TRUE produce a new gds, if FALSE use gds previously created   
 #' @param run.lrr If TRUE use LRR values instead absolute copy numbers in the association
 #' @param assign.probe \sQuote{min.pvalue} or \sQuote{high.freq} to represent the CNV segment
 #' @param correct.inflation logical. Estimate lambda from raw p-values and correct for genomic inflation.
-#' Used with \code{\link{method.m.test}} can be generate strict p-values. 
+#' Use with argument \code{method.m.test} to generate strict p-values. 
 #' @param both.up.down Check for CNV genotype similarity in both directions. 
 #' Default is FALSE (i.e. only downstream)
 #' @param verbose Show progress in the analysis
 #' @return The CNV segments and the representative probes and their respective p-value
-#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
+#' @author Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
 #' @examples
 #' 
 #' # Load phenotype-CNV information
@@ -1529,7 +1531,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
 #' 30 25LG2
 #' 31 LGE22'
 #' 
-#' chr.code.name <- read.table(text=df, header=F)
+#' chr.code.name <- read.table(text=df, header=FALSE)
 #' 
 #' segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name)
 #'  
@@ -1600,7 +1602,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
   
   pdf(file.path(all.paths[3], paste0(unique(values(segs.pvalue.gr)$Phenotype), 
                                      "-LRR-", run.lrr, "QQ-PLOT.pdf")))
-  qq.plot.pdf <- qqunif.plot(values(segs.pvalue.gr)$MinPvalueAdjusted, auto.key = list(corner = c(0.95, 
+  qq.plot.pdf <- .qqunifPlot(values(segs.pvalue.gr)$MinPvalueAdjusted, auto.key = list(corner = c(0.95, 
                                                                                                   0.05)))
   print(qq.plot.pdf)
   invisible(dev.off())
@@ -1748,7 +1750,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose = FALSE)
     if (verbose) {
       message("Start the parallel import of LRR/BAF values")
     }
-    BiocParallel::bplapply(1:nrow(list.filesLo), .freadImport, BPPARAM = multicoreParam, 
+    BiocParallel::bplapply(1:nrow(list.filesLo), .freadImport, BPPARAM = param, 
                            list.filesLo = list.filesLo, genofile = genofile, all.samples = all.samples, 
                            nLRR = nLRR, nBAF = nBAF, snps.included = snps.included, verbose = verbose)
     

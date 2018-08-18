@@ -6,21 +6,22 @@ Maintainer: Ludwig Geistlinger <Ludwig.Geistlinger@sph.cuny.edu>
 Depends: 
     R(>= 3.5.0), 
     GenomicRanges,
-    RaggedExperiment, 
-    lattice
+    RaggedExperiment
 Imports: 
-    AnnotationDbi, 
-    BiocParallel, 
-    GWASTools, 
-    RaggedExperiment, 
+    BiocGenerics,
+    BiocParallel,
+    GenomeInfoDb,
+    IRanges,
     S4Vectors,
-    SummarizedExperiment, 
     SNPRelate, 
     data.table, 
-    doBy, 
-    edgeR, 
+    dplyr,
+    gdsfmt,
+    lattice,
+    plyr,
+    qqman, 
     rappdirs,
-    qqman  
+    reshape2
 Suggests:
     AnnotationHub,
     BSgenome.Btaurus.UCSC.bosTau6.masked, 
@@ -28,9 +29,7 @@ Suggests:
     knitr,
     regioneR,
     rmarkdown 
-Description: CNV calling from SNP-chip genotype and next-generation 
-    sequencing data, CNV architecture, CNV-expression association, 
-    CNV-phenotype association, and CNV evolution 
+Description: The cnvAnalyzeR package implements a comprehensive tool suite for CNV analysis.
 License: Artistic-2.0
 Encoding: UTF-8
 VignetteBuilder: knitr

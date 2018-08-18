@@ -27,7 +27,7 @@
 #' https://www.ncbi.nlm.nih.gov/pubmed/22539667 (Figure 1)
 #'
 #' @param grl A \code{\linkS4class{GRangesList}}.
-#' @param density Numeric. 
+#' @param density Numeric. Defaults to 0.1. 
 #'
 #' @return A \code{\linkS4class{GRanges}} object containing the summarized
 #' genomic ranges. 
@@ -37,7 +37,7 @@
 #' association analysis tool. Bioinformatics, 28(13):1790-2.
 #'
 #' @author Martin Morgan
-#' @seealso
+#' @seealso \code{\link{findOverlaps}}
 #' 
 #' @examples
 #'
@@ -101,9 +101,13 @@ populationRanges <- function(grl, density=0.1)
 #'       move to next step.
 #' \item If calls remain, return to 1. Otherwise exit.
 #' }
-#' @param grl A \code{\linkS4class{GRangesList}}.
-#' @param density Numeric. 
 #'
+#' @param grl A \code{\linkS4class{GRangesList}}.
+#' @param ro.thresh Numeric. Threshold for reciprocal overlap required for merging
+#' two overlapping regions. Defaults to 0.5.
+#' @param multi.assign Logical. Allow regions to be assigned to several region clusters?
+#' Defaults to FALSE.
+#' 
 #' @return A \code{\linkS4class{GRanges}} object containing the summarized
 #' genomic ranges. 
 #'
@@ -112,7 +116,7 @@ populationRanges <- function(grl, density=0.1)
 #' in the human genome. Nature, 464(7289):704-12.
 #'
 #' @author Ludwig Geistlinger
-#' @seealso
+#' @seealso \code{\link{subsetByOverlaps}}
 #' 
 #' @examples
 #'

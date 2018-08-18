@@ -9,7 +9,7 @@ populationRanges(grl, density = 0.1)
 \arguments{
 \item{grl}{A \code{\linkS4class{GRangesList}}.}
 
-\item{density}{Numeric.}
+\item{density}{Numeric. Defaults to 0.1.}
 }
 \value{
 A \code{\linkS4class{GRanges}} object containing the summarized
@@ -60,7 +60,7 @@ Kim JH et al. (2012) CNVRuler: a copy number variation-based case-control
 association analysis tool. Bioinformatics, 28(13):1790-2.
 }
 \seealso{
-
+\code{\link{findOverlaps}}
 }
 \author{
 Martin Morgan
