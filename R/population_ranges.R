@@ -65,13 +65,13 @@
 populationRanges <- function(grl, density=0.1)
 {
     gr <- unlist(grl)
-    cover <- reduce(gr)
-    disjoint <- disjoin(gr)
+    cover <- GenomicRanges::reduce(gr)
+    disjoint <- GenomicRanges::disjoin(gr)
 
-    dj_covered_hits <- subjectHits(findOverlaps(disjoint, cover))
-    cover_support <- countOverlaps(cover, gr)[dj_covered_hits]
-    ppn <- countOverlaps(disjoint, gr) / cover_support
-    reduce(disjoint[ppn >= density])
+    dj_covered_hits <- S4Vectors::subjectHits(GenomicRanges::findOverlaps(disjoint, cover))
+    cover_support <- GenomicRanges::countOverlaps(cover, gr)[dj_covered_hits]
+    ppn <- GenomicRanges::countOverlaps(disjoint, gr) / cover_support
+    GenomicRanges::reduce(disjoint[ppn >= density])
 }
 
 
@@ -138,7 +138,7 @@ populationRangesRO <- function(grl, ro.thresh=0.5, multi.assign=FALSE)
     gr <- unlist(grl)
 
     # build initial clusters
-    init.clusters <- reduce(gr)
+    init.clusters <- GenomicRanges::reduce(gr)
     message(paste("TODO:", length(init.clusters)))
 
     # cluster within each initial cluster
@@ -147,12 +147,12 @@ populationRangesRO <- function(grl, ro.thresh=0.5, multi.assign=FALSE)
         {
             message(which(init.clusters == ic))
             # get calls of cluster
-            ccalls <- subsetByOverlaps(gr, ic)
+            ccalls <- IRanges::subsetByOverlaps(gr, ic)
             clusters <- .clusterCalls(ccalls, ro.thresh, multi.assign)
-            clusters <- range(extractList(ccalls, clusters))
+            clusters <- range(IRanges::extractList(ccalls, clusters))
             clusters <- sort(unlist(clusters))  
     })
-    ro.ranges <- unname(unlist(GRangesList(cl.per.iclust)))
+    ro.ranges <- unname(unlist(GenomicRanges::GRangesList(cl.per.iclust)))
     return(ro.ranges)
 }
 
@@ -162,13 +162,13 @@ populationRangesRO <- function(grl, ro.thresh=0.5, multi.assign=FALSE)
 .getROHits <- function(calls, ro.thresh=0.5)
 {
     # calculate pairwise ro
-    hits <- findOverlaps(calls, drop.self=TRUE, drop.redundant=TRUE)
+    hits <- GenomicRanges::findOverlaps(calls, drop.self=TRUE, drop.redundant=TRUE)
     
-    x <- calls[queryHits(hits)]
-    y <- calls[subjectHits(hits)]
-    pint <- pintersect(x, y)
-    rovlp1 <- width(pint) / width(x)
-    rovlp2 <- width(pint) / width(y)
+    x <- calls[S4Vectors::queryHits(hits)]
+    y <- calls[S4Vectors::subjectHits(hits)]
+    pint <- GenomicRanges::pintersect(x, y)
+    rovlp1 <- GenomicRanges::width(pint) / GenomicRanges::width(x)
+    rovlp2 <- GenomicRanges::width(pint) / GenomicRanges::width(y)
 
     # keep only hits with ro > threshold
     ind <- rovlp1 > ro.thresh & rovlp2 > ro.thresh
@@ -184,11 +184,11 @@ populationRangesRO <- function(grl, ro.thresh=0.5, multi.assign=FALSE)
     pmins <- pmin(rovlp1, rovlp2)
     ind <- order(pmins, decreasing=TRUE)
     
-    qh <- queryHits(hits)
-    sh <- subjectHits(hits)       
-    hits <- Hits(qh[ind], sh[ind], queryLength(hits), subjectLength(hits))
-    mcols(hits)$RO1 <- rovlp1[ind]
-    mcols(hits)$RO2 <- rovlp2[ind]
+    qh <- S4Vectors::queryHits(hits)
+    sh <- S4Vectors::subjectHits(hits)       
+    hits <- S4Vectors::Hits(qh[ind], sh[ind], S4Vectors::queryLength(hits), S4Vectors::subjectLength(hits))
+    S4Vectors::mcols(hits)$RO1 <- rovlp1[ind]
+    S4Vectors::mcols(hits)$RO2 <- rovlp2[ind]
 
     return(hits)
 }
@@ -198,12 +198,12 @@ populationRangesRO <- function(grl, ro.thresh=0.5, multi.assign=FALSE)
 # threshold
 .getMergeIndex <- function(hit, cluster, hits)
 {
-    # (1) check whether query / subject of hit is part of cluster
-    curr.qh <- queryHits(hit)
-    curr.sh <- subjectHits(hit)
+    # (1) check whether query / S4Vectors::subject of hit is part of cluster
+    curr.qh <- S4Vectors::queryHits(hit)
+    curr.sh <- S4Vectors::subjectHits(hit)
        
-    prev.qh <- queryHits(cluster)
-    prev.sh <- subjectHits(cluster)
+    prev.qh <- S4Vectors::queryHits(cluster)
+    prev.sh <- S4Vectors::subjectHits(cluster)
     prev.members <- union(prev.qh, prev.sh)
     is.part <- c(curr.qh, curr.sh) %in% prev.members
 
@@ -219,11 +219,11 @@ populationRangesRO <- function(grl, ro.thresh=0.5, multi.assign=FALSE)
         # check whether the call which is not part of the cluster
         # has sufficient RO with all others in the cluster 
         npart <- c(curr.qh, curr.sh)[!is.part]
-        req.hits <- Hits(   rep(npart, length(prev.members)), 
+        req.hits <- S4Vectors::Hits(   rep(npart, length(prev.members)), 
                             prev.members, 
-                            queryLength(hits), 
-                            subjectLength(hits))
-        is.gr <- queryHits(req.hits) > subjectHits(req.hits) 
+                            S4Vectors::queryLength(hits), 
+                            S4Vectors::subjectLength(hits))
+        is.gr <- S4Vectors::queryHits(req.hits) > S4Vectors::subjectHits(req.hits) 
         req.hits[is.gr] <- t(req.hits[is.gr])
         mergeIndex <- match(req.hits, hits)        
         if(any(is.na(mergeIndex))) mergeIndex <- NULL
@@ -239,7 +239,7 @@ populationRangesRO <- function(grl, ro.thresh=0.5, multi.assign=FALSE)
 .pruneMultiAssign <- function(clusters)
 {
     cid <- seq_along(clusters)
-    times <- sapply(clusters, length)
+    times <- lengths(clusters)
     cid <- rep(cid, times)
     ind <- unlist(clusters)
     ndup <- !duplicated(ind)
@@ -291,11 +291,11 @@ populationRangesRO <- function(grl, ro.thresh=0.5, multi.assign=FALSE)
     }
    
     # compile hit clusters 
-    hit.clusters <- unname(splitAsList(hits, cid))
+    hit.clusters <- unname(IRanges::splitAsList(hits, cid))
 
     # extract call clusters
     call.clusters <- lapply(hit.clusters, 
-        function(h) union(queryHits(h), subjectHits(h)))
+        function(h) union(S4Vectors::queryHits(h), S4Vectors::subjectHits(h)))
     
     # can calls be assigned to more than one cluster?
     if(!multi.assign) call.clusters <- .pruneMultiAssign(call.clusters)

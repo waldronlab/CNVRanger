@@ -206,6 +206,9 @@
 
 .checkConvertCNVs <- function(cnvs, all.paths, n.cor=1){
   
+  the.names <- as.character(as.matrix(cnvs[1, ]))
+  stand.names <- c("chr", "start", "end", "sample.id", "state")
+  stand.names.ext <- c(stand.names, "num.snps", "start.probe", "end.probe")
   ## If PennCNV file
   if (unique(sub("^([[:alpha:]]*).*", "\\1", cnvs$V2))[[1]] == "numsnp") {
     cnvs <- as.data.frame(cnvs)
@@ -219,14 +222,12 @@
     CNVs <- cnvs
     
     ## If general format
-  } else if (suppressWarnings(all(as.character(as.matrix(cnvs[1, ])) == c("chr", "start", "end", "sample.id", 
-                                  "state", "num.snps", "start.probe", "end.probe")))) {
-    the.names <- as.character(as.matrix(cnvs[1, ]))
+  } else if (suppressWarnings(all(the.names == stand.names.ext))) {
     cnvs <- cnvs[-1, ]
     colnames(cnvs) <- the.names
     cnvs <- as.data.frame(cnvs)
-    cnvs$start <- as.numeric(cnvs$start)
-    cnvs$end <- as.numeric(cnvs$end)
+    cnvs$start <- as.integer(cnvs$start)
+    cnvs$end <- as.integer(cnvs$end)
     ## Convert to PennCNV format
     cnvs$V1 <- paste0(cnvs$chr, ":", cnvs$start, "-", cnvs$end)
     cnvs$length <- (cnvs$end - cnvs$start) + 1
@@ -237,55 +238,50 @@
     cnvs$start.probe <- paste0("startSNP=", cnvs$start.probe)
     cnvs$end.probe <- paste0("endSNP=", cnvs$end.probe)
     
-    cnvs <- subset(cnvs, select = c(chr, start, end, V1, num.snps, length, state, 
-                                    sample.id, start.probe, end.probe))
-    colnames(cnvs) <- c("chr", "start", "end", "V1", "V2", "V3", "V4", "V5", 
-                        "V6", "V7")
+    cnvs <- cnvs[,c(stand.names[1:3], "V1", "num.snps", "length", "state", 
+                                    "sample.id", "start.probe", "end.probe")]
+    colnames(cnvs)[5:10] <- c("V2", "V3", "V4", "V5", "V6", "V7")
     CNVs <- cnvs
     
     ## If sequencing info
-  } else if (all(as.character(as.matrix(cnvs[1, ])) == c("chr", "start", "end", "sample.id", 
-                                                         "state"))) {
+  } else if (all(the.names == stand.names)) {
     cnvs <- as.data.frame(cnvs)
     
     ### Include artificial probe tags in the 
     #"num.snps", "start.probe", "end.probe"
     
     cnvs.seq <- cnvs
-    the.names <- as.character(as.matrix(cnvs.seq[1, ]))
     cnvs.seq <- cnvs.seq[-1, ]
     colnames(cnvs.seq) <- the.names
-    cnv.seq.gr <- makeGRangesFromDataFrame(cnvs.seq, keep.extra.columns = TRUE)
-    chr.seq <- as.character(seqnames(cnv.seq.gr))
-    start.seq <- start(cnv.seq.gr)
-    start.seq <- as.data.frame(cbind("chr"=chr.seq, "position"=start.seq), 
-                             stringsAsFactors=FALSE)
-    end.seq <-  end(cnv.seq.gr)
-    end.seq <- as.data.frame(cbind("chr"=chr.seq, "position"=end.seq), 
-                             stringsAsFactors=FALSE)
-    dif <- end(cnv.seq.gr)-start(cnv.seq.gr)
-    middle.seq <- end(cnv.seq.gr)-dif
-    middle.seq <- as.data.frame(cbind("chr"=chr.seq, "position"=middle.seq),  
-                             stringsAsFactors=FALSE)
+    cnv.seq.gr <- GenomicRanges::makeGRangesFromDataFrame(cnvs.seq, keep.extra.columns = TRUE)
+    chr.seq <- as.character(GenomicRanges::seqnames(cnv.seq.gr))
+    start.seq <- GenomicRanges::start(cnv.seq.gr)
+    start.seq <- data.frame(chr=chr.seq, position=start.seq, stringsAsFactors=FALSE)
+    end.seq <-  GenomicRanges::end(cnv.seq.gr)
+    end.seq <- data.frame(chr=chr.seq, position=end.seq, stringsAsFactors=FALSE)
+    dif <- GenomicRanges::end(cnv.seq.gr) - GenomicRanges::start(cnv.seq.gr)
+    middle.seq <- GenomicRanges::end(cnv.seq.gr) - dif
+    middle.seq <- data.frame(chr=chr.seq, position=middle.seq, stringsAsFactors=FALSE)
     arti.pr <- rbind(start.seq, end.seq, middle.seq) # Bind all artifical probes
-    arti.pr <- makeGRangesFromDataFrame(arti.pr, seqnames.field = "chr", 
+    arti.pr <- GenomicRanges::makeGRangesFromDataFrame(arti.pr, seqnames.field = "chr", 
                                         start.field="position", end.field = "position")
-    arti.pr <- reduce(arti.pr) ## Exclude duplicated positions
-    arti.pr <- sortSeqlevels(arti.pr)
-    arti.pr <- sort(arti.pr)
+    arti.pr <- GenomicRanges::reduce(arti.pr) ## Exclude duplicated positions
+    arti.pr <- GenomeInfoDb::sortSeqlevels(arti.pr)
+    arti.pr <- GenomicRanges::sort(arti.pr)
     
     probe.like.map <- as.data.frame(arti.pr)
-    probe.like.map$Name <- paste0("probe.like_", seq(from = 1, to = nrow(probe.like.map)))
-    probe.like.map <- subset(probe.like.map, select = c(Name, seqnames, start))
+    probe.like.map$Name <- paste0("probe.like_", seq_len(nrow(probe.like.map)))
+    probe.like.map <- probe.like.map[, c("Name", "seqnames", "start")]
     colnames(probe.like.map) <- c("Name", "Chr", "Position")
     probe.like.map$Chr <- gsub("chr", "", probe.like.map$Chr)
-    write.table(probe.like.map, file.path(all.paths[1], "/MapPenn.txt"), col.names = TRUE, 
+    write.table(probe.like.map, file.path(all.paths[1], "MapPenn.txt"), 
                 row.names = FALSE, quote = FALSE, sep = "\t")
     
     ## Associate artificial probes to CNVs
     
-    
-    probe.like.map.gr <- makeGRangesFromDataFrame(probe.like.map, seqnames.field="Chr", 
+    probe.like.map.gr <- GenomicRanges::makeGRangesFromDataFrame(
+                                                  probe.like.map, 
+                                                  seqnames.field="Chr", 
                                                   start.field="Position", 
                                                   end.field="Position",  
                                                   keep.extra.columns = TRUE)
@@ -293,23 +289,23 @@
     ### HELPER - associate probes-like regions with CNVs
     .probeToCNVs <- function(lo, cnv.seq.gr, probe.like.map.gr){
     cnvx <- cnv.seq.gr[lo]  
-    ov.pr <- subsetByOverlaps(probe.like.map.gr, cnvx)
+    ov.pr <- IRanges::subsetByOverlaps(probe.like.map.gr, cnvx)
     num.snps <- length(ov.pr)
-    start.probe <- values(ov.pr)$Name[1]
-    end.probe <- values(ov.pr)$Name[length(ov.pr)]
+    start.probe <- ov.pr$Name[1]
+    end.probe <- ov.pr$Name[length(ov.pr)]
     return(c(num.snps, start.probe, end.probe))
     }
     
     if(rappdirs:::get_os() == "win"){
       param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
-      cnvs.probes <- suppressMessages(BiocParallel::bplapply(1:length(cnv.seq.gr), 
+      cnvs.probes <- suppressMessages(BiocParallel::bplapply(seq_along(cnv.seq.gr), 
                                                            .probeToCNVs, BPPARAM = param, 
                                                            cnv.seq.gr=cnv.seq.gr,
                                                            probe.like.map.gr=probe.like.map.gr))
     }
     if(rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac"){
       multicoreParam <- BiocParallel::MulticoreParam(workers = n.cor)
-      cnvs.probes <- suppressMessages(BiocParallel::bplapply(1:length(cnv.seq.gr), 
+      cnvs.probes <- suppressMessages(BiocParallel::bplapply(seq_along(cnv.seq.gr), 
                                                            .probeToCNVs, BPPARAM = multicoreParam, 
                                                            cnv.seq.gr=cnv.seq.gr,
                                                            probe.like.map.gr=probe.like.map.gr))
@@ -317,9 +313,9 @@
     #cnv.seq.gr.split  <- split(cnv.seq.gr, as.factor(cnv.seq.gr))
     #subsetByOverlaps(probe.like.map.gr, cnv.seq.gr.split) 
     cnv.p.df <- t(as.data.frame(cnvs.probes))
-    values(cnv.seq.gr)$num.snps <- as.numeric(as.character(cnv.p.df[,1]))
-    values(cnv.seq.gr)$start.probe <- as.character(cnv.p.df[,2])
-    values(cnv.seq.gr)$end.probe <- as.character(cnv.p.df[,3])
+    cnv.seq.gr$num.snps <- as.integer(as.character(cnv.p.df[,1]))
+    cnv.seq.gr$start.probe <- as.character(cnv.p.df[,2])
+    cnv.seq.gr$end.probe <- as.character(cnv.p.df[,3])
     
     cnv.seq <- as.data.frame(cnv.seq.gr)
     cnv.seq <- cnv.seq[, c(1:3, 6:10)]
@@ -331,8 +327,8 @@
     #cnvs <- cnvs[-1, ]
     #colnames(cnvs) <- the.names
     cnvs <- cnv.seq
-    cnvs$start <- as.numeric(cnvs$start)
-    cnvs$end <- as.numeric(cnvs$end)
+    cnvs$start <- as.integer(cnvs$start)
+    cnvs$end <- as.integer(cnvs$end)
     ## Convert to PennCNV format
     cnvs$V1 <- paste0(cnvs$chr, ":", cnvs$start, "-", cnvs$end)
     cnvs$length <- (cnvs$end - cnvs$start) + 1
@@ -343,13 +339,10 @@
     cnvs$start.probe <- paste0("startSNP=", cnvs$start.probe)
     cnvs$end.probe <- paste0("endSNP=", cnvs$end.probe)
     
-    cnvs <- subset(cnvs, select = c(chr, start, end, V1, num.snps, length, state, 
-                                    sample.id, start.probe, end.probe))
-    colnames(cnvs) <- c("chr", "start", "end", "V1", "V2", "V3", "V4", "V5", 
-                        "V6", "V7")
+    cnvs <- cnvs[,c(stand.names[1:3], "V1", "num.snps", "length", "state", 
+                                    "sample.id", "start.probe", "end.probe")]
+    colnames(cnvs)[5:10] <- c("V2", "V3", "V4", "V5", "V6", "V7")
     CNVs <- cnvs
-    
-    
   } else stop("Unexpected CNV input format - is it tab delimited?")
   
   return(CNVs)
@@ -393,7 +386,7 @@
 #' @return List \sQuote{phen.info} with \sQuote{samplesPhen}, \sQuote{phenotypes}, 
 #' \sQuote{phenotypesdf}, \sQuote{phenotypesSam}, \sQuote{FamID}, \sQuote{SexIds}, 
 #' \sQuote{pops.names} (if more than one population) and \sQuote{all.paths}
-#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
+#' @author Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
 #' @examples
 #' 
 #' folder.package <- system.file('extdata', package = 'cnvAnalyzeR')
@@ -463,7 +456,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
     cnvs <- read.table(file.path(all.paths[1], "CNVOut.txt"), sep = "", header = F)  ### CNV table 
     CNVs <- .checkConvertCNVs(cnvs, all.paths, n.cor)
     
-    CGr <- makeGRangesFromDataFrame(CNVs)
+    CGr <- GenomicRanges::makeGRangesFromDataFrame(CNVs)
     #startP <- cbind(CNVs$chr, start(CGr))
     #endP <- cbind(CNVs$chr, end(CGr))
     #middleP <- cbind(CNVs$chr, end(CGr) - (width(CGr)/2))
@@ -508,14 +501,13 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
 .writeProbesCNV <- function(lo, all.samples, genofile, CNVsGr, probes.cnv.gr, n) {
   sampleX <- all.samples[[lo]]
   g <- as.numeric(SNPRelate::snpgdsGetGeno(genofile, sample.id = sampleX, verbose = FALSE))
-  CNVSamByState <- split(CNVsGr[values(CNVsGr)$V5 == all.samples[lo]], 
-                         as.character(elementMetadata(CNVsGr[values(CNVsGr)$V5 == 
-                                                               all.samples[lo]])$V4))
+  CNVSamByState <- split(CNVsGr[CNVsGr$V5 == all.samples[lo]], 
+                         as.character(CNVsGr[CNVsGr$V5 == all.samples[lo]]$V4))
   for (slo in seq_along(CNVSamByState)) {
-    state <- unique(substr(x = as.character(values(CNVSamByState[[slo]])$V4), 
-                           start = nchar(as.character(values(CNVSamByState[[slo]])$V4)), 
-                           stop = nchar(as.character(values(CNVSamByState[[slo]])$V4))))
-    SamCNVSNP <- values(suppressWarnings(subsetByOverlaps(probes.cnv.gr, CNVSamByState[[slo]])))$snp.id
+    state <- unique(substr(x = as.character(CNVSamByState[slo]$V4), 
+                           start = nchar(as.character(CNVSamByState[slo]$V4)), 
+                           stop = nchar(as.character(CNVSamByState[slo])$V4)))
+    suppressWarnings(SamCNVSNP <- IRanges::subsetByOverlaps(probes.cnv.gr, CNVSamByState[slo])$snp.id)
     g[SamCNVSNP] <- state
   }
   g <- as.integer(g)
@@ -536,35 +528,35 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
   g[seq_along(g)] <- "1"
   
   # 0n
-  CNVsGr0n <- CNVsGr[values(CNVsGr)$sample == sampleX]
-  CNVsGr0n <- CNVsGr0n[values(CNVsGr0n)$type == "state1,cn=0"]
-  probes.cnv.gr.0n <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, CNVsGr0n))
+  CNVsGr0n <- CNVsGr[CNVsGr$sample == sampleX]
+  CNVsGr0n <- CNVsGr0n[CNVsGr0n$type == "state1,cn=0"]
+  probes.cnv.gr.0n <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, CNVsGr0n))
   
-  g[values(probes.cnv.gr.0n)$tag.snp] <- "0"
+  g[probes.cnv.gr.0n$tag.snp] <- "0"
   
   # 1n
-  CNVsGr1n <- CNVsGr[values(CNVsGr)$sample == sampleX]
-  CNVsGr1n <- CNVsGr1n[values(CNVsGr1n)$type == "state2,cn=1"]
-  probes.cnv.gr.1n <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, CNVsGr1n))
+  CNVsGr1n <- CNVsGr[CNVsGr$sample == sampleX]
+  CNVsGr1n <- CNVsGr1n[CNVsGr1n$type == "state2,cn=1"]
+  probes.cnv.gr.1n <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, CNVsGr1n))
   
-  g[values(probes.cnv.gr.1n)$tag.snp] <- "0"
+  g[probes.cnv.gr.1n$tag.snp] <- "0"
   
   # 3n
-  CNVsGr3n <- CNVsGr[values(CNVsGr)$sample == sampleX]
-  CNVsGr3n <- CNVsGr3n[values(CNVsGr3n)$type == "state5,cn=3"]
-  probes.cnv.gr.3n <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, CNVsGr3n))
+  CNVsGr3n <- CNVsGr[CNVsGr$sample == sampleX]
+  CNVsGr3n <- CNVsGr3n[CNVsGr3n$type == "state5,cn=3"]
+  probes.cnv.gr.3n <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, CNVsGr3n))
   
-  g[values(probes.cnv.gr.3n)$tag.snp] <- "2"
+  g[probes.cnv.gr.3n$tag.snp] <- "2"
   
   # 4n
-  CNVsGr4n <- CNVsGr[values(CNVsGr)$sample == sampleX]
-  CNVsGr4n <- CNVsGr4n[values(CNVsGr4n)$type == "state6,cn=4"]
-  probes.cnv.gr.4n <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, CNVsGr4n))
+  CNVsGr4n <- CNVsGr[CNVsGr$sample == sampleX]
+  CNVsGr4n <- CNVsGr4n[CNVsGr4n$type == "state6,cn=4"]
+  probes.cnv.gr.4n <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, CNVsGr4n))
   
-  g[values(probes.cnv.gr.4n)$tag.snp] <- "2"
+  g[probes.cnv.gr.4n$tag.snp] <- "2"
   
   # 2n
-  g <- as.numeric(g)
+  g <- as.integer(g)
   
   ### Replace the genotype in the gds file
   gdsfmt::write.gdsn(n, g, start = c(1, lo), count = c(length(g), 1))
@@ -645,7 +637,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
     CNVgenoX[indexExclude, ] <- -1
   }
   
-  CNVgenoX <- apply(CNVgenoX, 2, as.numeric)
+  CNVgenoX <- apply(CNVgenoX, 2, as.integer)
   
   ### Replace the genotype in the gds file
   if (length(chunk) - 1 != lo) {
@@ -731,8 +723,8 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   
   ###################### Import CNVs to data-frame
   
-  cnvs <- data.table::fread(file.path(all.paths[1], "CNVOut.txt"), sep = "\t", 
-                            header = FALSE)  ### CNV table 
+  cnv.table <- file.path(all.paths[1], "CNVOut.txt")
+  cnvs <- data.table::fread(cnv.table, sep = "\t", header = FALSE) 
   CNVs <- .checkConvertCNVs(cnvs, all.paths, n.cor)
   
   ####################### Check if the chromosomes are numeric
@@ -747,57 +739,53 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   
   ############################# 
   
-  CNVs$start <- as.integer(as.character(CNVs$start))
-  CNVs$end <- as.integer(as.character(CNVs$end))
-  CNVsGr <- makeGRangesFromDataFrame(CNVs, keep.extra.columns = TRUE)
-  CNVsGr <- CNVsGr[values(CNVsGr)$V5 %in% samplesPhen]  ### Subset CNVs in phenotyped samples
+  CNVsGr <- GenomicRanges::makeGRangesFromDataFrame(CNVs, keep.extra.columns = TRUE)
+  CNVsGr <- CNVsGr[CNVsGr$V5 %in% samplesPhen]  ### Subset CNVs in phenotyped samples
   
   ###################### Import SNP map to data-frame
-  probes <- data.table::fread(file.path(all.paths[1], "MapPenn.txt"), header = TRUE, 
-                              sep = "\t")
+  map.file <- file.path(all.paths[1], "MapPenn.txt")  
+  probes <- data.table::fread(map.file, header=TRUE, sep="\t")
   probes <- as.data.frame(probes)
-  probes$Position <- as.numeric(as.character(probes$Position))
-  probes <- probes[complete.cases(probes), ]
-  probesGr <- makeGRangesFromDataFrame(probes, seqnames.field = "Chr", start.field = "Position", 
+  probes <- probes[stats::complete.cases(probes), ]
+  probesGr <- GenomicRanges::makeGRangesFromDataFrame(probes, seqnames.field = "Chr", start.field = "Position", 
                                        end.field = "Position", keep.extra.columns = TRUE)
   
-  all.samples <- unique(as.character(values(CNVsGr)$V5))
+  all.samples <- unique(CNVsGr$V5)
   
   ###################### Select probes within CNVs
-  probesCNV <- suppressWarnings(as.character(values(suppressWarnings(subsetByOverlaps(probesGr, 
-                                                                                      CNVsGr)))$Name))
+  probesCNV <- IRanges::subsetByOverlaps(probesGr, CNVsGr)$Name
   probesCNV <- unique(unlist(probesCNV))
-  probes.cnv.gr <- probesGr[values(probesGr)$Name %in% probesCNV]
+  probes.cnv.gr <- probesGr[probesGr$Name %in% probesCNV]
   
-  counts <- as.integer(countOverlaps(probes.cnv.gr, CNVsGr))
-  values(probes.cnv.gr)$freq <- counts
+  counts <- GenomicRanges::countOverlaps(probes.cnv.gr, CNVsGr)
+  probes.cnv.gr$freq <- unname(counts)
   
   ##### Subset by frequency
   NumSam <- freq.cn * length(all.samples)
-  probes.cnv.gr <- probes.cnv.gr[values(probes.cnv.gr)$freq >= NumSam]
+  probes.cnv.gr <- probes.cnv.gr[probes.cnv.gr$freq >= NumSam]
   
   ##### Order the probes
   probes.cnv.gr <- GenomeInfoDb::sortSeqlevels(probes.cnv.gr)
-  probes.cnv.gr <- sort(probes.cnv.gr)
+  probes.cnv.gr <- GenomicRanges::sort(probes.cnv.gr)
   
-  values(probes.cnv.gr)$snp.id <- seq_along(probes.cnv.gr)
+  probes.cnv.gr$snp.id <- seq_along(probes.cnv.gr)
   
   ###################### SNP genotype matrix not available
-  if (!snp.matrix) {
-    CNVBiMa <- matrix(2, nrow = length(probes.cnv.gr), ncol = length(all.samples))
-  }
+  if (!snp.matrix)  CNVBiMa <- matrix(2, nrow=length(probes.cnv.gr), ncol=length(all.samples))
   
-  ###################### SNP genotype matrix available - TODO
-  else{
-    stop("Option to consider SNP matrix is not implemented yet")  ## CHECK IF WE HAVE THE SAME SAMPLES - INCLUDE NA FOR SAMPLES WITH ONLY ONE GENOTYPE TYPE? (i.e CNV or SNP)
-  }
+  ###################### TODO: SNP genotype matrix available ## 
+  ## CHECK IF WE HAVE THE SAME SAMPLES - INCLUDE NA FOR SAMPLES WITH ONLY ONE GENOTYPE TYPE? (i.e CNV or SNP)
+  else stop("Option to consider SNP matrix is not implemented yet")  
+  
   
   ###################### Create a GDS with chr and SNP names to numeric
-  SNPRelate::snpgdsCreateGeno(file.path(all.paths[1], "CNV.gds"), genmat = CNVBiMa, 
-                              sample.id = all.samples, snp.id = as.character(values(probes.cnv.gr)$snp.id), 
-                              snp.rs.id = as.character(values(probes.cnv.gr)$Name), snp.chromosome = 
-                                as.character(seqnames(probes.cnv.gr)), 
-                              snp.position = start(probes.cnv.gr))
+  SNPRelate::snpgdsCreateGeno(file.path(all.paths[1], "CNV.gds"), 
+                                genmat = CNVBiMa, 
+                                sample.id = all.samples, 
+                                snp.id = as.character(probes.cnv.gr$snp.id), 
+                                snp.rs.id = probes.cnv.gr$Name, 
+                                snp.chromosome = as.character(GenomicRanges::seqnames(probes.cnv.gr)), 
+                                snp.position = GenomicRanges::start(probes.cnv.gr))
   
   
   if ("CNVGenotype" %in% genotype.nodes) {
@@ -914,7 +902,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   
   cnvs <- data.table::fread(file.path(all.paths[1], "CNVOut.txt"), sep = "\t", 
                             header = FALSE)  ### CNV table 
-  CNVs <- .checkConvertCNVs(cnvs, all.paths, n.cor)
+  CNVs <- .checkConvertCNVs(cnvs, all.paths)
   
   ####################### Check if the chromosomes are numeric
   
@@ -930,41 +918,40 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   
   CNVs$start <- as.integer(as.character(CNVs$start))
   CNVs$end <- as.integer(as.character(CNVs$end))
-  CNVsGr <- makeGRangesFromDataFrame(CNVs, keep.extra.columns = TRUE)
-  CNVsGr <- CNVsGr[values(CNVsGr)$V5 %in% samplesPhen]  ### Subset CNVs in phenotyped samples
+  CNVsGr <- GenomicRanges::makeGRangesFromDataFrame(CNVs, keep.extra.columns = TRUE)
+  CNVsGr <- CNVsGr[CNVsGr$V5 %in% samplesPhen]  ### Subset CNVs in phenotyped samples
   
   ###################### Import SNP map to data-frame
   probes <- data.table::fread(file.path(all.paths[1], "MapPenn.txt"), header = TRUE, 
                               sep = "\t")
   probes <- as.data.frame(probes)
-  probes$Position <- as.numeric(as.character(probes$Position))
-  probes <- probes[complete.cases(probes), ]
-  probesGr <- makeGRangesFromDataFrame(probes, seqnames.field = "Chr", start.field = "Position", 
+  probes$Position <- as.integer(as.character(probes$Position))
+  probes <- probes[stats::complete.cases(probes), ]
+  probesGr <- GenomicRanges::makeGRangesFromDataFrame(probes, seqnames.field = "Chr", start.field = "Position", 
                                        end.field = "Position", keep.extra.columns = TRUE)
   
-  all.samples <- unique(as.character(values(CNVsGr)$V5))
+  all.samples <- unique(as.character(CNVsGr$V5))
   
   ###################### Select probes within CNVs
-  probesCNV <- suppressWarnings(as.character(values(suppressWarnings(subsetByOverlaps(probesGr, 
-                                                                                      CNVsGr)))$Name))
+  probesCNV <- suppressWarnings(as.character(IRanges::subsetByOverlaps(probesGr, CNVsGr)$Name))
   probesCNV <- unique(unlist(probesCNV))
-  probes.cnv.gr <- probesGr[values(probesGr)$Name %in% probesCNV]
+  probes.cnv.gr <- probesGr[probesGr$Name %in% probesCNV]
   
-  counts <- as.integer(countOverlaps(probes.cnv.gr, CNVsGr))
-  values(probes.cnv.gr)$freq <- counts
+  counts <- GenomicRanges::countOverlaps(probes.cnv.gr, CNVsGr)
+  probes.cnv.gr$freq <- unname(counts)
   
   ##### Subset by frequency
   NumSam <- freq.cn * length(all.samples)
-  probes.cnv.gr <- probes.cnv.gr[values(probes.cnv.gr)$freq >= NumSam]
+  probes.cnv.gr <- probes.cnv.gr[probes.cnv.gr$freq >= NumSam]
   
   ##### Order the probes
   probes.cnv.gr <- GenomeInfoDb::sortSeqlevels(probes.cnv.gr)
-  probes.cnv.gr <- sort(probes.cnv.gr)
+  probes.cnv.gr <- GenomicRanges::sort(probes.cnv.gr)
   
-  values(probes.cnv.gr)$snp.id <- seq_along(probes.cnv.gr)
+  probes.cnv.gr$snp.id <- seq_along(probes.cnv.gr)
   
   return(probes.cnv.gr)
-  }
+}
 
 
 # HELPER - Internal function of parallel implementation to produce the .gvar file (absolute copy number) requested for the CNV-GWAS in PLINK
@@ -1130,20 +1117,24 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
 
 .runPLINK <- function(all.paths) {
   
-  if(rappdirs:::get_os() == "win" | rappdirs:::get_os() == "unix"){
-    plinkPath <- paste0(all.paths[2], "/plink")
-    plinkPath <- gsub("\\\\", "/", plinkPath)
-    system(paste(plinkPath, "--gfile", file.path(all.paths[2], "mydata"), 
+    if(rappdirs:::get_os() == "win" | rappdirs:::get_os() == "unix")
+    {
+        plinkPath <- paste0(all.paths[2], "/plink")
+        plinkPath <- gsub("\\\\", "/", plinkPath)
+        system(paste(plinkPath, "--gfile", file.path(all.paths[2], "mydata"), 
                  paste("--out", file.path(all.paths[2], "plink")), "--noweb"), wait=TRUE, intern = TRUE)}
-  
-  if(rappdirs:::get_os() == "mac"){
-  plink.path <- file.path(all.paths[2], "plink")
-  mydata <- file.path(all.paths[2], "mydata")
-  mydata <- paste0("\'", mydata, "\'")
-  plink <- file.path(all.paths[2], "plink")
-  plink <- paste0("\'", plink, "\'")
-  args <- c("--gfile", mydata, "--out", plink, "--noweb", "--allow-no-sex")    
-  system2(plink.path, args=args, minimized=TRUE)}
+    } 
+ 
+    if(rappdirs:::get_os() == "mac")
+    {
+        plink.path <- file.path(all.paths[2], "plink")
+        mydata <- file.path(all.paths[2], "mydata")
+        mydata <- paste0("\'", mydata, "\'")
+        plink <- file.path(all.paths[2], "plink")
+        plink <- paste0("\'", plink, "\'")
+        args <- c("--gfile", mydata, "--out", plink, "--noweb", "--allow-no-sex")    
+        system2(plink.path, args=args)
+    }
   
   cnv.gds <- file.path(all.paths[1], "CNV.gds")
   genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
@@ -1318,34 +1309,35 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
     all.segs[[ch]] <- all.segsch
   }
   
-  values(probes.cnv.gr)$starts.seg <- unlist(all.segs)
+  probes.cnv.gr$starts.seg <- unlist(all.segs)
   
-  pstarts <- probes.cnv.gr[values(probes.cnv.gr)$starts.seg == "start"]
+  pstarts <- probes.cnv.gr[probes.cnv.gr$starts.seg == "start"]
   pstarts.split = split(pstarts, GenomeInfoDb::seqnames(pstarts))
   
   options(warn = -1)
-  all.segs.gr <- GRangesList()
+  all.segs.gr <- GenomicRanges::GRangesList()
   for (chx in seq_along(pstarts.split)) {
     pstartsx <- pstarts.split[[chx]]
     if (!length(pstartsx)) {
-      all.segs.gr[[chx]] <- reduce(pstartsx)  #Empty if no segments
+      all.segs.gr[[chx]] <- GenomicRanges::reduce(pstartsx)  #Empty if no segments
       next
     }
-    all.segs.grX <- GRangesList()
+    all.segs.grX <- GenomicRanges::GRangesList()
     for (st in seq_along(pstartsx)) {
       prx <- pstartsx[st]
       if (st < length(pstartsx)) {
-        LimPrx <- BiocGenerics::start(pstartsx[st + 1]) - 1
+        LimPrx <- GenomicRanges::start(pstartsx[st + 1]) - 1
       }
       if (st == length(pstartsx)) {
-        LimPrx <- max(BiocGenerics::start(probes.cnv.gr[GenomeInfoDb::seqnames(probes.cnv.gr) == 
-                                                          GenomeInfoDb::seqnames(prx)]))
+        sel.probes <- probes.cnv.gr[GenomeInfoDb::seqnames(probes.cnv.gr) == GenomeInfoDb::seqnames(prx)]
+        LimPrx <- max(GenomicRanges::start(sel.probes))
       }
-      seqLar <- GRanges(as.character(GenomeInfoDb::seqnames(prx)), IRanges::IRanges(BiocGenerics::start(prx), 
-                                                                                    LimPrx))
-      seqPrbs <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, seqLar))
-      seqx <- GRanges(as.character(GenomeInfoDb::seqnames(prx)), IRanges::IRanges(BiocGenerics::start(prx), 
-                                                                                  BiocGenerics::start(seqPrbs[length(seqPrbs)])))
+      seqLar <- GenomicRanges::GRanges(as.character(GenomeInfoDb::seqnames(prx)), 
+                                   IRanges::IRanges(GenomicRanges::start(prx), LimPrx))
+      seqPrbs <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, seqLar))
+      seqx <- GenomicRanges::GRanges(as.character(GenomeInfoDb::seqnames(prx)), 
+                                        IRanges::IRanges(GenomicRanges::start(prx), 
+                                        GenomicRanges::start(seqPrbs[length(seqPrbs)])))
       all.segs.grX[[st]] <- seqx
     }
     all.segs.gr[[chx]] <- suppressWarnings(unlist(all.segs.grX))
@@ -1366,7 +1358,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
                        assign.probe = "min.pvalue", correct.inflation) {
   
   segs.pvalue.gr <- unlist(all.segs.gr)
-  values(segs.pvalue.gr)$SegName <- seq_along(segs.pvalue.gr)
+  segs.pvalue.gr$SegName <- seq_along(segs.pvalue.gr)
   
   (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork = TRUE, 
                                      readonly = FALSE))
@@ -1387,14 +1379,18 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   #### Correct for genomic inflation
   all.samples <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id"))
   if(correct.inflation){
-    chisq.n <- qchisq(resultsp$VALUE,1,lower.tail = FALSE)   #### Calculating chi-square distribution based on original P-values
-    lambda <- GenABEL::estlambda(resultsp$VALUE, filter=FALSE)$estimate ### Estimating genomic inflation factor
-    chisq_corr=chisq.n/lambda   ###correcting the qui-square distribution with lambda
-    resultsp$VALUE= pchisq(chisq_corr,1,lower.tail = FALSE) ####re-calculating corrected P values
+    #### Calculating chi-square distribution based on original P-values
+    chisq.n <- qchisq(resultsp$VALUE,1,lower.tail = FALSE) 
+    ### Estimating genomic inflation factor      
+    lambda <- GenABEL::estlambda(resultsp$VALUE, filter=FALSE)$estimate 
+    ###correcting the qui-square distribution with lambda
+    chisq_corr=chisq.n/lambda   
+    ####re-calculating corrected P values
+    resultsp$VALUE= pchisq(chisq_corr,1,lower.tail = FALSE) 
   }
   
   resultsp <- resultsp[order(resultsp$VALUE, decreasing = FALSE), ]
-  resultspGr <- makeGRangesFromDataFrame(resultsp, seqnames.field = "Chr", start.field = "Position", 
+  resultspGr <- GenomicRanges::makeGRangesFromDataFrame(resultsp, seqnames.field = "Chr", start.field = "Position", 
                                          end.field = "Position", keep.extra.columns = TRUE)
   
   ######## Assign the lowest p-value to the CNV segment
@@ -1405,65 +1401,66 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   
   if (assign.probe == "min.pvalue") {
     for (se in seq_along(segs.pvalue.gr)) {
-      if (length(subsetByOverlaps(resultspGr, segs.pvalue.gr[se]))) {
-        values.all[[se]] <- min(values(suppressWarnings(subsetByOverlaps(resultspGr, 
-                                                                         segs.pvalue.gr[se])))$VALUE)
-        Prbx <- suppressWarnings(subsetByOverlaps(resultspGr, segs.pvalue.gr[se]))
-        names.all[[se]] <- as.character(Prbx[values(Prbx)$VALUE %in% min(values(suppressWarnings(subsetByOverlaps(resultspGr, 
-                                                                                                                  segs.pvalue.gr[se])))$VALUE)]$NAME[[1]])
-        probe.sel <- suppressWarnings(subsetByOverlaps(resultspGr, segs.pvalue.gr[se]))
-        probe.sel <- probe.sel[order(values(probe.sel)$VALUE)][1]
-        probe.sel <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, probe.sel))
-        freqs.all[[se]] <- as.character(values(probe.sel)$freq[1])
+      suppressWarnings(Prbx <- IRanges::subsetByOverlaps(resultspGr, segs.pvalue.gr[se]))
+      if (length(Prbx)) {
+        values.all[[se]] <- min(Prbx$VALUE)
+        names.all[[se]] <- as.character(Prbx[Prbx$VALUE %in% values.all[[se]]]$NAME[[1]])
+        probe.sel <- Prbx[order(Prbx$VALUE)][1]
+        suppressWarnings(probe.sel <- IRanges::subsetByOverlaps(probes.cnv.gr, probe.sel))
+        freqs.all[[se]] <- as.character(probe.sel$freq[1])
       } else {
-        probe.sel <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, segs.pvalue.gr[se]))[1]
+        probe.sel <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, segs.pvalue.gr[se]))[1]
         values.all[[se]] <- 1
-        names.all[[se]] <- as.character(values(probe.sel)$Name)
-        freqs.all[[se]] <- as.character(values(probe.sel)$freq[1])
+        names.all[[se]] <- as.character(probe.sel$Name)
+        freqs.all[[se]] <- as.character(probe.sel$freq[1])
       }
     }
   }
   
   if (assign.probe == "high.freq") {
     for (se in seq_along(segs.pvalue.gr)) {
-      probe.sel <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, segs.pvalue.gr[se]))
-      probe.sel <- probe.sel[rev(order(values(probe.sel)$freq))][1]
-      resultX <- suppressWarnings(subsetByOverlaps(resultspGr, probe.sel))[1]  ## Take the first probe if the position is duplicated
-      values.all[[se]] <- values(resultX)$VALUE
-      names.all[[se]] <- as.character(values(probe.sel)$Name)
-      freqs.all[[se]] <- as.character(values(probe.sel)$freq[1])
+      suppressWarnings(probe.sel <- IRanges::subsetByOverlaps(probes.cnv.gr, segs.pvalue.gr[se]))
+      probe.sel <- probe.sel[rev(order(probe.sel$freq))][1]
+      ## Take the first probe if the position is duplicated
+      resultX <- suppressWarnings(IRanges::subsetByOverlaps(resultspGr, probe.sel))[1]
+      values.all[[se]] <- resultX$VALUE
+      names.all[[se]] <- as.character(probe.sel$Name)
+      freqs.all[[se]] <- as.character(probe.sel$freq[1])
     }
   }
   
   if (assign.probe == "median") {
     for (se in seq_along(segs.pvalue.gr)) {
-      probe.sel <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, segs.pvalue.gr[se]))
-      #probe.sel <- probe.sel[rev(order(values(probe.sel)$freq))][1]
-      probe.sel <- probe.sel[which.min(abs(values(probe.sel)$freq - median(values(probe.sel)$freq)))[1]]
-      resultX <- suppressWarnings(subsetByOverlaps(resultspGr, probe.sel))[1]  ## Take the first probe if the position is duplicated
-      values.all[[se]] <- values(resultX)$VALUE
-      names.all[[se]] <- as.character(values(probe.sel)$Name)
-      freqs.all[[se]] <- as.character(values(probe.sel)$freq[1])
+      probe.sel <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, segs.pvalue.gr[se]))
+      absdiff <-   abs(probe.sel$freq - median(probe.sel$freq))
+      probe.sel <- probe.sel[which.min(absdiff)]
+      ## Take the first probe if the position is duplicated
+      resultX <- suppressWarnings(IRanges::subsetByOverlaps(resultspGr, probe.sel))[1]  
+      values.all[[se]] <- resultX$VALUE
+      names.all[[se]] <- as.character(probe.sel$Name)
+      freqs.all[[se]] <- as.character(probe.sel$freq[1])
     }
   }
   
   if (assign.probe == "mean") {
     for (se in seq_along(segs.pvalue.gr)) {
-      probe.sel <- suppressWarnings(subsetByOverlaps(probes.cnv.gr, segs.pvalue.gr[se]))
-      probe.sel <- probe.sel[which.min(abs(values(probe.sel)$freq - mean(values(probe.sel)$freq)))[1]]
-      resultX <- suppressWarnings(subsetByOverlaps(resultspGr, probe.sel))[1]  ## Take the first probe if the position is duplicated
-      values.all[[se]] <- values(resultX)$VALUE
-      names.all[[se]] <- as.character(values(probe.sel)$Name)
-      freqs.all[[se]] <- as.character(values(probe.sel)$freq[1])
+      probe.sel <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, segs.pvalue.gr[se]))
+      absdiff <- abs(probe.sel$freq - mean(probe.sel$freq))
+      probe.sel <- probe.sel[which.min(absdiff)]
+      ## Take the first probe if the position is duplicated
+      resultX <- suppressWarnings(IRanges::subsetByOverlaps(resultspGr, probe.sel))[1]  
+      values.all[[se]] <- resultX$VALUE
+      names.all[[se]] <- as.character(probe.sel$Name)
+      freqs.all[[se]] <- as.character(probe.sel$freq[1])
     }
   }
   
-  values(segs.pvalue.gr)$MinPvalue <- unlist(values.all)
-  values(segs.pvalue.gr)$NameProbe <- unlist(names.all)
-  values(segs.pvalue.gr)$Frequency <- unlist(freqs.all)
+  segs.pvalue.gr$MinPvalue <- unlist(values.all)
+  segs.pvalue.gr$NameProbe <- unlist(names.all)
+  segs.pvalue.gr$Frequency <- unlist(freqs.all)
   
-  values(segs.pvalue.gr)$MinPvalueAdjusted <- stats::p.adjust(values(segs.pvalue.gr)$MinPvalue, 
-                                                              method = method.m.test, n = length(segs.pvalue.gr))
+  segs.pvalue.gr$MinPvalueAdjusted <- stats::p.adjust(segs.pvalue.gr$MinPvalue, 
+                             method = method.m.test, n = length(segs.pvalue.gr))
   segs.pvalue.gr$Phenotype <- names(phenotypesSamX)[[2]]
   SNPRelate::snpgdsClose(genofile)
   
@@ -1545,7 +1542,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
   
   phenotypesSam <- phen.info$phenotypesSam
   phenotypesSamX <- phenotypesSam[, c(1, (lo.phe + 1))]
-  phenotypesSamX <- na.omit(phenotypesSamX)  ### Exclude samples without phenotypes. i.e NA
+  phenotypesSamX <- stats::na.omit(phenotypesSamX)  ### Exclude samples without phenotypes. i.e NA
   all.paths <- phen.info$all.paths
   
   #################################### Produce the GDS for a given phenotype
@@ -1600,9 +1597,9 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
   #################################### Plot the QQ-plot of the analysis
   if (verbose) message("Plot the QQ-plot of the analysis")
   
-  pdf(file.path(all.paths[3], paste0(unique(values(segs.pvalue.gr)$Phenotype), 
+  pdf(file.path(all.paths[3], paste0(unique(segs.pvalue.gr$Phenotype), 
                                      "-LRR-", run.lrr, "QQ-PLOT.pdf")))
-  qq.plot.pdf <- .qqunifPlot(values(segs.pvalue.gr)$MinPvalueAdjusted, auto.key = list(corner = c(0.95, 
+  qq.plot.pdf <- .qqunifPlot(segs.pvalue.gr$MinPvalueAdjusted, auto.key = list(corner = c(0.95, 
                                                                                                   0.05)))
   print(qq.plot.pdf)
   invisible(dev.off())
@@ -1624,14 +1621,14 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
                                                                          2], segs.pvalue$seqnames)
     }
     
-    segs.pvalue.gr <- makeGRangesFromDataFrame(segs.pvalue, keep.extra.columns = TRUE)
+    segs.pvalue.gr <- GenomicRanges::makeGRangesFromDataFrame(segs.pvalue, keep.extra.columns = TRUE)
     SNPRelate::snpgdsClose(genofile)
   }
   
   ######################################################## END ########################################
   
   ######################################################## END ###########################################
-  segs.pvalue.gr <- segs.pvalue.gr[order(values(segs.pvalue.gr)$MinPvalue)]
+  segs.pvalue.gr <- segs.pvalue.gr[order(segs.pvalue.gr$MinPvalue)]
   return(segs.pvalue.gr)
 }
 
@@ -1650,11 +1647,12 @@ snpgdsGetGenoCNV <- function(genofile, snp.id, node.to.extract = "CNVgenotype") 
     snp.id = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.id")), 
     chr = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome")), 
     position = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.position")), 
-    probes = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id")))
+    probes = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id")),
+    stringsAsFactors=FALSE)
   
   all.samples <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id"))
-  snp.id <- as.numeric(as.character(subset(map, 
-                                           probes=="AX-100939600")$snp.id))
+    
+  snp.id <- as.numeric(as.character(map[map$probes=="AX-100939600", "snp.id"]))
   
   if (node.to.extract == "CNVgenotype") {
     gens <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), 
@@ -1750,7 +1748,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose = FALSE)
     if (verbose) {
       message("Start the parallel import of LRR/BAF values")
     }
-    BiocParallel::bplapply(1:nrow(list.filesLo), .freadImport, BPPARAM = param, 
+    BiocParallel::bplapply(seq_len(nrow(list.filesLo)), .freadImport, BPPARAM = param, 
                            list.filesLo = list.filesLo, genofile = genofile, all.samples = all.samples, 
                            nLRR = nLRR, nBAF = nBAF, snps.included = snps.included, verbose = verbose)
     
@@ -1761,7 +1759,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose = FALSE)
       message("Start the parallel import of LRR/BAF values")
     }
     param <- BiocParallel::SnowParam(workers = 1, type = "SOCK")
-    BiocParallel::bplapply(1:nrow(list.filesLo), .freadImport, BPPARAM = param, 
+    BiocParallel::bplapply(seq_len(nrow(list.filesLo)), .freadImport, BPPARAM = param, 
                            list.filesLo = list.filesLo, genofile = genofile, all.samples = all.samples, 
                            nLRR = nLRR, nBAF = nBAF, snps.included = snps.included, verbose = verbose)
   }
@@ -1798,7 +1796,8 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose = FALSE)
   colnames(sig.x) <- c("name", "chr", "position", "lrr", "baf")
   
   ### Order the signal file as in the gds
-  sig.x <- subset(sig.x, name %in% snps.included)
+  ind <- as.vector(sig.x$name) %in% snps.included  
+  sig.x <- sig.x[ind,]
   
   ### Include missing SNPs
   missing.snps <- snps.included[!(snps.included %in% sig.x$name)]

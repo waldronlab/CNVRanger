@@ -1,5 +1,5 @@
-#' @import S4Vectors GenomicRanges
+#' @import GenomicRanges RaggedExperiment
 #' @importFrom grDevices dev.off pdf
-#' @importFrom stats complete.cases end median na.omit pchisq qbeta qchisq start
+#' @importFrom stats median pchisq qbeta qchisq
 #' @importFrom utils download.file read.table unzip write.table
 NULL

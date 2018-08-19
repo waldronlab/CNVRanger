@@ -36,7 +36,7 @@
   n<-1
   exp.x<-c()
   if(is.list(pvalues)) {
-    nn<-sapply(pvalues, length)
+    nn<-lengths(pvalues)
     rs<-cumsum(nn)
     re<-rs-nn+1
     n<-min(nn)
@@ -44,12 +44,12 @@
       grp=factor(rep(names(pvalues), nn), levels=names(pvalues))
       names(pvalues)<-NULL
     } else {
-      grp=factor(rep(1:length(pvalues), nn))
+      grp=factor(rep(seq_along(pvalues), nn))
     }
     pvo<-pvalues
     pvalues<-numeric(sum(nn))
     exp.x<-numeric(sum(nn))
-    for(i in 1:length(pvo)) {
+    for(i in seq_along(pvo)) {
       if (!already.transformed) {
         pvalues[rs[i]:re[i]] <- -log10(pvo[[i]])
         exp.x[rs[i]:re[i]] <- -log10((rank(pvo[[i]], ties.method="first")-.5)/nn[i])
@@ -107,17 +107,17 @@
   }
   
   #draw the plot
-  xyplot(pvalues~exp.x, groups=grp, xlab=xlab, ylab=ylab, aspect=aspect,
+  lattice::xyplot(pvalues~exp.x, groups=grp, xlab=xlab, ylab=ylab, aspect=aspect,
          prepanel=prepanel, scales=list(axs="i"), pch=pch,
          panel = function(x, y, ...) {
            if (draw.conf) {
              panel.qqconf(n, conf.points=conf.points, 
                           conf.col=conf.col, conf.alpha=conf.alpha)
            };
-           panel.xyplot(x,y, ...);
-           panel.abline(0,1);
+           lattice::panel.xyplot(x,y, ...);
+           lattice::panel.abline(0,1);
          }, par.settings=par.settings, ...
-)
+   )
 }
 
 #' Plot the manhattan
@@ -174,14 +174,16 @@ plotManhattan <- function(all.paths, regions, chr.size.order=NULL,
   chr.size.order$chr.numeric <- seq_len(nrow(chr.size.order))
   
     chr.all$P <- 1 
-    phen.name <- values(regions)$Phenotype
+    phen.name <- regions$Phenotype
     phen.name <- unique(phen.name)
     
 
-    gwasResults <- cbind("CHR"=as.character(seqnames(regions)), "BP"=start(regions),
-                         "SNP"= values(regions)$SegName, "P"= values(regions)$MinPvalueAdjusted)
+    gwasResults <- data.frame(  CHR=as.character(GenomicRanges::seqnames(regions)), 
+                                BP=GenomicRanges::start(regions),
+                                SNP=regions$SegName, 
+                                P=regions$MinPvalueAdjusted,
+                                stringsAsFactors = FALSE)
     
-    gwasResults <- as.data.frame(gwasResults, stringsAsFactors = FALSE)
     gwasResults <- rbind(gwasResults, chr.all)
     
     ### turn chr to numeric
@@ -190,10 +192,11 @@ plotManhattan <- function(all.paths, regions, chr.size.order=NULL,
                               chr.size.order[cn,3], gwasResults$CHR)
     }
     
-    gwasResults$CHR <- as.numeric(gwasResults$CHR)
-    gwasResults$BP <- as.numeric(gwasResults$BP)
+    gwasResults$CHR <- as.integer(gwasResults$CHR)
+    gwasResults$BP <- as.integer(gwasResults$BP)
     gwasResults$P <- as.numeric(gwasResults$P)
-    gwasResults <- dplyr::arrange(gwasResults, CHR, BP)
+    ind <- do.call(order, gwasResults[,c("CHR", "BP")])
+    gwasResults <- gwasResults[ind,]
     
     if(plot.pdf){
       pdf(file.path(all.paths[3], paste0(phen.name,"-Manhattan.pdf")))
@@ -210,7 +213,4 @@ plotManhattan <- function(all.paths, regions, chr.size.order=NULL,
     
   
 }
-
-
-
 

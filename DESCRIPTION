@@ -8,14 +8,12 @@ Depends:
     GenomicRanges,
     RaggedExperiment
 Imports: 
-    BiocGenerics,
     BiocParallel,
     GenomeInfoDb,
     IRanges,
     S4Vectors,
     SNPRelate, 
     data.table, 
-    dplyr,
     gdsfmt,
     lattice,
     plyr,
