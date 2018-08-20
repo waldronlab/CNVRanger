@@ -17,10 +17,6 @@
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
 #' @examples 
 #' 
-#'
-#' all.paths <- phen.info$all.paths
-#' segs.pvalue.gr <- cnvGWAS(phen.info)
-#' 
 #' # Load phenotype-CNV information
 #' data.dir <- system.file("extdata", package="cnvAnalyzeR")
 #' 
@@ -40,7 +36,7 @@
 #'                  37653027, 31324166, 25106277, 20202851, 20315886, 20466350,
 #'                  16480340, 16193477, 13820886, 10486032, 11572643, 9871655,
 #'                  14661763, 7693166, 4276343, 6655392, 6808513, 1092960, 809223,
-#'                  6596997, 4327975, 5101010, 773534, 71365269, 19934923)
+#'                  6596997, 4327975, 5101010, 773534, 71365269, rep(19934923,2))
 #'
 #' chr.size.order <- data.frame(chr=order.chrs, sizes=chr.sizes, stringsAsFactors=FALSE)
 #'

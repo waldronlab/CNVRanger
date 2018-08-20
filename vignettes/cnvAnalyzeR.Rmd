@@ -276,15 +276,19 @@ As the `PLINK` provides one separately p-value for each SNP probe, only one of t
 ```{r manh}
 
 ## Define the chromosome order in the plot
-order.chrs <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "17", "18", "19", "20", "21", "22", "23", "24", "25LG1", "25LG2", "26", "27", "28", "LGE22", "1A", "4A")
+order.chrs <- c(1:24, "25LG1", "25LG2", 26:28, "LGE22", "1A", "4A")
 
 ## Chromosome sizes
-chr.sizes <- c(114059860,150265477,111636321,68030631,61875929,34342011,37653027, 31324166,25106277,20202851,20315886,20466350,16480340,16193477, 13820886,10486032,11572643,9871655,14661763,7693166,4276343, 6655392,6808513,1092960,809223,6596997,4327975,5101010, 773534,71365269,19934923)
+chr.sizes <- c(114059860, 150265477, 111636321, 68030631, 61875929, 34342011,
+                37653027, 31324166, 25106277, 20202851, 20315886, 20466350, 
+                16480340, 16193477, 13820886, 10486032, 11572643, 9871655, 
+                14661763, 7693166, 4276343, 6655392, 6808513, 1092960, 809223,
+                6596997, 4327975, 5101010, 773534, 71365269, rep(19934923,2))
 
-chr.size.order <- as.data.frame(cbind("chr"=order.chrs, "sizes"=chr.sizes), stringsAsFactors = FALSE)
+chr.size.order <- data.frame(chr=order.chrs, sizes=chr.sizes, stringsAsFactors=FALSE)
 
 ## Plot a pdf file with a manhatthan within the 'Results' workfolder
-plotManhattan(all.paths, regions=segs.pvalue.gr, chr.size.order, plot.pdf=FALSE)
+plotManhattan(all.paths, segs.pvalue.gr, chr.size.order, plot.pdf=FALSE)
 ```
 
 Alternatively, the user can use the relative signal intensity (log R ratio - LRR) to perform a GWAS analysis. CNV detection using SNP-chip intensities and allele frequencies are usually challenging and can produce biased CNV frequencies [da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1). Thus, GWAS using LRR values directly may help to identify CNV segments which are possibly associated with phenotypes but have their frequency biased by the CNV calling procedure. Therefore, the `cnvGWAS` function allows the user to perform associations with LRR values instead absolute copy numbers. To perform the GWAS using LRR values is necessary to import the LRR/BAF values and state `run.lrr=TRUE` in the `cnvGWAS` function:
