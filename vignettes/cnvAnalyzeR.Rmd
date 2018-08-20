@@ -12,7 +12,10 @@ author:
     email: ludwig.geistlinger@sph.cuny.edu
 package: cnvAnalyzeR
 abstract: >
-  The _cnvAnalyzeR_ package implements a comprehensive tool suite for CNV analysis. The package aims aims to perform a downstream analysis of CNVs which were identified by NGS and SNP-chip allele intensities and frequencies. Once the CNVs for each individual of a given population are available, the user will be able to infer CNV hot-spots and their frequencies, perform a genome-wide association and infer gene expression underlie by copy number variation.
+    The _cnvAnalyzeR_ package implements a comprehensive tool suite for CNV analysis.
+    This includes functionality for summarizing individual CNV calls across a population,
+    assessing overlap with functional genomic regions, and association analysis 
+    with expression and quantitative phenotypes.
 output:
   BiocStyle::html_document:
     toc: true
@@ -35,7 +38,23 @@ suppressPackageStartupMessages({
 Copy number variation (CNV) is a frequently observed deviation from the diploid 
 state due to duplication or deletion of genomic regions.
 
-Some papers that we want to cite:
+CNVs can be experimentally detected based on comparative genomic hybridization [CGH]. 
+On the other hand, CNVs can also be computationally inferred from SNP-arrays. 
+A frequently used algorithm to infer CNVs from SNP-chip data is 
+[PennCNV](http://penncnv.openbioinformatics.org), 
+which shows good consistency with the CGH gold standard. 
+In addition, recent developments have also enabled the detection of CNVs from 
+next-generation sequencing data.
+
+The named technologies for CNV detection have in common that they report, for each
+sample under study, genomic regions that are duplicated or deleted with respect 
+to a reference. 
+
+Such regions are termed _CNV calls_ in the following and will be considered the 
+starting point for analysis with the `r Biocpkg("cnvAnalyzeR")` package.  
+
+The key parts of the functionality implemented in the package were developed,
+described, and applied in several previous studies:
 
 - Genome-wide detection of CNVs and their association with meat tenderness in 
     Nelore cattle
@@ -48,16 +67,18 @@ Some papers that we want to cite:
 - CNVs are associated with genomic architecture in a songbird 
     [da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)
 
+
+# Reading and accessing CNV data
+
+The `r Biocpkg("cnvAnalyzeR")` package uses Bioconductor core data strutures 
+implemented in the `r Biocpkg("GenomicRanges")` and `r Biocpkg("RaggedExperiment")` 
+packages to represent, access, and manipulate CNV data.
+
 We start by loading the package.
 
 ```{r lib}
 library(cnvAnalyzeR)
 ```
-
-# Reading and accessing CNV data
-
-The `r Biocpkg("cnvAnalyzeR")` package uses `r Biocpkg("GenomicRanges")` and 
-`r Biocpkg("RaggedExperiment")` to represent, access, and manipulate CNV data.
 
 For demonstration, we consider CNV calls as obtained with 
 [PennCNV](http://penncnv.openbioinformatics.org) from SNP-chip data in a 

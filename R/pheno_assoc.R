@@ -425,8 +425,6 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
         genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
         n <- gdsfmt::add.gdsn(genofile, "CNVgenotype", CNVBiMa, replace = TRUE)
         
-        # is that needed?: gdsfmt::read.gdsn(n)
-        
         if (rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac") {
             multicoreParam <- BiocParallel::SnowParam(workers = 1, type = "SOCK")
             BiocParallel::bplapply(seq_along(all.samples), .writeProbesCNV, BPPARAM = multicoreParam, 
