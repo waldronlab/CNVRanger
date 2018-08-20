@@ -324,7 +324,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
 #' @param n.cor Number of cores
 #' @return probes.cnv.gr Object with information about all probes to be used in 
 #' the downstream CNV-GWAS. Only numeric chromosomes
-#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
+#' @author Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
 #' @examples
 #' 
 #' # Load phenotype-CNV information
@@ -617,7 +617,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=FALSE)
 # file @param snp.id is the SNP probe name to retrieve @param node.to.extract
 # \sQuote{CNVgenotype} or \sQuote{CNVgenotypeSNPlike}. Default is
 # \sQuote{CNVgenotype} @return CNV genotypes in a specific probe @author
-# Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
+# Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
 .snpgdsGetGenoCNV <- function(genofile, snp.id, node.to.extract = "CNVgenotype") {
     
     map <- data.frame(snp.id = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.id")), 

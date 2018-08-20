@@ -2,7 +2,7 @@
 % Please edit documentation in R/graphical_representations.R
 \name{plotManhattan}
 \alias{plotManhattan}
-\title{Plot the manhattan}
+\title{Manhattan Plot}
 \usage{
 plotManhattan(all.paths, regions, chr.size.order = NULL,
   plot.pdf = TRUE)
@@ -10,41 +10,47 @@ plotManhattan(all.paths, regions, chr.size.order = NULL,
 \arguments{
 \item{all.paths}{TODO.}
 
-\item{regions}{GRanges from CNV-GWAS run to produce the manhattan plot}
+\item{regions}{\code{\linkS4class{GRanges}} as returned by \code{\link{cnvGWAS}}}
 
-\item{chr.size.order}{Data-frame with two columns: (i) 'chr' have the chromosome names as character
-and (ii) 'size' with the length of the chromosome in basepairs}
+\item{chr.size.order}{\code{\link{data.frame}} with two columns: (i) 'chr': chromosome names (character),
+and (ii) 'size': length of the chromosomes in bp (integer)}
 
-\item{plot.pdf}{Produce a pdf file}
+\item{plot.pdf}{Logical plot a to pdf file}
 }
 \description{
-Function to write a manhattan plot with the p-values from a CNV-GWAS.
+Manhattan plot for p-values of a CNV-GWAS
 }
 \examples{
 
-folder.package <- system.file('extdata', package = 'cnvAnalyzeR')
-
-phen.info <- setupCnvGWAS(name="Example", phen.loc=file.path(folder.package, "Pheno.txt"), ## GEBV values
-                         cnv.out.loc <- file.path(folder.package, "CNVOut.txt"), ## CNV calls            
-                         map.loc <- file.path(folder.package, "MapPenn.txt")) ## Genomic positions of the SNPs used in the CNV call
 
 all.paths <- phen.info$all.paths
-
 segs.pvalue.gr <- cnvGWAS(phen.info)
 
-## Define the chromosome order in the plot
-order.chrs <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "17", "18", "19",
-               "20", "21", "22", "23", "24", "25LG1", "25LG2", "26", "27", "28", "LGE22", "1A", "4A")
+# Load phenotype-CNV information
+data.dir <- system.file("extdata", package="cnvAnalyzeR")
 
-## Chromosome sizes
-chr.sizes <- c(114059860,150265477,111636321,68030631,61875929,34342011,37653027, 31324166,25106277,20202851,20315886,20466350,16480340,16193477,
-              13820886,10486032,11572643,9871655,14661763,7693166,4276343, 6655392,6808513,1092960,809223,6596997,4327975,5101010, 773534,71365269,19934923)
+phen.loc <- file.path(data.dir, "Pheno.txt")
+cnv.out.loc <- file.path(data.dir, "CNVOut.txt")
+map.loc <- file.path(data.dir, "MapPenn.txt")
 
-chr.size.order <- cbind(as.data.frame(order.chrs, stringsAsFactors = FALSE),as.data.frame(chr.sizes,  stringsAsFactors = FALSE))
-colnames(chr.size.order) <- c("chr", "sizes")
+phen.info <- setupCnvGWAS('Example', phen.loc, cnv.out.loc, map.loc)
+all.paths <- phen.info$all.paths
+segs.pvalue.gr <- cnvGWAS(phen.info)
 
-## Plot a pdf file with a manhatthan within the 'Results' workfolder
-plotManhattan(all.paths, segs.pvalue.gr, "p-value", chr.size.order)
+# Define the chromosome order in the plot
+order.chrs <- c(1:24, "25LG1", "25LG2", 26:28, "LGE22", "1A", "4A")
+
+# Chromosome sizes
+chr.sizes <- c(  114059860, 150265477, 111636321, 68030631, 61875929, 34342011,
+                 37653027, 31324166, 25106277, 20202851, 20315886, 20466350,
+                 16480340, 16193477, 13820886, 10486032, 11572643, 9871655,
+                 14661763, 7693166, 4276343, 6655392, 6808513, 1092960, 809223,
+                 6596997, 4327975, 5101010, 773534, 71365269, 19934923)
+
+chr.size.order <- data.frame(chr=order.chrs, sizes=chr.sizes, stringsAsFactors=FALSE)
+
+# Plot Manhatthan to a pdf within the 'Results' workfolder
+plotManhattan(all.paths, segs.pvalue.gr, chr.size.order)
 
 }
 \author{
