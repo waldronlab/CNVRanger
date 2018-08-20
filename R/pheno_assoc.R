@@ -1403,9 +1403,9 @@ testit <- function(x) {
 {
     cnv.gds <- file.path(all.paths[1], "CNV.gds")
     genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
-    
-    chrx <- data.frame(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome")), 
-                seq_along(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome"))))
+   
+    snp.chr <-  gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome")) 
+    chrx <- data.frame(V1=snp.chr, V2=seq_along(snp.chr))
     g1 <- g2 <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"))
     
     chrx$V1 <- factor(chrx$V1, levels = unique(chrx$V1))
