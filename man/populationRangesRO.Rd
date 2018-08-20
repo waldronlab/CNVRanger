@@ -58,7 +58,7 @@ grl <- GRangesList(
 )
 
 # default as chosen in the original CNVRuler procedure
-populationRanges(grl, ro.thresh=0.5)
+populationRangesRO(grl, ro.thresh=0.5)
 
 }
 \references{

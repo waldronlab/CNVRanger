@@ -1,4 +1,4 @@
-############################################################
+###########################################################
 # 
 # author: Ludwig Geistlinger
 # date: 2017-08-12 22:31:59
@@ -130,7 +130,7 @@ populationRanges <- function(grl, density=0.1)
 #' )
 #'
 #' # default as chosen in the original CNVRuler procedure
-#' populationRanges(grl, ro.thresh=0.5)
+#' populationRangesRO(grl, ro.thresh=0.5)
 #'
 #' @export
 populationRangesRO <- function(grl, ro.thresh=0.5, multi.assign=FALSE)
@@ -142,10 +142,11 @@ populationRangesRO <- function(grl, ro.thresh=0.5, multi.assign=FALSE)
     message(paste("TODO:", length(init.clusters)))
 
     # cluster within each initial cluster
-    cl.per.iclust <- sapply(init.clusters, 
-        function(ic)
+    cl.per.iclust <- lapply(seq_along(init.clusters), 
+        function(i)
         {
-            message(which(init.clusters == ic))
+            message(i)
+            ic <- init.clusters[i]
             # get calls of cluster
             ccalls <- IRanges::subsetByOverlaps(gr, ic)
             clusters <- .clusterCalls(ccalls, ro.thresh, multi.assign)
