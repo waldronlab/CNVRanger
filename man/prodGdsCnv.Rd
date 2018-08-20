@@ -5,8 +5,8 @@
 \title{Produce CNV-GDS for the phenotyped samples}
 \usage{
 prodGdsCnv(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1,
-  chr.code.name = NULL, genotype.nodes = "CNVGenotype",
-  coding.translate = NULL, n.cor = 1)
+  chr.code.name = NULL, genotype.nodes = c("CNVGenotype",
+  "CNVgenotypeSNPlike"), coding.translate = NULL, n.cor = 1)
 }
 \arguments{
 \item{phen.info}{Returned by \code{setupCnvGWAS}}
@@ -46,12 +46,13 @@ Only diploid chromosomes should be included.
 \examples{
 
 # Load phenotype-CNV information
+data.dir <- system.file("extdata", package="cnvAnalyzeR")
 
-folder.package <- system.file('extdata', package = 'cnvAnalyzeR')
+phen.loc <- file.path(data.dir, "Pheno.txt")
+cnv.out.loc <- file.path(data.dir, "CNVOut.txt")
+map.loc <- file.path(data.dir, "MapPenn.txt")
 
-phen.info <- setupCnvGWAS(name='Example', phen.loc=file.path(folder.package, 'Pheno.txt'), 
-cnv.out.loc <- file.path(folder.package, 'CNVOut.txt'), 
-map.loc <- file.path(folder.package, 'MapPenn.txt'))
+phen.info <- setupCnvGWAS('Example', phen.loc, cnv.out.loc, map.loc)
 
 # Construct the data-frame with integer and original chromosome names 
  
@@ -62,8 +63,7 @@ df <- '16 1A
 30 25LG2
 31 LGE22'
 
-chr.code.name <- read.table(text=df, header=F)
-
+chr.code.name <- read.table(text=df, header=FALSE)
 probes.cnv.gr <- prodGdsCnv(phen.info, chr.code.name=chr.code.name)
 
 }

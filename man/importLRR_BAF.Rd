@@ -28,27 +28,30 @@ used to perform a GWAS directly as an alternative to copy number dosage
 \examples{
 
 # Load phenotype-CNV information
+data.dir <- system.file("extdata", package="cnvAnalyzeR")
 
-folder.package <- system.file('extdata', package = 'cnvAnalyzeR')
+phen.loc <- file.path(data.dir, "Pheno.txt")
+cnv.out.loc <- file.path(data.dir, "CNVOut.txt")
+map.loc <- file.path(data.dir, "MapPenn.txt")
 
-phen.info <- setupCnvGWAS(name='Example', phen.loc=file.path(folder.package, 'Pheno.txt'), 
-cnv.out.loc = file.path(folder.package, 'CNVOut.txt'), 
-map.loc = file.path(folder.package, 'MapPenn.txt'))
+phen.info <- setupCnvGWAS('Example', phen.loc, cnv.out.loc, map.loc)
 
 # Extract path names
 all.paths <- phen.info$all.paths
 
 # List files to import LRR/BAF 
-list.of.files <- list.files(path = folder.package, pattern = '\\\\.cnv.txt.adjusted$')
+list.of.files <- list.files(path=data.dir, pattern="cnv.txt.adjusted$")
 list.of.files <- as.data.frame(list.of.files)
-colnames(list.of.files)[1] <- 'file.names'
-list.of.files$sample.names <- gsub('.cnv.txt.adjusted','', list.of.files$file.names)
+colnames(list.of.files)[1] <- "file.names"
+list.of.files$sample.names <- sub(".cnv.txt.adjusted$", "", list.of.files$file.names)
 
 # All missing samples will have LRR = '0' and BAF = '0.5' in all SNPs listed in the GDS file
-importLRR_BAF(all.paths, folder.package, list.of.files)
+importLRR_BAF(all.paths, data.dir, list.of.files)
 
 # Read the GDS to check if the LRR/BAF nodes were added
-(genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], 'CNV.gds'), allow.fork=TRUE, readonly=FALSE)) ## read GDS
+cnv.gds <- file.path(all.paths[1], 'CNV.gds')    
+genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork=TRUE, readonly=FALSE)
+SNPRelate::snpgdsClose(cnv.gds)
 
 }
 \author{

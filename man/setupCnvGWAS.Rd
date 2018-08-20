@@ -8,7 +8,7 @@ setupCnvGWAS(name, phen.loc, cnv.out.loc, map.loc = NULL,
   folder = NULL, pops.names = NULL, n.cor = 1)
 }
 \arguments{
-\item{name}{String with a project code or name (e.g. "Project1")}
+\item{name}{String with a project code or name (e.g. 'Project1')}
 
 \item{phen.loc}{Path/paths to the tab separated text file cointaining phenotype 
 and sample info. When using more than one population, for populations without
@@ -48,12 +48,13 @@ one phenotype per run.
 }
 \examples{
 
-folder.package <- system.file('extdata', package = 'cnvAnalyzeR')
+data.dir <- system.file("extdata", package="cnvAnalyzeR")
 
-## One population
-phen.info <- setupCnvGWAS(name='Example', phen.loc=file.path(folder.package, 'Pheno.txt'), 
-cnv.out.loc <- file.path(folder.package, 'CNVOut.txt'), 
-map.loc <- file.path(folder.package, 'MapPenn.txt'))
+phen.loc <- file.path(data.dir, "Pheno.txt")
+cnv.out.loc <- file.path(data.dir, "CNVOut.txt")
+map.loc <- file.path(data.dir, "MapPenn.txt")
+
+phen.info <- setupCnvGWAS('Example', phen.loc, cnv.out.loc, map.loc)
 
 
 }

@@ -75,12 +75,13 @@ In this release only the p-value for the copy number is available  (i.e. 'P(CNP)
 \examples{
 
 # Load phenotype-CNV information
+data.dir <- system.file("extdata", package="cnvAnalyzeR")
 
-folder.package <- system.file('extdata', package = 'cnvAnalyzeR')
+phen.loc <- file.path(data.dir, "Pheno.txt")
+cnv.out.loc <- file.path(data.dir, "CNVOut.txt")
+map.loc <- file.path(data.dir, "MapPenn.txt")
 
-phen.info <- setupCnvGWAS(name='Example', phen.loc=file.path(folder.package, 'Pheno.txt'), 
-cnv.out.loc = file.path(folder.package, 'CNVOut.txt'), 
-map.loc = file.path(folder.package, 'MapPenn.txt'))
+phen.info <- setupCnvGWAS('Example', phen.loc, cnv.out.loc, map.loc)
 
 # Define chr correspondence to numeric, if necessary
 df <- '16 1A
@@ -90,7 +91,6 @@ df <- '16 1A
 31 LGE22'
 
 chr.code.name <- read.table(text=df, header=FALSE)
-
 segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name)
  
 }
