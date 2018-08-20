@@ -549,7 +549,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
 #' # Read the GDS to check if the LRR/BAF nodes were added
 #' cnv.gds <- file.path(all.paths[1], 'CNV.gds')    
 #' genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork=TRUE, readonly=FALSE)
-#' SNPRelate::snpgdsClose(cnv.gds)
+#' SNPRelate::snpgdsClose(genofile)
 #' 
 #' @export
 

@@ -51,7 +51,7 @@ importLRR_BAF(all.paths, data.dir, list.of.files)
 # Read the GDS to check if the LRR/BAF nodes were added
 cnv.gds <- file.path(all.paths[1], 'CNV.gds')    
 genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork=TRUE, readonly=FALSE)
-SNPRelate::snpgdsClose(cnv.gds)
+SNPRelate::snpgdsClose(genofile)
 
 }
 \author{
