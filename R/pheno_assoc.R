@@ -498,18 +498,25 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
 # HELPER - Write CNV-genotype in a dosage-like fashion
 # 
 
-.writeProbesCNV <- function(lo, all.samples, genofile, CNVsGr, probes.cnv.gr, n) {
-  sampleX <- all.samples[[lo]]
-  g <- as.numeric(SNPRelate::snpgdsGetGeno(genofile, sample.id = sampleX, verbose = FALSE))
-  CNVSamByState <- split(CNVsGr[CNVsGr$V5 == all.samples[lo]], 
-                         as.character(CNVsGr[CNVsGr$V5 == all.samples[lo]]$V4))
-  for (slo in seq_along(CNVSamByState)) {
-    state <- unique(substr(x = as.character(CNVSamByState[slo]$V4), 
-                           start = nchar(as.character(CNVSamByState[slo]$V4)), 
-                           stop = nchar(as.character(CNVSamByState[slo])$V4)))
-    suppressWarnings(SamCNVSNP <- IRanges::subsetByOverlaps(probes.cnv.gr, CNVSamByState[slo])$snp.id)
-    g[SamCNVSNP] <- state
-  }
+.writeProbesCNV <- function(lo, all.samples, genofile, CNVsGr, probes.cnv.gr, n) 
+{
+  sampleX <- all.samples[lo]
+  g <- SNPRelate::snpgdsGetGeno(genofile, sample.id=sampleX, verbose=FALSE)  
+  g <- drop(g)
+
+  ind <- CNVsGr$V5 == sampleX  
+  CNVSamByState <- split(CNVsGr[ind], CNVsGr[ind]$V4)
+  
+    for (slo in seq_along(CNVSamByState)) 
+    {
+        curr <- CNVSamByState[[slo]]
+        curr4 <- curr$V4
+        state <- unique(curr4)
+    
+        SamCNVSNP <- IRanges::subsetByOverlaps(probes.cnv.gr, curr)
+        SamCNVSNP <- SamCNVSNP$snp.id
+        g[SamCNVSNP] <- state
+    }
   g <- as.integer(g)
   gdsfmt::write.gdsn(n, g, start = c(1, lo), count = c(length(g), 1))
 }
@@ -779,7 +786,8 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   
   
   ###################### Create a GDS with chr and SNP names to numeric
-  SNPRelate::snpgdsCreateGeno(file.path(all.paths[1], "CNV.gds"), 
+  cnv.gds <- file.path(all.paths[1], "CNV.gds")  
+  SNPRelate::snpgdsCreateGeno(cnv.gds, 
                                 genmat = CNVBiMa, 
                                 sample.id = all.samples, 
                                 snp.id = as.character(probes.cnv.gr$snp.id), 
@@ -790,16 +798,17 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   
   if ("CNVGenotype" %in% genotype.nodes) {
     ###################### Replace genotype matrix with CNV genotypes
-    (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork = TRUE, 
-                                       readonly = FALSE))
+    genofile <- SNPRelate::snpgdsOpen(cnv.gds, 
+                                        allow.fork = TRUE, 
+                                        readonly = FALSE)
     
-    CNVBiMaCN <- matrix(2, nrow = length(probes.cnv.gr), ncol = length(all.samples))
-    n <- gdsfmt::add.gdsn(genofile, "CNVgenotype", CNVBiMaCN, replace = TRUE)
-    gdsfmt::read.gdsn(n)
+    n <- gdsfmt::add.gdsn(genofile, "CNVgenotype", CNVBiMa, replace = TRUE)
+    
+    # is that needed?:  gdsfmt::read.gdsn(n)
     
     if(rappdirs:::get_os() == 'unix' | rappdirs:::get_os() == 'mac'){
       multicoreParam <- BiocParallel::SnowParam(workers = 1, type = 'SOCK')
-      BiocParallel::bplapply(1:length(all.samples), .writeProbesCNV, BPPARAM =
+      BiocParallel::bplapply(seq_along(all.samples), .writeProbesCNV, BPPARAM =
                                multicoreParam, all.samples=all.samples, genofile=genofile, CNVsGr=CNVsGr,
                              probes.cnv.gr=probes.cnv.gr, n=n) } 
     
@@ -1119,10 +1128,11 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
   
     if(rappdirs:::get_os() == "win" | rappdirs:::get_os() == "unix")
     {
-        plinkPath <- paste0(all.paths[2], "/plink")
+        plinkPath <- paste0(all.paths[2], "plink")
         plinkPath <- gsub("\\\\", "/", plinkPath)
         system(paste(plinkPath, "--gfile", file.path(all.paths[2], "mydata"), 
-                 paste("--out", file.path(all.paths[2], "plink")), "--noweb"), wait=TRUE, intern = TRUE)}
+                 paste("--out", file.path(all.paths[2], "plink")), "--noweb"), 
+                 wait=TRUE, intern = TRUE)
     } 
  
     if(rappdirs:::get_os() == "mac")
@@ -1132,7 +1142,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE,
         mydata <- paste0("\'", mydata, "\'")
         plink <- file.path(all.paths[2], "plink")
         plink <- paste0("\'", plink, "\'")
-        args <- c("--gfile", mydata, "--out", plink, "--noweb", "--allow-no-sex")    
+        args <- c("--gfile", mydata, "--out", plink, "--noweb", "--allow-no-sex")
         system2(plink.path, args=args)
     }
   
