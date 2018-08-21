@@ -252,19 +252,18 @@ For CNV calls inferred from SNP-chip data, we additionally provide probe-by-prob
 genome-wide association analysis (GWA) between CNVs and quantitative phenotypes as 
 previously described ([da Silva et al., 2018](https://doi.org/10.1371/journal.pone.0157711)).
 
-This treats common CN polymorphisms (CNPs, allele frequency > 5%) as SNPs of 
-equal frequency and carries out GWA as implemented in    
+This treats common CN polymorphisms (CNPs, allele frequency >5%) as SNPs of 
+equal frequency and carries out GWA as implemented in 
 [PLINK](http://zzz.bwh.harvard.edu/plink/gvar.shtml).
-
 
 For demonstration, we use CNV data of a wild population of songbirds 
 ([da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)).
 
-Using genomic estimated breeding values (GEBVs) for breeding time as the 
+Using genomic estimated breeding values (GEBVs) for breeding time (BT) as the 
 quantitative phenotype, we accordingly analyze for each CNV region whether change 
 in copy number is associated with change in the genetic potential for breeding time. 
 
-To function `setupCnvGWAS` imports phenotype information, CNV calls, and the probe map (if available).
+The function `setupCnvGWAS` imports phenotype information, CNV calls, and the probe map (if available).
 The information required for analysis is then stored in the resulting `phen.info` list:
 
 ```{r importPhen}
@@ -290,7 +289,7 @@ For the GWAS, chromosome names are assumed to be `integer` (i.e. `1, 2, 3, ...`)
 Non-integer chromosome names can be encoded by providing a `data.frame` that 
 describes the mapping from `character` names to corresponding integers. 
 
-For the example of the great tits, chromosomes _1A_, _4A_, _25LG1_, _25LG2_, and _LGE22_ 
+For the example data, chromosomes _1A_, _4A_, _25LG1_, _25LG2_, and _LGE22_ 
 are correspondingly encoded via 
 
 ```{r CNVGWASNames}
@@ -312,7 +311,7 @@ segs.pvalue.gr
 
 The CNV-GWAS uses the concept of CNV segments to define CNV loci. 
 This procedure was originally proposed in our previous work in Nelore cattle 
-[da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711) and 
+([da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)) and 
 defines CNV segments based on CNV genotype similarity of subsequent SNP probes. 
 
 The default is `min.sim=0.95`, which will continuously add probe positions to a 
@@ -322,20 +321,20 @@ CNV segments will look like the S12 Table in
 [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711). 
 
 As `PLINK` returns a _p_-value for each probe, only one of the _p_-values of the
-probes overlapping each CNV segment is assigned as the segment _p_-value. 
+probes contained in a CNV segment is chosen as the segment _p_-value. 
 
-This is similar to an approach used in differential expression analysis of 
+This is similar to an approach used in differential expression (DE) analysis of 
 microarray gene expression data, where typically the most significant DE probe
 is chosen in case of multiple probes mapping to the same gene. 
 
 Here, the representative probe for the CNV segment can be chosen to be the probe 
-with lowest p-value (`assign.probe="min.pvalue"`, default) or the one with highest 
+with lowest _p_-value (`assign.probe="min.pvalue"`, default) or the one with highest 
 CNV frequency (`assign.probe="high.freq"`). 
 
 Multiple testing correction based on the number of CNV segments tested is carried
 out using the FDR approach (default). 
 Results can then be displayed as for regular GWAS via a Manhattan plot 
-(which is exported here to a pdf file). 
+(which can optionally be exported to a pdf file). 
 
 ```{r manh}
 ## Define the chromosome order in the plot
@@ -359,7 +358,7 @@ challenging and can produce biased CNV frequencies
 ([da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)). 
 
 Therefore, we also provide the option to carry out the GWAS based on the 
-relative signal intensity (log R ratio - LRR).
+relative signal intensity (log R ratio, LRR).
 GWAS using LRR values directly facilitates the identification of CNV segments 
 associated with the phenotype, disregarding putatively biased frequency estimates 
 from the CNV calling procedure. 
@@ -394,15 +393,15 @@ Therefore, running a GWAS implies that any GDS file produced by previous analysi
 will be overwritten. 
 Use `produce.gds=FALSE` to avoid overwriting in the GWAS run. 
 
-For convenience, a GDS file can be producedbefore the GWAS analysis with the 
+For convenience, a GDS file can be produced before the GWAS analysis with the 
 `prodGdsCnv` function.
-This will additionally construct a `GRanges` object containing the genomic 
+This additionally returns a `GRanges` object containing the genomic 
 position, name and, frequency of each probe used to construct the CNV segments
 for the GWAS analysis. 
 
 Note that `probes.cnv.gr` object contains the integer chromosome names 
 (as the GDS file on disk). 
-Only the `segs.pvalue.gr`, which encloses the GWAS results, has the character 
+Only the `segs.pvalue.gr`, which stores the GWAS results, has the character 
 chromosome names.  
 
 ```{r prodGDS}
