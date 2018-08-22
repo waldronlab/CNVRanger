@@ -250,7 +250,7 @@ Here, we analyze differences in expression between CN states based on the
 
 For CNV calls inferred from SNP-chip data, we additionally provide probe-by-probe
 genome-wide association analysis (GWA) between CNVs and quantitative phenotypes as 
-previously described ([da Silva et al., 2018](https://doi.org/10.1371/journal.pone.0157711)).
+previously described ([da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)).
 
 This treats common CN polymorphisms (CNPs, allele frequency >5%) as SNPs of 
 equal frequency and carries out GWA as implemented in 
