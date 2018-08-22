@@ -15,35 +15,55 @@
 #' @param calls A \code{\linkS4class{GRangesList}} or a 
 #' \code{linkS4class{RaggedExperiment}} storing the individual CNV calls for 
 #' each sample
-#' @param rcounts A \code{\linkS4class{SummarizedExperiment}} storing the raw RNA-seq
-#' read counts for each sample.
+#' @param rcounts A \code{\linkS4class{RangedSummarizedExperiment}} storing the 
+#' raw RNA-seq read counts for each sample.
 #'
 cnvExprAssoc <- function(cnvrs, calls, rcounts, 
-    multi.calls="largest",
+    window="1Mbp", multi.calls="largest", 
     min.samples=10, min.cpm=5, padj.method="BH")
 {
     # sanity checks
     stopifnot(is(cnvrs, "GRanges"), 
                 is(calls, "GRangesList") || is(calls, "RaggedExperiment"),
-                is(rcounts, "matrix") || is(rcounts, "SummarizedExperiment"))
+                is(is(rcounts, "RangedSummarizedExperiment"))
+
+    stopifnot(is.integer(assay(calls)), is.integer(assay(rcounts)))
 
     if(is(calls, "GRangesList")) 
         calls <- GenomicRanges::makeGRangesListFromDataFrame(calls, 
                         split.field="sampleId", keep.extra.columns=TRUE)
 
-    if(is(rcounts, "matrix"))
-        rcounts <- SummarizedExperiment(assays=list(counts=rcounts))
-
     # consider samples in cnv AND expression data
     sampleIds <- sort(intersect(colnames(calls), colnames(rcounts)))
     calls <- calls[,sampleIds]
     rcounts <- rcounts[,sampleIds]         
-    
+   
+    # filter and norm RNA-seq data
+    y <- .preprocRnaSeq(assay(rcounts))
+
+    # restrict RNA-seq data to genes in window for each cnv 
 
     # determine states 
     cnv.states <- RaggedExperiment::qreduceAssay(calls, query=cnvrs, 
                     simplifyReduce=.largest, background=2)
-    
+
+    # exclude cnv regions with not at least one gain/loss state with >= min.samples 
+    tab <- apply(cnv.states, 1, table)
+    .isTestable <- function(states)
+    { 
+        cond1 <- length(states) > 1
+        cond2 <- any(states[names(states) != "2"] >= min.samples)
+        res <- cond1 && cond2
+        return(res)
+    } 
+    ind <- vapply(tab, .isTestable, logical(1))
+    nr.excl <- sum(!ind)
+    if(nr.excl) message(paste("Excluding", nr.excl, 
+                                "cnvrs not satisfying min.samples threshold"))
+    stopifnot(length(cnvrs) > nr.excl)
+    cnv.states <- cnv.states[ind]
+    cnvrs <- cnvrs[ind]   
+ 
     apply(cnv.states, 1, testCnvExpr, y=, min.state.freq=)
 
 }
@@ -107,11 +127,13 @@ testCnvExpr <- function(y, states, min.state.freq=10, padj.method="BH")
 }
 
 # filter low exprs
-rs <- rowSums(edgeR::cpm(rcounts) > 2)
-keep <- rs > 10
-rcounts <- rcounts[keep,]   
-y <- edgeR::DGEList(counts=rcounts) 
-y <- edgeR::calcNormFactors(y)
-cpmy <- edgeR::cpm(y)
-
+.preprocRnaSeq <- function(rcounts, min.cpm=2)
+{ 
+    rs <- rowSums(edgeR::cpm(rcounts) > min.cpm)
+    keep <- rs >= ncol(rcounts) / 2
+    rcounts <- rcounts[keep,]   
+    y <- edgeR::DGEList(counts=rcounts) 
+    y <- edgeR::calcNormFactors(y)
+    return(y)
+}
 
