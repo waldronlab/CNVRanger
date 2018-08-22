@@ -20,32 +20,139 @@
 #'
 cnvExprAssoc <- function(cnvrs, calls, rcounts, 
     window="1Mbp", multi.calls="largest", 
-    min.samples=10, min.cpm=5, padj.method="BH")
+    min.samples=10, min.cpm=2, padj.method="BH", verbose=TRUE)
 {
     # sanity checks
     stopifnot(is(cnvrs, "GRanges"), 
                 is(calls, "GRangesList") || is(calls, "RaggedExperiment"),
-                is(is(rcounts, "RangedSummarizedExperiment"))
+                is(rcounts, "RangedSummarizedExperiment"))
 
-    stopifnot(is.integer(assay(calls)), is.integer(assay(rcounts)))
+    stopifnot(is.integer(RaggedExperiment::assay(calls)), 
+                is.integer(SummarizedExperiment::assay(rcounts)))
 
     if(is(calls, "GRangesList")) 
-        calls <- GenomicRanges::makeGRangesListFromDataFrame(calls, 
-                        split.field="sampleId", keep.extra.columns=TRUE)
+        calls <- RaggedExperiment::RaggedExperiment(grl)
 
     # consider samples in cnv AND expression data
     sampleIds <- sort(intersect(colnames(calls), colnames(rcounts)))
+    if(verbose) message(paste("Restricting analysis to", 
+                    length(sampleIds), "intersecting samples"))
+    stopifnot(length(sampleIds) > 0)
     calls <- calls[,sampleIds]
     rcounts <- rcounts[,sampleIds]         
    
     # filter and norm RNA-seq data
-    y <- .preprocRnaSeq(assay(rcounts))
+    y <- .preprocRnaSeq(SummarizedExperiment::assay(rcounts))
+    rcounts <- rcounts[rownames(y),]
 
-    # restrict RNA-seq data to genes in window for each cnv 
+    # determine states
+    cnv.states <- .getStates(cnvrs, calls, multi.calls, min.samples) 
+    cnvrs <- IRanges::subsetByOverlaps(cnvrs, 
+                GenomicRanges::GRanges(rownames(cnv.states)))   
+   
+    # determine genes to test for each CNV region 
+    ecnvrs <- .extendRegions(cnvrs, window=window)
+    olaps <- GenomicRanges::findOverlaps(rowRanges(rcounts), ecnvrs) 
+    cgenes <- split(S4Vectors::queryHits(olaps), S4Vectors::subjectHits(olaps))
+    
+    nr.cnvrs <- length(cgenes)
+    if(verbose) message(paste("Analyzing", nr.cnvrs, 
+                                "regions with >=1 gene in the given window"))
+    ind <- as.integer(names(cgenes))
+    cnv.states <- cnv.states[ind,]
+    cnvrs <- cnvrs[ind]
 
-    # determine states 
+    #TODO: BiocParallel
+    res <- lapply(seq_len(nr.cnvrs), 
+        function(i)
+        { 
+            if(verbose) message(paste(i, "of", nr.cnvrs))
+            ind <- cgenes[[i]]
+            y$counts <- y$counts[ind,,drop=FALSE]
+            r <- .testCnvExpr(y, cnv.states[i,],
+                                min.state.freq=min.samples, 
+                                padj.method=padj.method)
+            return(r)
+        })
+    names(res) <- rownames(cnv.states)
+    return(res)
+}
+
+# test a single cnv region
+.testCnvExpr <- function(y, states, min.state.freq=10, padj.method="BH")
+{
+    # form groups according to CNV states
+    state.freq <- table(states)
+    nr.states <- length(state.freq)
+    too.less.samples <- state.freq < min.state.freq
+    if(sum(too.less.samples))
+    {
+        too.less.states <- names(state.freq)[too.less.samples]
+        too.less.states <- as.integer(too.less.states)
+        ind <- states != too.less.states
+        nr.states <- length(state.freq) - length(too.less.states) 
+        stopifnot(nr.states > 1) 
+        states <- states[ind]
+        y$counts <- y$counts[,ind, drop=FALSE]
+        y$samples <- y$samples[ind,,drop=FALSE]
+    }
+    
+    # design
+    s <- states - 2
+    s <- paste0("s", ifelse(s <= 0, "-", "+"), abs(s))
+    group <- as.factor(s)
+    y$samples$group <- group
+    f <- stats::formula(paste0("~", "group"))
+    design <- stats::model.matrix(f)
+
+    # test
+    y <- edgeR::estimateDisp(y, design, robust=TRUE)
+    fit <- edgeR::glmQLFit(y, design, robust=TRUE)
+    qlf <- edgeR::glmQLFTest(fit, coef=2:nr.states)
+    fc.cols <- grep("^logFC", colnames(qlf$table), value=TRUE)
+    rel.cols <- c(fc.cols, "PValue")
+    ind <- order(qlf$table[,"PValue"])
+    de.tbl <- qlf$table[ind, rel.cols]    
+    
+    # multiple testing
+    padj <- stats::p.adjust(de.tbl[,"PValue"], method=padj.method)
+    de.tbl <- cbind(de.tbl, padj)
+    colnames(de.tbl)[ncol(de.tbl)] <- "AdjPValue"
+    return(de.tbl)
+}
+
+.extendRegions <- function(regions, window="1Mbp")
+{
+    stopifnot(is.character(window) || is.numeric(window))
+    if(is.character(window)) window <- .window2integer(window)
+    nstart <- GenomicRanges::start(regions) - window
+    nend <- GenomicRanges::end(regions) + window
+    GenomicRanges::start(regions) <- pmax(1, nstart) 
+    GenomicRanges::end(regions) <- nend
+    return(regions)
+}
+
+.window2integer <- function(w)
+{
+    stopifnot(grepl("[0-9]+[GMk]*bp$", w))
+    w <- sub("bp$", "", w)
+    unit <- 0
+    if(grepl("[GMk]$", w))
+    {
+        n <- nchar(w)
+        unit <- substring(w, n, n)
+        unit <- switch(unit, k=3, M=6, G=9)
+        w <- substring(w, 1, n-1)
+    }
+    w <- as.integer(w) * 10^unit
+    return(w)
+}
+
+.getStates <- function(cnvrs, calls, multi.calls=.largest, min.samples=10)
+{
+    #TODO: resolve multi.calls
     cnv.states <- RaggedExperiment::qreduceAssay(calls, query=cnvrs, 
-                    simplifyReduce=.largest, background=2)
+                    simplifyReduce=multi.calls, background=2)
 
     # exclude cnv regions with not at least one gain/loss state with >= min.samples 
     tab <- apply(cnv.states, 1, table)
@@ -61,53 +168,8 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
     if(nr.excl) message(paste("Excluding", nr.excl, 
                                 "cnvrs not satisfying min.samples threshold"))
     stopifnot(length(cnvrs) > nr.excl)
-    cnv.states <- cnv.states[ind]
-    cnvrs <- cnvrs[ind]   
- 
-    apply(cnv.states, 1, testCnvExpr, y=, min.state.freq=)
-
-}
-
-# test a single cnv region
-testCnvExpr <- function(y, states, min.state.freq=10, padj.method="BH")
-{
-    # form groups according to CNV states
-    state.freq <- table(states)
-    too.less.samples <- state.freq < min.state.freq
-    if(sum(too.less.samples))
-    {
-        too.less.states <- names(state.freq)[too.less.samples]
-        too.less.states <- as.integer(too.less.states)
-        ind <- states != too.less.states
-        nr.states <- length(state.freq) - length(too.less.states) 
-    }
-    stopifnot(nr.states > 1) 
-    states <- states[ind]
-    y <- y[,ind]
-
-    # design
-    s2g <- c("B","C","A","D", "E")
-    sort(ifelse(s-2 <= 0, paste0("s-", abs(s-2)), paste0("s+", abs(s-2))))
-    group <- s2g[states + 1]
-    group <- as.factor(group)
-    y$group <- group
-    f <- stats::formula(paste0("~", "group"))
-    design <- stats::model.matrix(f)
-
-    # test
-    y <- edgeR::estimateDisp(y, design, robust=TRUE)
-    fit <- edgeR::glmQLFit(y, design, robust=TRUE)
-    qlf <- edgeR::glmQLFTest(fit, coef=2:nr.states)
-    fc.cols <- grep("^logFC", colnames(qlf$table), value=TRUE)
-    rel.cols <- c(fc.cols, "PValue")
-    ind <- order(de.tbl[,"PValue"])
-    de.tbl <- qlf$table[ind, rel.cols]    
-    
-    # multiple testing
-    padj <- stats::p.adjust(de.tbl[,"PValue"], method=padj.method)
-    de.tbl <- cbind(de.tbl, padj)
-    colnames(de.tbl)[ncol(de.tbl)] <- "AdjPValue"
-    return(de.tbl)
+    cnv.states <- cnv.states[ind,]
+    return(cnv.states)
 }
 
 .largest <- function(scores, ranges, qranges) 

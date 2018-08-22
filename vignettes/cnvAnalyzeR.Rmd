@@ -220,6 +220,7 @@ Get genomic coordinates of genes for UMD3.1 assembly (Ensembl 92):
 ```{r getBtGenes2}
 ahEdb <- ahDb[["AH60948"]]
 bt.genes <- genes(ahEdb)
+seqlevels(bt.genes) <- paste0("chr", seqlevels(bt.genes))
 bt.genes
 ```
 
@@ -227,7 +228,6 @@ Select only genes on chromosome 1 and 2 for demonstration:
 ```{r formatBtGenes}
 sel.genes <- bt.genes[seqnames(bt.genes) %in% c("1","2")]
 sel.genes <- sel.genes[sel.genes$gene_biotype == "protein_coding"]
-seqlevels(sel.genes) <- paste0("chr", seqlevels(sel.genes))
 sel.genes
 ```
 
@@ -245,6 +245,21 @@ res
 
 Here, we analyze differences in expression between CN states based on the
 `r Biocpkg("edgeR")` package.
+
+
+```{r rseqdata}
+rcounts <- read.delim("RNAseq/all_counts_cleaned.txt", row.names=1, stringsAsFactors=FALSE)
+rcounts <- as.matrix(rcounts)
+dim(rcounts)
+rcounts[1:5, 1:5]
+```
+
+```{r rse}
+rse <- SummarizedExperiment(assays=list(rcounts=rcounts), 
+                rowRanges=granges(bt.genes)[rownames(rcounts)])
+rse
+```
+
 
 # CNV-phenotype association analysis
 
