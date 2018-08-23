@@ -31,6 +31,7 @@ suppressPackageStartupMessages({
     library(AnnotationHub)
     library(regioneR)
     library(BSgenome.Btaurus.UCSC.bosTau6.masked)
+    library(SummarizedExperiment)
 })
 ```
 
@@ -248,13 +249,15 @@ Here, we analyze differences in expression between CN states based on the
 
 
 ```{r rseqdata}
-rcounts <- read.delim("RNAseq/all_counts_cleaned.txt", row.names=1, stringsAsFactors=FALSE)
+rseq.file <- file.path(data.dir, "all_counts_cleaned.txt")
+rcounts <- read.delim(rseq.file, row.names=1, stringsAsFactors=FALSE)
 rcounts <- as.matrix(rcounts)
 dim(rcounts)
 rcounts[1:5, 1:5]
 ```
 
 ```{r rse}
+library(SummarizedExperiment)
 rse <- SummarizedExperiment(assays=list(rcounts=rcounts), 
                 rowRanges=granges(bt.genes)[rownames(rcounts)])
 rse
