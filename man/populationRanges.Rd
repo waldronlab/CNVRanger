@@ -26,7 +26,7 @@ analysis with e.g. phenotype data.
 In the simplest case, this just merges overlapping individual calls into 
 summarized regions.
 However, this typically inflates CNVR size and trimming low-density areas
-(usually <10\% of the total contributing individual calls within a summarized 
+(usually <10\% of the total contributing individual calls within a summarized
 region) is advisable.
 
 An illustration of the concept can be found here: 

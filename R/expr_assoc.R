@@ -7,17 +7,17 @@
 # 
 ############################################################
 
-#' CNV-expression association analysis
-#'
-#'
-#' @param cnvrs A \code{\linkS4class{GRanges}} object containing the summarized
-#' CNV regions as e.g. obtained with \code{\link{populationRanges}}.
-#' @param calls A \code{\linkS4class{GRangesList}} or a 
-#' \code{linkS4class{RaggedExperiment}} storing the individual CNV calls for 
-#' each sample
-#' @param rcounts A \code{\linkS4class{RangedSummarizedExperiment}} storing the 
-#' raw RNA-seq read counts for each sample.
-#'
+# CNV-expression association analysis
+#
+#
+# @param cnvrs A \code{\linkS4class{GRanges}} object containing the summarized
+# CNV regions as e.g. obtained with \code{\link{populationRanges}}.
+# @param calls A \code{\linkS4class{GRangesList}} or a 
+# \code{linkS4class{RaggedExperiment}} storing the individual CNV calls for 
+# each sample
+# @param rcounts A \code{\linkS4class{RangedSummarizedExperiment}} storing the 
+# raw RNA-seq read counts for each sample.
+#
 cnvExprAssoc <- function(cnvrs, calls, rcounts, 
     window="1Mbp", multi.calls="largest", 
     min.samples=10, min.cpm=2, padj.method="BH", verbose=TRUE)
@@ -31,7 +31,7 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
                 is.integer(SummarizedExperiment::assay(rcounts)))
 
     if(is(calls, "GRangesList")) 
-        calls <- RaggedExperiment::RaggedExperiment(grl)
+        calls <- RaggedExperiment::RaggedExperiment(calls)
 
     # consider samples in cnv AND expression data
     sampleIds <- sort(intersect(colnames(calls), colnames(rcounts)))
