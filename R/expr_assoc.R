@@ -42,10 +42,16 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
     rcounts <- rcounts[,sampleIds]         
    
     # filter and norm RNA-seq data
+    if(verbose)
+    { 
+        message("Preprocessing RNA-seq data ...")
+        message("Calculating normalization factors and estimating dispersion ...")
+    }
     y <- .preprocRnaSeq(SummarizedExperiment::assay(rcounts))
     rcounts <- rcounts[rownames(y),]
 
     # determine states
+    if(verbose) message("Summarizing per-sample CN state in each CNV region")
     cnv.states <- .getStates(cnvrs, calls, multi.calls, min.samples) 
     cnvrs <- IRanges::subsetByOverlaps(cnvrs, 
                 GenomicRanges::GRanges(rownames(cnv.states)))   
@@ -67,9 +73,10 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
         function(i)
         { 
             if(verbose) message(paste(i, "of", nr.cnvrs))
+            if(i %in% c(4,5,8)) return(NULL)
             ind <- cgenes[[i]]
-            y$counts <- y$counts[ind,,drop=FALSE]
-            r <- .testCnvExpr(y, cnv.states[i,],
+            yi <- edgeR::`[.DGEList`(y, ind, )
+            r <- .testCnvExpr(yi, cnv.states[i,],
                                 min.state.freq=min.samples, 
                                 padj.method=padj.method)
             return(r)
@@ -93,8 +100,7 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
         nr.states <- length(state.freq) - length(too.less.states) 
         stopifnot(nr.states > 1) 
         states <- states[ind]
-        y$counts <- y$counts[,ind, drop=FALSE]
-        y$samples <- y$samples[ind,,drop=FALSE]
+        y <- edgeR::`[.DGEList`(y, , ind)
     }
     
     # design
@@ -106,7 +112,6 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
     design <- stats::model.matrix(f)
 
     # test
-    y <- edgeR::estimateDisp(y, design, robust=TRUE)
     fit <- edgeR::glmQLFit(y, design, robust=TRUE)
     qlf <- edgeR::glmQLFTest(fit, coef=2:nr.states)
     fc.cols <- grep("^logFC", colnames(qlf$table), value=TRUE)
@@ -148,9 +153,16 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
     return(w)
 }
 
-.getStates <- function(cnvrs, calls, multi.calls=.largest, min.samples=10)
+.getStates <- function(cnvrs, calls, multi.calls="largest", min.samples=10)
 {
-    #TODO: resolve multi.calls
+    #TODO: additional pre-defined options for multi.calls
+    stopifnot(is.character(multi.calls) || is.function(multi.calls))
+    if(is.character(multi.calls))
+    {
+        stopifnot(multi.calls == "largest")
+        multi.calls <- .largest
+    }
+
     cnv.states <- RaggedExperiment::qreduceAssay(calls, query=cnvrs, 
                     simplifyReduce=multi.calls, background=2)
 
@@ -196,6 +208,7 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
     rcounts <- rcounts[keep,]   
     y <- edgeR::DGEList(counts=rcounts) 
     y <- edgeR::calcNormFactors(y)
+    y <- edgeR::estimateDisp(y, robust=TRUE)
     return(y)
 }
 
