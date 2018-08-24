@@ -18,6 +18,7 @@ Imports:
     edgeR,
     gdsfmt,
     lattice,
+    methods,
     plyr,
     qqman, 
     rappdirs,
