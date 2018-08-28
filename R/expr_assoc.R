@@ -7,31 +7,38 @@
 # 
 ############################################################
 
-# CNV-expression association analysis
-#
-#
-# @param cnvrs A \code{\linkS4class{GRanges}} object containing the summarized
-# CNV regions as e.g. obtained with \code{\link{populationRanges}}.
-# @param calls A \code{\linkS4class{GRangesList}} or a 
-# \code{linkS4class{RaggedExperiment}} storing the individual CNV calls for 
-# each sample
-# @param rcounts A \code{\linkS4class{RangedSummarizedExperiment}} storing the 
-# raw RNA-seq read counts for each sample.
-#
+#' CNV-expression association analysis
+#'
+#'
+#' @param cnvrs A \code{\linkS4class{GRanges}} object containing the summarized
+#' CNV regions as e.g. obtained with \code{\link{populationRanges}}.
+#' @param calls A \code{\linkS4class{GRangesList}} or a 
+#' \code{linkS4class{RaggedExperiment}} storing the individual CNV calls for 
+#' each sample
+#' @param rcounts A \code{\linkS4class{RangedSummarizedExperiment}} storing the 
+#' raw RNA-seq read counts in a rectangular fashion (genes x samples).
+#'
+#' @references Geistlinger et al. (2018) Widespread modulation of gene expression
+#' by copy number variation in skeletal muscle. Sci Rep, 8(1):1399.
+#'
+#'
+#'
+#'
 cnvExprAssoc <- function(cnvrs, calls, rcounts, 
     window="1Mbp", multi.calls="largest", 
-    min.samples=10, min.cpm=2, padj.method="BH", verbose=TRUE)
+    min.samples=10, min.cpm=2, de.method=c("edgeR", "limma"),
+    padj.method="BH", verbose=TRUE)
 {
     # sanity checks
     stopifnot(is(cnvrs, "GRanges"), 
                 is(calls, "GRangesList") || is(calls, "RaggedExperiment"),
                 is(rcounts, "RangedSummarizedExperiment"))
 
-    stopifnot(is.integer(RaggedExperiment::assay(calls)), 
-                is.integer(SummarizedExperiment::assay(rcounts)))
-
     if(is(calls, "GRangesList")) 
         calls <- RaggedExperiment::RaggedExperiment(calls)
+
+    stopifnot(is.integer(RaggedExperiment::assay(calls)), 
+                is.integer(SummarizedExperiment::assay(rcounts)))
 
     # consider samples in cnv AND expression data
     sampleIds <- sort(intersect(colnames(calls), colnames(rcounts)))
@@ -42,11 +49,7 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
     rcounts <- rcounts[,sampleIds]         
    
     # filter and norm RNA-seq data
-    if(verbose)
-    { 
-        message("Preprocessing RNA-seq data ...")
-        message("Calculating normalization factors and estimating dispersion ...")
-    }
+    if(verbose) message("Preprocessing RNA-seq data ...")
     y <- .preprocRnaSeq(SummarizedExperiment::assay(rcounts))
     rcounts <- rcounts[rownames(y),]
 
@@ -69,15 +72,14 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
     cnvrs <- cnvrs[ind]
 
     #TODO: BiocParallel
+    de.method <- match.arg(de.method)
     res <- lapply(seq_len(nr.cnvrs), 
         function(i)
         { 
             if(verbose) message(paste(i, "of", nr.cnvrs))
-            if(i %in% c(4,5,8)) return(NULL)
-            ind <- cgenes[[i]]
-            yi <- edgeR::`[.DGEList`(y, ind, )
-            r <- .testCnvExpr(yi, cnv.states[i,],
+            r <- .testCnvExpr(y, cgenes[[i]], cnv.states[i,],
                                 min.state.freq=min.samples, 
+                                de.method=de.method,
                                 padj.method=padj.method)
             return(r)
         })
@@ -86,7 +88,8 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
 }
 
 # test a single cnv region
-.testCnvExpr <- function(y, states, min.state.freq=10, padj.method="BH")
+.testCnvExpr <- function(y, cgenes, states, min.state.freq=10, 
+    de.method=c("limma", "edgeR"), padj.method="BH")
 {
     # form groups according to CNV states
     state.freq <- table(states)
@@ -112,12 +115,33 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
     design <- stats::model.matrix(f)
 
     # test
-    fit <- edgeR::glmQLFit(y, design, robust=TRUE)
-    qlf <- edgeR::glmQLFTest(fit, coef=2:nr.states)
-    fc.cols <- grep("^logFC", colnames(qlf$table), value=TRUE)
+    de.method <- match.arg(de.method)
+    if(de.method == "limma")
+    {
+        y <- limma::voom(y, design)
+        fit <- limma::lmFit(y, design)
+
+        # restrict to cgenes
+        fit <- limma::`[.MArrayLM`(fit, cgenes,)
+        fit <- limma::eBayes(fit)
+        res <- limma::topTable(fit, number=length(cgenes), coef=2:nr.states,
+                                sort.by="none", adjust.method="none")
+        colnames(res) <- sub("\\.", "", colnames(res))
+    }
+    else
+    {
+        y <- edgeR::estimateDisp(y, design, robust=TRUE)
+        fit <- edgeR::glmQLFit(y, design, robust=TRUE)
+
+        # restrict to cgenes
+        fit <- edgeR::`[.DGEGLM`(fit, cgenes,)
+        res <- edgeR::glmQLFTest(fit, coef=2:nr.states)
+        res <- res$table
+    }
+    fc.cols <- grep("^logFC", colnames(res), value=TRUE)
     rel.cols <- c(fc.cols, "PValue")
-    ind <- order(qlf$table[,"PValue"])
-    de.tbl <- qlf$table[ind, rel.cols]    
+    ind <- order(res[,"PValue"])
+    de.tbl <- res[ind, rel.cols]    
     
     # multiple testing
     padj <- stats::p.adjust(de.tbl[,"PValue"], method=padj.method)
@@ -208,7 +232,6 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
     rcounts <- rcounts[keep,]   
     y <- edgeR::DGEList(counts=rcounts) 
     y <- edgeR::calcNormFactors(y)
-    y <- edgeR::estimateDisp(y, robust=TRUE)
     return(y)
 }
 
