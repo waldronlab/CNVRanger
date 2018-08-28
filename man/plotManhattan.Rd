@@ -4,7 +4,8 @@
 \alias{plotManhattan}
 \title{Manhattan Plot}
 \usage{
-plotManhattan(all.paths, regions, chr.size.order = NULL, plot.pdf = TRUE)
+plotManhattan(all.paths, regions, chr.size.order = NULL,
+  plot.pdf = TRUE)
 }
 \arguments{
 \item{all.paths}{TODO.}

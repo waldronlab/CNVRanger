@@ -45,7 +45,6 @@
 #'
 #' @export
 #'  
-
 plotManhattan <- function(all.paths, regions, chr.size.order = NULL, plot.pdf = TRUE) {
     
     ## Produce chromosome limits
@@ -99,7 +98,7 @@ plotManhattan <- function(all.paths, regions, chr.size.order = NULL, plot.pdf = 
 # https://genome.sph.umich.edu/wiki/Code_Sample:_Generating_QQ_Plots_in_R By
 # Matthew Flickinger @import lattice
 
-.qqunifPlot <- function(pvalues, should.thin = T, thin.obs.places = 2, thin.exp.places = 2, 
+.qqunifPlot <- function(pvalues, should.thin = TRUE, thin.obs.places = 2, thin.exp.places = 2, 
     xlab = expression(paste("Expected (", -log[10], " p-value)")), 
     ylab = expression(paste("Observed (", -log[10], " p-value)")), 
     draw.conf = TRUE, conf.points = 1000, conf.col = "lightgray", 
@@ -178,7 +177,7 @@ plotManhattan <- function(all.paths, regions, chr.size.order = NULL, plot.pdf = 
     }
     
     # reduce number of points to plot
-    if (should.thin == T) {
+    if (should.thin) {
         if (!is.null(grp)) {
             thin <- unique(data.frame(pvalues = round(pvalues, thin.obs.places), 
                 exp.x = round(exp.x, thin.exp.places), grp = grp))

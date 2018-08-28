@@ -430,14 +430,13 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
         
         if (rappdirs:::get_os() == "win") {
             param <- BiocParallel::SnowParam(workers = 1, type = "SOCK")
-            BiocParallel::bplapply(1:length(all.samples), .writeProbesCNV, BPPARAM = param, 
+            BiocParallel::bplapply(seq_along(all.samples), .writeProbesCNV, BPPARAM = param, 
                 all.samples = all.samples, genofile = genofile, CNVsGr = CNVsGr, 
                 probes.cnv.gr = probes.cnv.gr, n = n)
         }
         
         testit(15)  ## Wait to make sure that gds is writen in parallel
         SNPRelate::snpgdsClose(genofile)
-        
     }
     else {
         # CNVgenotypeSNPlike
@@ -1769,7 +1768,6 @@ testit <- function(x) {
 }
 
 # HELPER - Estimate lambda - From GeneAbel package that was temporarily removed from CRAN
-
 estlambda <- function(data, plot = FALSE, proportion = 1, method = "regression", 
           filter = TRUE, df = 1, ...) 
 {
@@ -1794,13 +1792,13 @@ estlambda <- function(data, plot = FALSE, proportion = 1, method = "regression",
     data[which(abs(data) < 1e-08)] <- NA
   }
   data <- sort(data)
-  ppoi <- ppoints(data)
+  ppoi <- stats::ppoints(data)
   ppoi <- sort(qchisq(ppoi, df = df, lower.tail = FALSE))
-  data <- data[1:ntp]
-  ppoi <- ppoi[1:ntp]
+  data <- data[seq_len(ntp)]
+  ppoi <- ppoi[seq_len(ntp)]
   out <- list()
   if (method == "regression") {
-    s <- summary(lm(data ~ 0 + ppoi))$coeff
+    s <- summary(stats::lm(data ~ 0 + ppoi))$coeff
     out$estimate <- s[1, 1]
     out$se <- s[1, 2]
   }
@@ -1809,26 +1807,18 @@ estlambda <- function(data, plot = FALSE, proportion = 1, method = "regression",
                                                       df)
     out$se <- NA
   }
-  else if (method == "KS") {
-    limits <- c(0.5, 100)
-    out$estimate <- estLambdaKS(data, limits = limits, df = df)
-    if (abs(out$estimate - limits[1]) < 1e-04 || abs(out$estimate - 
-                                                     limits[2]) < 1e-04) 
-      warning("using method='KS' lambda too close to limits, use other method")
-    out$se <- NA
-  }
   else {
     stop("'method' should be either 'regression' or 'median'!")
   }
   if (plot) {
     lim <- c(0, max(data, ppoi, na.rm = TRUE))
-    oldmargins <- par()$mar
-    par(mar = oldmargins + 0.2)
+    oldmargins <- graphics::par()$mar
+    graphics::par(mar = oldmargins + 0.2)
     plot(ppoi, data, xlab = expression("Expected " ~ chi^2), 
          ylab = expression("Observed " ~ chi^2), ...)
-    abline(a = 0, b = 1)
-    abline(a = 0, b = out$estimate, col = "red")
-    par(mar = oldmargins)
+    graphics::abline(a = 0, b = 1)
+    graphics::abline(a = 0, b = out$estimate, col = "red")
+    graphics::par(mar = oldmargins)
   }
   out
 }
