@@ -47,6 +47,10 @@
 #' @param verbose Show progress in the analysis
 #' @return The CNV segments and the representative probes and their respective p-value
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
+#' @seealso \code{link{setupCnvGWAS}} to setup files needed for the CNV-GWAS.
+#' @references da Silva et al. (2016) Genome-wide detection of CNVs and their 
+#' association with meat tenderness in Nelore cattle. PLoS One, 11(6):e0157711.
+#'
 #' @examples
 #' 
 #' # Load phenotype-CNV information

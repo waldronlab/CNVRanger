@@ -94,6 +94,13 @@ chr.code.name <- read.table(text=df, header=FALSE)
 segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name)
  
 }
+\references{
+da Silva et al. (2016) Genome-wide detection of CNVs and their 
+association with meat tenderness in Nelore cattle. PLoS One, 11(6):e0157711.
+}
+\seealso{
+\code{link{setupCnvGWAS}} to setup files needed for the CNV-GWAS.
+}
 \author{
 Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
 }
