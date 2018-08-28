@@ -356,7 +356,7 @@ Results can then be displayed as for regular GWAS via a Manhattan plot
 
 ```{r manh}
 ## Define the chromosome order in the plot
-order.chrs <- c(1:24, "25LG1", "25LG2", 26:28, "LGE22", "1A", "4A")
+order.chrs <- c(1:24, "25LG1", "25LG2", 27:28, "LGE22", "1A", "4A")
 
 ## Chromosome sizes
 chr.sizes <- c(114059860, 150265477, 111636321, 68030631, 61875929, 34342011,
