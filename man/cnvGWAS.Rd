@@ -40,9 +40,12 @@ produced in the gds file.}
 string use only biallelic CNVs. If 'all' code multiallelic CNVs as 0 
 for loss; 1 for 2n and 2 for gain.}
 
-\item{path.files}{TODO}
+\item{path.files}{Folder containing the input CNV files used for the CNV 
+calling (i.e. one text file with 5 collumns for each sample). Columns should 
+contain (i) probe name, (ii) Chromosome, (iii) Position, (iv) LRR, and (v) BAF.}
 
-\item{list.of.files}{TODO}
+\item{list.of.files}{Data-frame with two columns where the (i) is the file 
+name with signals and (ii) is the correspondent name of the sample in the gds file}
 
 \item{produce.gds}{logical. If TRUE produce a new gds, if FALSE use gds previously created}
 

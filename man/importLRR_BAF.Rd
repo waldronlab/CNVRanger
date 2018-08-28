@@ -4,7 +4,7 @@
 \alias{importLRR_BAF}
 \title{Import LRR and BAF from text files used in the CNV analysis}
 \usage{
-importLRR_BAF(all.paths, path.files, list.of.files, verbose = FALSE)
+importLRR_BAF(all.paths, path.files, list.of.files, verbose = TRUE)
 }
 \arguments{
 \item{all.paths}{Object returned from \code{CreateFolderTree} function with 

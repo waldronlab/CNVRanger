@@ -270,7 +270,7 @@ For CNV calls inferred from SNP-chip data, we additionally provide probe-by-prob
 genome-wide association analysis (GWA) between CNVs and quantitative phenotypes as 
 previously described ([da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)).
 
-This treats common CN polymorphisms (CNPs, allele frequency >5%) as SNPs of 
+This treats common CN polymorphisms (CNPs, allele frequency >1%) as SNPs of 
 equal frequency and carries out GWA as implemented in 
 [PLINK](http://zzz.bwh.harvard.edu/plink/gvar.shtml).
 
@@ -363,7 +363,7 @@ chr.sizes <- c(114059860, 150265477, 111636321, 68030631, 61875929, 34342011,
                 37653027, 31324166, 25106277, 20202851, 20315886, 20466350, 
                 16480340, 16193477, 13820886, 10486032, 11572643, 9871655, 
                 14661763, 7693166, 4276343, 6655392, 6808513, 1092960, 809223,
-                6596997, 4327975, 5101010, 773534, 71365269, rep(19934923,2))
+                6596997, 4327975, 5101010, 773534, 71365269, 19934923)
 
 chr.size.order <- data.frame(chr=order.chrs, sizes=chr.sizes, stringsAsFactors=FALSE)
 
@@ -392,7 +392,7 @@ samples <- sub("^GT","", samples)
 sample.files <- data.frame(file.names=files, sample.names=samples)
  
 # All missing samples will have LRR = '0' and BAF = '0.5' in all SNPs listed in the GDS file
-importLRR_BAF(all.paths, data.dir, sample.files)
+importLRR_BAF(all.paths, data.dir, sample.files, verbose=FALSE)
 
 # Read the GDS to check if the LRR/BAF nodes were added
 cnv.gds <- file.path(all.paths[1], "CNV.gds")

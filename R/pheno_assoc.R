@@ -35,8 +35,11 @@
 #' @param coding.translate For 'CNVgenotypeSNPlike'. If NULL or unrecognized 
 #' string use only biallelic CNVs. If 'all' code multiallelic CNVs as 0 
 #' for loss; 1 for 2n and 2 for gain.
-#' @param path.files TODO
-#' @param list.of.files TODO
+#' @param path.files Folder containing the input CNV files used for the CNV 
+#' calling (i.e. one text file with 5 collumns for each sample). Columns should 
+#' contain (i) probe name, (ii) Chromosome, (iii) Position, (iv) LRR, and (v) BAF.
+#' @param list.of.files Data-frame with two columns where the (i) is the file 
+#' name with signals and (ii) is the correspondent name of the sample in the gds file
 #' @param produce.gds logical. If TRUE produce a new gds, if FALSE use gds previously created   
 #' @param run.lrr If TRUE use LRR values instead absolute copy numbers in the association
 #' @param assign.probe \sQuote{min.pvalue} or \sQuote{high.freq} to represent the CNV segment
@@ -268,17 +271,6 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
         CNVs <- .checkConvertCNVs(cnvs, all.paths, n.cor)
         
         CGr <- GenomicRanges::makeGRangesFromDataFrame(CNVs)
-        # startP <- cbind(CNVs$chr, start(CGr)) endP <- cbind(CNVs$chr, end(CGr)) middleP
-        # <- cbind(CNVs$chr, end(CGr) - (width(CGr)/2)) probe.like.map <- rbind(startP,
-        # endP, middleP) probe.like.map <- as.data.frame(probe.like.map) plGr <-
-        # makeGRangesFromDataFrame(probe.like.map, start.field = 'V2', end.field = 'V2',
-        # seqnames.field = 'V1') plGr <- BiocGenerics::unique(plGr) probe.like.map <-
-        # as.data.frame(plGr) probe.like.map$Name <- paste0('probe.like_', seq(from = 1,
-        # to = nrow(probe.like.map))) probe.like.map <- subset(probe.like.map, select =
-        # c(Name, seqnames, start)) colnames(probe.like.map) <- c('Name', 'Chr',
-        # 'Position') probe.like.map$Chr <- gsub('chr', '', probe.like.map$Chr)
-        # write.table(probe.like.map, file.path(all.paths[1], '/MapPenn.txt'), col.names
-        # = TRUE, row.names = FALSE, quote = FALSE, sep = '\t')
         
     } else {
         if (length(map.loc) > 1) 
@@ -455,12 +447,10 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
         CNVBiMaCN <- matrix(2, nrow = length(probes.cnv.gr), ncol = length(all.samples))
         
         n <- gdsfmt::add.gdsn(genofile, "CNVgenotypeSNPlike", CNVBiMaCN, replace = TRUE)
-        ## is that needed? gdsfmt::read.gdsn(n)
         
         #Define the chunks of SNPs to import chunk
         chunk <- seq(from = 1, to = length(probes.cnv.gr), by = length(probes.cnv.gr))  ## No chunk
-        # chunk <- seq(from = 1, to = length(probes.cnv.gr), by = chunk.len) ## with
-        # chunk
+        
         if (chunk[length(chunk)] != length(probes.cnv.gr)) {
             chunk[length(chunk) + 1] <- length(probes.cnv.gr)
         }
@@ -555,7 +545,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
 #' 
 #' @export
 
-importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=FALSE)
+importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
 {
     cnv.gds <- file.path(all.paths[1], "CNV.gds")
     genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork=TRUE, readonly=FALSE)
@@ -576,8 +566,10 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=FALSE)
     # Check if all files
     list.filesLo.back <- list.filesLo
     list.filesLo <- list.filesLo[list.filesLo$gds %in% all.samples, ]
+    if(verbose){
     if (nrow(list.filesLo) != nrow(list.filesLo.back))
         warning("list.of.files has different length of the list of samples from gds")
+    }
     
     LRR.matrix <- matrix(0, nrow = length(snps.included), ncol = length(all.samples))
     
@@ -629,7 +621,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=FALSE)
     
     all.samples <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id"))
     
-    snp.id <- as.numeric(as.character(map[map$probes == "AX-100939600", "snp.id"]))
+    snp.id <- as.numeric(as.character(map[map$probes == snp.id]))
     
     if (node.to.extract == "CNVgenotype") {
         gens <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), start = c(snp.id, 
@@ -643,14 +635,12 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=FALSE)
     return(gens)
 }
 
-
 # HELPER - Create the folder tree to keep necessary files during and after the
 # analysis @param name String with a project code or name (e.g. 'Project1')
 # @param folder Choose manually the project folder (i.e. path as the root
 # folder). If NULL, a standard program folder will be chosen.  @return List with
 # paths placed to store the files produced by subsequent analysis @examples
 # all.paths <- createFolderTree('Project_name')
-
 .createFolderTree <- function(name, folder = NULL) {
     
     # data dir
@@ -677,7 +667,6 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=FALSE)
 # \code{CreateFolderTree} function with the working folder tree @param version
 # PLINK version. Only 1.07 implemented @return boolean. Success (TRUE) or fail
 # (FALSE) in running PLINK
-
 .getPLINK <- function(plink.path, version = "1.07") {
     
     plink.url <- "http://zzz.bwh.harvard.edu/plink/dist/plink-"
@@ -934,8 +923,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=FALSE)
                 .probeToCNVs, BPPARAM = multicoreParam, cnv.seq.gr = cnv.seq.gr, 
                 probe.like.map.gr = probe.like.map.gr))
         }
-        # cnv.seq.gr.split <- split(cnv.seq.gr, as.factor(cnv.seq.gr))
-        # subsetByOverlaps(probe.like.map.gr, cnv.seq.gr.split)
+      
         cnv.p.df <- t(as.data.frame(cnvs.probes))
         cnv.seq.gr$num.snps <- as.integer(as.character(cnv.p.df[, 1]))
         cnv.seq.gr$start.probe <- as.character(cnv.p.df[, 2])
@@ -944,13 +932,11 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=FALSE)
         cnv.seq <- as.data.frame(cnv.seq.gr)
         cnv.seq <- cnv.seq[, c(1:3, 6:10)]
         colnames(cnv.seq)[1] <- "chr"
-        ## Convert to PennCNV
         
-        # the.names <- as.character(as.matrix(cnvs[1, ])) the.names <- colnames(cnv.seq)
-        # cnvs <- cnvs[-1, ] colnames(cnvs) <- the.names
         cnvs <- cnv.seq
         cnvs$start <- as.integer(cnvs$start)
         cnvs$end <- as.integer(cnvs$end)
+        
         ## Convert to PennCNV format
         cnvs$V1 <- paste0(cnvs$chr, ":", cnvs$start, "-", cnvs$end)
         cnvs$length <- (cnvs$end - cnvs$start) + 1
@@ -1372,7 +1358,8 @@ testit <- function(x) {
 .runPLINK <- function(all.paths) {
     
     if (rappdirs:::get_os() == "win" | rappdirs:::get_os() == "unix") {
-        plinkPath <- paste0(all.paths[2], "plink")
+        plinkPath <- file.path(all.paths[2], "plink")
+        #plinkPath <- all.paths[2]
         plinkPath <- gsub("\\\\", "/", plinkPath)
         system(paste(plinkPath, "--gfile", file.path(all.paths[2], "mydata"), paste("--out", 
             file.path(all.paths[2], "plink")), "--noweb"), wait = TRUE, intern = TRUE)
@@ -1634,7 +1621,7 @@ testit <- function(x) {
         #### Calculating chi-square distribution based on original P-values
         chisq.n <- qchisq(resultsp$VALUE, 1, lower.tail = FALSE)
         ### Estimating genomic inflation factor
-        lambda <- GenABEL::estlambda(resultsp$VALUE, filter = FALSE)$estimate
+        lambda <- estlambda(resultsp$VALUE, filter = FALSE)$estimate
         ### correcting the qui-square distribution with lambda
         chisq_corr = chisq.n/lambda
         #### re-calculating corrected P values
@@ -1779,4 +1766,69 @@ testit <- function(x) {
             1))
     }
     
+}
+
+# HELPER - Estimate lambda - From GeneAbel package that was temporarily removed from CRAN
+
+estlambda <- function(data, plot = FALSE, proportion = 1, method = "regression", 
+          filter = TRUE, df = 1, ...) 
+{
+  data <- data[which(!is.na(data))]
+  if (proportion > 1 || proportion <= 0) 
+    stop("proportion argument should be greater then zero and less than or equal to one")
+  ntp <- round(proportion * length(data))
+  if (ntp < 1) 
+    stop("no valid measurements")
+  if (ntp == 1) {
+    warning(paste("One measurement, lambda = 1 returned"))
+    return(list(estimate = 1, se = 999.99))
+  }
+  if (ntp < 10) 
+    warning(paste("number of points is too small:", ntp))
+  if (min(data) < 0) 
+    stop("data argument has values <0")
+  if (max(data) <= 1) {
+    data <- qchisq(data, 1, lower.tail = FALSE)
+  }
+  if (filter) {
+    data[which(abs(data) < 1e-08)] <- NA
+  }
+  data <- sort(data)
+  ppoi <- ppoints(data)
+  ppoi <- sort(qchisq(ppoi, df = df, lower.tail = FALSE))
+  data <- data[1:ntp]
+  ppoi <- ppoi[1:ntp]
+  out <- list()
+  if (method == "regression") {
+    s <- summary(lm(data ~ 0 + ppoi))$coeff
+    out$estimate <- s[1, 1]
+    out$se <- s[1, 2]
+  }
+  else if (method == "median") {
+    out$estimate <- median(data, na.rm = TRUE)/qchisq(0.5, 
+                                                      df)
+    out$se <- NA
+  }
+  else if (method == "KS") {
+    limits <- c(0.5, 100)
+    out$estimate <- estLambdaKS(data, limits = limits, df = df)
+    if (abs(out$estimate - limits[1]) < 1e-04 || abs(out$estimate - 
+                                                     limits[2]) < 1e-04) 
+      warning("using method='KS' lambda too close to limits, use other method")
+    out$se <- NA
+  }
+  else {
+    stop("'method' should be either 'regression' or 'median'!")
+  }
+  if (plot) {
+    lim <- c(0, max(data, ppoi, na.rm = TRUE))
+    oldmargins <- par()$mar
+    par(mar = oldmargins + 0.2)
+    plot(ppoi, data, xlab = expression("Expected " ~ chi^2), 
+         ylab = expression("Observed " ~ chi^2), ...)
+    abline(a = 0, b = 1)
+    abline(a = 0, b = out$estimate, col = "red")
+    par(mar = oldmargins)
+  }
+  out
 }
