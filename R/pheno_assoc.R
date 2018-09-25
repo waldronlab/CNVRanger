@@ -1576,8 +1576,9 @@ testit <- function(x) {
             }
             seqLar <- GenomicRanges::GRanges(as.character(GenomeInfoDb::seqnames(prx)), 
                 IRanges::IRanges(GenomicRanges::start(prx), LimPrx))
-            seqPrbs <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, 
-                seqLar))
+            seqlevels(seqLar) <- seqlevels(probes.cnv.gr)
+            seqPrbs <- IRanges::subsetByOverlaps(probes.cnv.gr, 
+                seqLar)
             seqx <- GenomicRanges::GRanges(as.character(GenomeInfoDb::seqnames(prx)), 
                 IRanges::IRanges(GenomicRanges::start(prx), GenomicRanges::start(seqPrbs[length(seqPrbs)])))
             all.segs.grX[[st]] <- seqx
@@ -1667,7 +1668,8 @@ testit <- function(x) {
                 segs.pvalue.gr[se])
             probe.sel <- probe.sel[rev(order(probe.sel$freq))][1]
             ## Take the first probe if the position is duplicated
-            resultX <- suppressWarnings(IRanges::subsetByOverlaps(resultspGr, probe.sel))[1]
+            seqlevels(probe.sel) <- seqlevels(resultspGr)
+            resultX <- IRanges::subsetByOverlaps(resultspGr, probe.sel)[1]
             values.all[[se]] <- resultX$VALUE
             names.all[[se]] <- as.character(probe.sel$Name)
             freqs.all[[se]] <- as.character(probe.sel$freq[1])
@@ -1676,12 +1678,14 @@ testit <- function(x) {
     
     if (assign.probe == "median") {
         for (se in seq_along(segs.pvalue.gr)) {
-            probe.sel <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, 
-                segs.pvalue.gr[se]))
+            seqlevels(segs.pvalue.gr) <- seqlevels(probes.cnv.gr)
+            probe.sel <- IRanges::subsetByOverlaps(probes.cnv.gr, 
+                segs.pvalue.gr[se])
             absdiff <- abs(probe.sel$freq - median(probe.sel$freq))
             probe.sel <- probe.sel[which.min(absdiff)]
             ## Take the first probe if the position is duplicated
-            resultX <- suppressWarnings(IRanges::subsetByOverlaps(resultspGr, probe.sel))[1]
+            seqlevels(probe.sel) <- seqlevels(resultspGr)
+            resultX <- IRanges::subsetByOverlaps(resultspGr, probe.sel)[1]
             values.all[[se]] <- resultX$VALUE
             names.all[[se]] <- as.character(probe.sel$Name)
             freqs.all[[se]] <- as.character(probe.sel$freq[1])
@@ -1690,12 +1694,14 @@ testit <- function(x) {
     
     if (assign.probe == "mean") {
         for (se in seq_along(segs.pvalue.gr)) {
-            probe.sel <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, 
-                segs.pvalue.gr[se]))
+          seqlevels(segs.pvalue.gr) <- seqlevels(probes.cnv.gr)  
+            probe.sel <- IRanges::subsetByOverlaps(probes.cnv.gr, 
+                segs.pvalue.gr[se])
             absdiff <- abs(probe.sel$freq - mean(probe.sel$freq))
             probe.sel <- probe.sel[which.min(absdiff)]
             ## Take the first probe if the position is duplicated
-            resultX <- suppressWarnings(IRanges::subsetByOverlaps(resultspGr, probe.sel))[1]
+            seqlevels(probe.sel) <- seqlevels(resultspGr)  
+            resultX <- IRanges::subsetByOverlaps(resultspGr, probe.sel)[1]
             values.all[[se]] <- resultX$VALUE
             names.all[[se]] <- as.character(probe.sel$Name)
             freqs.all[[se]] <- as.character(probe.sel$freq[1])
