@@ -1001,32 +1001,36 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
     # 0n
     CNVsGr0n <- CNVsGr[CNVsGr$sample == sampleX]
     CNVsGr0n <- CNVsGr0n[CNVsGr0n$type == "state1,cn=0"]
-    probes.cnv.gr.0n <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, 
-        CNVsGr0n))
+    seqlevels(CNVsGr0n) <- seqlevels(probes.cnv.gr)
+    probes.cnv.gr.0n <- IRanges::subsetByOverlaps(probes.cnv.gr, 
+        CNVsGr0n)
     
     g[probes.cnv.gr.0n$tag.snp] <- "0"
     
     # 1n
     CNVsGr1n <- CNVsGr[CNVsGr$sample == sampleX]
     CNVsGr1n <- CNVsGr1n[CNVsGr1n$type == "state2,cn=1"]
-    probes.cnv.gr.1n <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, 
-        CNVsGr1n))
+    seqlevels(CNVsGr1n) <- seqlevels(probes.cnv.gr)
+    probes.cnv.gr.1n <- IRanges::subsetByOverlaps(probes.cnv.gr, 
+        CNVsGr1n)
     
     g[probes.cnv.gr.1n$tag.snp] <- "0"
     
     # 3n
     CNVsGr3n <- CNVsGr[CNVsGr$sample == sampleX]
     CNVsGr3n <- CNVsGr3n[CNVsGr3n$type == "state5,cn=3"]
-    probes.cnv.gr.3n <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, 
-        CNVsGr3n))
+    seqlevels(CNVsGr3n) <- seqlevels(probes.cnv.gr)
+    probes.cnv.gr.3n <- IRanges::subsetByOverlaps(probes.cnv.gr, 
+        CNVsGr3n)
     
     g[probes.cnv.gr.3n$tag.snp] <- "2"
     
     # 4n
     CNVsGr4n <- CNVsGr[CNVsGr$sample == sampleX]
     CNVsGr4n <- CNVsGr4n[CNVsGr4n$type == "state6,cn=4"]
-    probes.cnv.gr.4n <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, 
-        CNVsGr4n))
+    seqlevels(CNVsGr4n) <- seqlevels(probes.cnv.gr)
+    probes.cnv.gr.4n <- IRanges::subsetByOverlaps(probes.cnv.gr, 
+        CNVsGr4n)
     
     g[probes.cnv.gr.4n$tag.snp] <- "2"
     
@@ -1178,8 +1182,9 @@ testit <- function(x) {
     all.samples <- unique(as.character(CNVsGr$V5))
     
     ###################### Select probes within CNVs
-    probesCNV <- suppressWarnings(as.character(IRanges::subsetByOverlaps(probesGr, 
-        CNVsGr)$Name))
+    seqlevels(CNVsGr) <- seqlevels(probesGr)
+    probesCNV <- as.character(IRanges::subsetByOverlaps(probesGr, 
+        CNVsGr)$Name)
     probesCNV <- unique(unlist(probesCNV))
     probes.cnv.gr <- probesGr[probesGr$Name %in% probesCNV]
     
@@ -1658,8 +1663,9 @@ testit <- function(x) {
     
     if (assign.probe == "high.freq") {
         for (se in seq_along(segs.pvalue.gr)) {
-            suppressWarnings(probe.sel <- IRanges::subsetByOverlaps(probes.cnv.gr, 
-                segs.pvalue.gr[se]))
+            seqlevels(segs.pvalue.gr) <- seqlevels(probes.cnv.gr)
+            probe.sel <- IRanges::subsetByOverlaps(probes.cnv.gr, 
+                segs.pvalue.gr[se])
             probe.sel <- probe.sel[rev(order(probe.sel$freq))][1]
             ## Take the first probe if the position is duplicated
             resultX <- suppressWarnings(IRanges::subsetByOverlaps(resultspGr, probe.sel))[1]
