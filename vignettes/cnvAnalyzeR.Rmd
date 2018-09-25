@@ -81,6 +81,8 @@ We start by loading the package.
 library(cnvAnalyzeR)
 ```
 
+## Input data format
+
 For demonstration, we consider CNV calls as obtained with 
 [PennCNV](http://penncnv.openbioinformatics.org) from SNP-chip data in a 
 Brazilian cattle breed. 
@@ -99,6 +101,8 @@ In total, there are roughly 50,000 calls obtained for 723 samples.
 ```{r nrSamples}
 length(unique(calls[,"NE_id"]))
 ```
+
+## Representation as a `GRangesList`
 
 We group the calls by sample ID, resulting in a `GRangesList`.
 Each element of the list corresponds to a sample, and contains the genomic 
@@ -120,6 +124,8 @@ according to their genomic coordinates.
 grl <- sort(grl)
 grl
 ```
+
+## Representation as a `RaggedExperiment`
 
 An alternative matrix-like representation of the CNV calls can be obtained with 
 the `r Biocpkg("RaggedExperiment")` data class. 
@@ -281,6 +287,8 @@ Using genomic estimated breeding values (GEBVs) for breeding time (BT) as the
 quantitative phenotype, we accordingly analyze for each CNV region whether change 
 in copy number is associated with change in the genetic potential for breeding time. 
 
+## Setting up a CNV-GWAS
+
 The function `setupCnvGWAS` imports phenotype information, CNV calls, and the probe map (if available).
 The information required for analysis is then stored in the resulting `phen.info` list:
 
@@ -316,6 +324,8 @@ chr.code.name<- data.frame(
                     V1=c(16, 25, 29:31), 
                     V2=c("1A", "4A", "25LG1", "25LG2", "LGE22"))
 ```
+
+## Running a CNV-GWAS
 
 We can then run the actual CNV-GWAS, here without correction for multiple testing
 which is *only done for exemplification*. 
@@ -371,6 +381,8 @@ chr.size.order <- data.frame(chr=order.chrs, sizes=chr.sizes, stringsAsFactors=F
 plotManhattan(all.paths, segs.pvalue.gr, chr.size.order, plot.pdf=FALSE)
 ```
 
+## Using relative signal intensities 
+
 CNV detection using SNP-chip intensities and allele frequencies is usually 
 challenging and can produce biased CNV frequencies 
 ([da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)). 
@@ -402,6 +414,8 @@ gdsfmt::closefn.gds(genofile)
 # Run the CNV-GWAS with existent GDS
 segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, produce.gds=FALSE, run.lrr=TRUE)
 ```
+
+## Producing a GDS file in advance
 
 It is important to note that the `cnvGWAS` function uses the `CNV.gds` file 
 which is stored in the `Inputs` folder (i.e. `all.paths[1]`). 
