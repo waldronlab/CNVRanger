@@ -1,13 +1,12 @@
 
-
 #' Run the CNV-GWAS 
 #'
 #' Wraps all the necessary functions to run a CNV-GWAS using the output of the \code{\link{setupCnvGWAS}} function
 #'  
 #' (i) Produces the GDS file containing the genotype information  (if produce.gds == TRUE),
-#' (ii) Produces the requested inputs for a PLINK analysis, (iii) run a 
-#' CNV-GWAS analysis using linear model implemented in PLINK (http://zzz.bwh.harvard.edu/plink/gvar.shtml) and 
-#' (iv) export a QQ-plot displaying the adjusted p-values. In this release only the p-value for the copy number is available  (i.e. 'P(CNP)'). 
+#' (ii) Produces the requested inputs for a linear (PLINK, http://zzz.bwh.harvard.edu/plink/gvar.shtml) or linear mixed 
+#' model analysis, (iii) run a CNV-GWAS analysis and (iv) export a QQ-plot displaying the adjusted p-values. In this release, 
+#' SNP genotypes are not considered and only the p-value for the copy number is available  (i.e. 'P(CNP)' in PLINK). 
 #'
 #'   
 #' @param phen.info Returned by \code{\link{setupCnvGWAS}}
@@ -33,9 +32,15 @@
 #' @param select.population Select a subset of populations to be used in the GWAS. Use the population name or names
 #' @param epistasis.mode logical. In addition, perform the GWAS analysis using pairwise combination of the genotypes of all CNV segments to
 #' understand epistatic effect among CNVs. Default is FALSE.
+#' @param both.up.down logical. Probe genotype similarity considering the up- and downstream vicinity probes. If FALSE will only
+#' downstream probes are considered
 #' @param cnvr.specific Compare probes inside the same CNVR. Recommended to run with \sQuote{min.sim}>1
+#' @param exclude.outliers logical. Use quadrants to exclude samples with extreme phenotypes (i.e. outliers)
+#' @param minq Minimum quadrant to exclude. Only if \sQuote{exclude.outliers} is TRUE
+#' @param minq Maximum quadrant to exclude. Only if \sQuote{exclude.outliers} is TRUE
+#' @param log.pheno logical. log2 transform the phenotypes
 #' @param verbose Show progress in the analysis
-#' @return The CNV segments and the representative probes and their respective p-value
+#' @return The CNV segments and the representative probes with their respective assigned p-value
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @examples
 #' 
@@ -56,7 +61,7 @@
 #' 
 #' chr.code.name <- read.table(text=df, header=F)
 #' 
-#' segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name)
+#' segs.pvalue.gr <- cnvGWAS.V2(phen.info, chr.code.name=chr.code.name)
 #'  
 #' @export
 
@@ -66,7 +71,7 @@ cnvGWAS.V2 <- function(phen.info, n.cor=1, min.sim = 0.95, freq.cn = 0.01, snp.m
                     produce.gds=TRUE, run.lrr=FALSE, assign.probe="min.pvalue",
                     select.population = NULL, epistasis.mode =FALSE, correct.inflation=FALSE,
                     both.up.down=FALSE, cnvr.specific=FALSE, exclude.outliers=FALSE,
-                    minq=.01, maxq=.99, verbose=FALSE, log.pheno=FALSE){
+                    minq=.01, maxq=.99, log.pheno=FALSE, verbose=FALSE){
   
   if(!is.null(select.population)){
     phen.info$samplesPhen <- phen.info$samplesPhen[which(phen.info$pops.names %in% select.population)]
@@ -97,7 +102,7 @@ cnvGWAS.V2 <- function(phen.info, n.cor=1, min.sim = 0.95, freq.cn = 0.01, snp.m
   phenos.na[which(phenos.na<min(fun(phenos, minq, maxq)))] <- NA
   phenos.na[which(phenos.na>max(fun(phenos,minq, maxq)))] <- NA
   
-  phenos.na[is.na(phenos.na)] <- -9
+  #phenos.na[is.na(phenos.na)] <- -9 ## Trying to avoid -9 in the phenotype dataset
   phen.info$phenotypesSam[,(lo.phe+1)] <- phenos.na 
   phen.info$phenotypesdf[,1] <- phenos.na
   }
@@ -114,19 +119,17 @@ cnvGWAS.V2 <- function(phen.info, n.cor=1, min.sim = 0.95, freq.cn = 0.01, snp.m
     if(verbose==TRUE){message("Produce the GDS for a given phenotype")}
     
     probes.cnv.gr <- prodGdsCnv(phen.info=phen.info, freq.cn=freq.cn, snp.matrix=snp.matrix, 
-                                #n.cor=n.cor, 
                                 lo.phe=lo.phe, chr.code.name=chr.code.name, genotype.nodes=genotype.nodes,
-                                #coding.translate=coding.translate, lrr=lrr)
                                 coding.translate=coding.translate)
   }else if(produce.gds == FALSE){
     if(verbose==TRUE){
       message("Using existent gds file") }
     probes.cnv.gr <- .prodProbes(phen.info, lo.phe, freq.cn)
-    #probes.cnv.gr <- .prodProbes(phen.info, lo.phe, 0)
   }else{
     stop("TRUE/FALSE needed")  
   }
   
+  if(PLINK){
   ##################################### Produce PLINK map ##################
   if(verbose==TRUE){
     message("Produce PLINK map")}
@@ -152,6 +155,14 @@ cnvGWAS.V2 <- function(phen.info, n.cor=1, min.sim = 0.95, freq.cn = 0.01, snp.m
   
   ########################################### END #######################################
   
+  }else{
+  
+  ### Produce inputs to the lme4qtl analysis
+    
+  ### Run the LMM analysis for all probes  
+      
+  }
+  
   ##################################### Produce CNV segments #############
   if(verbose==TRUE){message("Produce CNV segments")}
   all.segs.gr <- .prodCNVseg(all.paths, probes.cnv.gr, min.sim, both.up.down)
@@ -166,6 +177,7 @@ cnvGWAS.V2 <- function(phen.info, n.cor=1, min.sim = 0.95, freq.cn = 0.01, snp.m
   ######################################################## END ###########################################
   
   ################################### Run bayesian  INCOMPLETE ######################################################
+  ## TODO - Might use to choose the better modelling for each CNV segment (i.e. linear, quadratic etc...)
   
   if(FALSE){
   
