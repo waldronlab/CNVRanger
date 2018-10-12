@@ -282,10 +282,14 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
     plink.dir <- dir(all.paths[2], pattern = "plink-1*")
     plink.bin <- file.path(all.paths[2], plink.dir, "plink")
     
+    if (length(plink.bin)==0){
+      got.plink <- .getPLINK(all.paths[2])
+    }else{
     if (!file.exists(plink.bin)) {
         got.plink <- .getPLINK(all.paths[2])
         if (!got.plink) 
             stop("PLINK setup failed")
+    }
     }
     all.paths[2] <- dirname(plink.bin)
     

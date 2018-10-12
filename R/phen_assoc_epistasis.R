@@ -7,7 +7,6 @@
 #' (ii) Produces the requested inputs for a linear (PLINK, http://zzz.bwh.harvard.edu/plink/gvar.shtml) or linear mixed 
 #' model analysis, (iii) run a CNV-GWAS analysis and (iv) export a QQ-plot displaying the adjusted p-values. In this release, 
 #' SNP genotypes are not considered and only the p-value for the copy number is available  (i.e. 'P(CNP)' in PLINK). 
-#'
 #'   
 #' @param phen.info Returned by \code{\link{setupCnvGWAS}}
 #' @param n.cor Number of cores to be used
@@ -94,7 +93,7 @@ cnvGWAS.V2 <- function(phen.info, n.cor=1, min.sim = 0.95, freq.cn = 0.01, snp.m
   phenos <- suppressWarnings(as.numeric(as.character(phen.info$phenotypesdf[,1])))
   phenos[which(phenos==-9)] <- NA
   if(log.pheno){
-    phenos <- log(2*min(phenos, na.rm=TRUE)*-1+phenos)
+    phenos <- log(2*min(phenos, na.rm=TRUE)*-1+phenos) ## TODO - Re-check
   }
   phenos.na <- phenos
   phenos <- as.numeric(na.omit(phenos))
@@ -460,8 +459,8 @@ cnvGWAS.V2 <- function(phen.info, n.cor=1, min.sim = 0.95, freq.cn = 0.01, snp.m
 }
 
 
-#' HELPER - Produce the PLINK .gvar file in disk - epistasis
-#' 
+# HELPER - Produce the PLINK .gvar file in disk - epistasis
+# 
 
 .prodPLINKgvar.epistasis <- function(all.paths, n.cor, snp.matrix, run.lrr=FALSE, gr.interactions, probes.cnv.gr.gwas){
   
@@ -527,11 +526,8 @@ cnvGWAS.V2 <- function(phen.info, n.cor=1, min.sim = 0.95, freq.cn = 0.01, snp.m
   SNPRelate::snpgdsClose(genofile)
 } ## TODO - modify - LRR TODO
 
-### Use only tested probes in the default GWAS
-
-
-#' HELPER - Produce PLINK probe map in disk - epistasis
-#' 
+# HELPER - Produce PLINK probe map in disk - epistasis
+# 
 
 .prodPLINKmap.epistasis <- function(all.paths, gr.interactions){
   (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=TRUE))
@@ -556,11 +552,10 @@ cnvGWAS.V2 <- function(phen.info, n.cor=1, min.sim = 0.95, freq.cn = 0.01, snp.m
   SNPRelate::snpgdsClose(genofile)
 }
 
-
-#' HELPER - Internal function of parallel implementation to produce the .gvar file (absolute copy number) 
-#' requested for the CNV-GWAS in PLINK - epistasis
-#' @examples
-#' Gens <- .prodGvar(lo, genofile, sam.gen, snps, fam.id)
+# HELPER - Internal function of parallel implementation to produce the .gvar file (absolute copy number) 
+# requested for the CNV-GWAS in PLINK - epistasis
+# @examples
+# Gens <- .prodGvar(lo, genofile, sam.gen, snps, fam.id)
 
 .prodGvar.epistasis <- function(lo, genofile, sam.gen, snps, fam.id, snp.matrix, gr.interactions){
   g <- as.numeric(SNPRelate::snpgdsGetGeno(genofile, sample.id=sam.gen[[lo]], verbose=FALSE))
@@ -599,9 +594,9 @@ cnvGWAS.V2 <- function(phen.info, n.cor=1, min.sim = 0.95, freq.cn = 0.01, snp.m
   return(df)
 } 
 
-#' HELPER - Internal function of parallel implementation to produce the .gvar file (LRR) requested for the CNV-GWAS in PLINK - epistasis
-#' @examples
-#' Gens <- .prodGvarLRR(lo, genofile, sam.gen, snps, fam.id)
+# HELPER - Internal function of parallel implementation to produce the .gvar file (LRR) requested for the CNV-GWAS in PLINK - epistasis
+# @examples
+# Gens <- .prodGvarLRR(lo, genofile, sam.gen, snps, fam.id)
 
 .prodGvarLRR.epistasis <- function(lo, genofile, sam.gen, snps, fam.id, snp.matrix){
   
@@ -628,8 +623,8 @@ cnvGWAS.V2 <- function(phen.info, n.cor=1, min.sim = 0.95, freq.cn = 0.01, snp.m
 } ## TODO - modify
 
 
-#' HELPER - Associate tested probe-interactions and draw p-values/adjusted p-values for each interaction
-#' 
+# HELPER - Associate tested probe-interactions and draw p-values/adjusted p-values for each interaction
+# 
 
 .assoPrCNV.epistasis  <- function(all.paths, phenotypesSamX, method.m.test, gr.interactions){
   
@@ -723,12 +718,15 @@ cnvGWAS.V2 <- function(phen.info, n.cor=1, min.sim = 0.95, freq.cn = 0.01, snp.m
   return(gr.interactions)
 } 
 
-#' HELPER Create the pairwise genotypes for epistasis analysis - TODO
-#' 
-#' 
-#' 
+
+# HELPER Create the pairwise genotypes for epistasis analysis - TODO
+# 
 
 
+# HELPER - Debug snippet - Dont't Run
+# 
+
+run.tests <- function(){
 index.epistasis <- base::expand.grid(seq_len(length(probes.cnv.gr)), seq_len(length(probes.cnv.gr)))
 old.row <- nrow(index.epistasis)
 #index.epistasis$tag <- paste0(index.epistasis$Var1, "-", index.epistasis$Var2)
@@ -759,3 +757,5 @@ segs.pvalue.gr <- cnvGWAS.V2(phen.info, n.cor=1, min.sim = 0.95, freq.cn = 0.05,
                              coding.translate= NULL, epistasis.mode =TRUE, cnvr.specific=TRUE, BothUpDown=TRUE)
 
 (genofile <- SNPRelate::snpgdsOpen(file.path(all.paths[1], "CNV.gds"), allow.fork=TRUE))
+
+}
