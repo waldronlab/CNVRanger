@@ -40,13 +40,13 @@ phen.info <- setupCnvGWAS('Example', phen.loc, cnv.out.loc, map.loc)
 all.paths <- phen.info$all.paths
 
 # List files to import LRR/BAF 
-list.of.files <- list.files(path=data.dir, pattern="cnv.txt.adjusted$")
-list.of.files <- as.data.frame(list.of.files)
-colnames(list.of.files)[1] <- "file.names"
-list.of.files$sample.names <- sub(".cnv.txt.adjusted$", "", list.of.files$file.names)
+files <- list.files(data.dir, pattern = "\\\\.cnv.txt.adjusted$")
+samples <- sub(".cnv.txt.adjusted$", "", files)
+samples <- sub("^GT","", samples)
+sample.files <- data.frame(file.names=files, sample.names=samples)
 
 # All missing samples will have LRR = '0' and BAF = '0.5' in all SNPs listed in the GDS file
-importLRR_BAF(all.paths, data.dir, list.of.files)
+importLRR_BAF(all.paths, data.dir, sample.files, verbose=FALSE)
 
 # Read the GDS to check if the LRR/BAF nodes were added
 cnv.gds <- file.path(all.paths[1], 'CNV.gds')    
