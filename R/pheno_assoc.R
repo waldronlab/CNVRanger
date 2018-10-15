@@ -280,16 +280,18 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
     
     phen.info <- .loadPhen(pheno.file, all.paths, pops.names = pops.names, n.cor)
     plink.dir <- dir(all.paths[2], pattern = "plink-1*")
-    plink.bin <- file.path(all.paths[2], plink.dir)
+    plink.bin <- file.path(all.paths[2], plink.dir, "plink")
     
-    if(length(plink.bin)==0){
+    if (length(plink.bin)==0){
       got.plink <- .getPLINK(all.paths[2])
-      if (!got.plink) 
-        stop("PLINK setup failed")
+    }else{
+    if (!file.exists(plink.bin)) {
+        got.plink <- .getPLINK(all.paths[2])
+        if (!got.plink) 
+            stop("PLINK setup failed")
     }
-    
-    #all.paths[2] <- dirname(plink.bin)
-    all.paths[2] <- plink.bin
+    }
+    all.paths[2] <- dirname(plink.bin)
     
     phen.info$all.paths <- all.paths
     phen.info$phenotypesSam$samplesPhen <- as.character(phen.info$phenotypesSam$samplesPhen)
@@ -477,7 +479,11 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
     
     # Include the phenotype 'lo' in the GDS
     genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
-    phenotypesSamX <- phenotypesSamX[match(all.samples, phenotypesSamX$samplesPhen),]  
+    phenotypesSamX <- phenotypesSamX[match(all.samples, phenotypesSamX$samplesPhen),] 
+    phenotypesSamX[,2] <- suppressWarnings(as.numeric(as.character(phenotypesSamX[,2])))
+    if(!is.numeric(phenotypesSamX[,2])){
+      stop("Phenotype is not numeric. The analysis requires a quantitative phenotype.")
+    }
     gdsfmt::add.gdsn(genofile, name = "phenotype", val = phenotypesSamX, replace = TRUE)
     FamID <- FamID[match(all.samples, FamID$samplesPhen), ]
     gdsfmt::add.gdsn(genofile, name = "FamID", val = as.character(FamID[, 2]), replace = TRUE, 
@@ -765,7 +771,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
             pheno.na <- pheno.na[!(pheno.na$sample.id %in% all$sample.id), ]
             
             all <- plyr::rbind.fill(all, pheno.na)
-            #all[is.na(all)] <- -9
+            all[is.na(all)] <- -9
             
             ### Produce phen.info objects
             samplesPhen <- unique(all$sample.id)  ## Greb sample names
@@ -796,9 +802,9 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
     phenotypesdf <- as.data.frame(phenotypesdf)
     phenotypesSam <- data.table::rbindlist(phenotypesSam.all)
     phenotypesSam <- as.data.frame(phenotypesSam)
-    ind <- colnames(phenotypesSam) %in% phenotypes
-    phenotypesSam[, ind] <- suppressWarnings(as.numeric(as.character(phenotypesSam[,ind])))
-    #phenotypesSam[is.na(phenotypesSam)] <- -9
+    #ind <- colnames(phenotypesSam) == phenotypes
+    #phenotypesSam[,lo.phe] <- suppressWarnings(as.numeric(as.character(phenotypesSam[,lo.phe])))
+    phenotypesSam[is.na(phenotypesSam)] <- -9
     FamID <- data.table::rbindlist(FamID.all)
     FamID <- as.data.frame(FamID)
     SexIds <- data.table::rbindlist(SexIds.all)
@@ -816,7 +822,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
             phenotypesSam = phenotypesSam, FamID = FamID, SexIds = SexIds, pops.names = pops.names)
     } else {
         phen.info <- list(samplesPhen = samplesPhen, phenotypes = phenotypes, phenotypesdf = phenotypesdf, 
-           phenotypesSam = phenotypesSam, FamID = FamID, SexIds = SexIds)
+            phenotypesSam = phenotypesSam, FamID = FamID, SexIds = SexIds)
     }
     
     return(phen.info)
