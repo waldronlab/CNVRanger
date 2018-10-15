@@ -445,3 +445,9 @@ probes.cnv.gr
 segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, produce.gds=FALSE)
 ```
 
+## Running a CNV-GWAS considering pedigree and multiple entries per sample TODO
+
+Linear regression without can generate false positives in structured populations even when the 
+estimated breeding values (EBV) are used as the response variable (DJ PAPER). 
+
+
