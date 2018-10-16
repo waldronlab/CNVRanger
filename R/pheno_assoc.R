@@ -139,7 +139,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
   segs.pvalue.gr <- lmmCNV(all.paths=all.paths, all.segs.gr=all.segs.gr, phen.info=phen.info, 
                            method.m.test=method.m.test, model=model, probes.cnv.gr=probes.cnv.gr, 
                            assign.probe=assign.probe, correct.inflation=correct.inflation,
-                           phenotypesSamX=phenotypesSamX, n.cor=n.cor)}else{
+                           phenotypesSamX=phenotypesSamX, n.cor=n.cor, verbose=verbose)}else{
                              message("No model specified for the LMM run")
                            }
   }else{
@@ -757,6 +757,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
   ## Prepare duplicated entries
   for (npop in seq_along(file.nam)) {
     dfN <- data.table::fread(file.path(pheno.path, file.nam[npop]))
+    if (!all(names(dfN) == "INEXISTENT")) {
     dfN.back <- as.data.frame(dfN)
     dfN$sample.id <- with(dfN, make.unique(as.character(sample.id), sep = ".DupSampleExclu."))
     dfN <- as.data.frame(dfN)
@@ -765,6 +766,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
     if(as.character(compare::compare(dfN$sample.id,dfN.back$sample.id,allowAll=TRUE))[1]==FALSE){
       message("Warning: Duplicated entries in sample.id")
       dup.samples <- dfN[grep(".DupSampleExclu.", dfN$sample.id),]$sample.id
+    }
     }
   }
   
@@ -1947,7 +1949,7 @@ return(pedigree)
 
 lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model, 
                    probes.cnv.gr, assign.probe, correct.inflation, phenotypesSamX,
-                   n.cor){
+                   n.cor, verbose=FALSE){
   
   ### Extract pedigree from the phen.info object
   ped <- as.data.frame(phen.info$pedigree)
@@ -1963,7 +1965,8 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
   #colnames(ped)[1] <- "id"
   #ped <- subset(ped, select = c(id, sire, dam))
   
-  
+  if (verbose) 
+    message("Fit the model - LMM")
   p1 <-    new("pedigree",
             sire = as.integer(ped$sire),
             dam = as.integer(ped$dam),
@@ -2008,14 +2011,18 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
   m1 <- mod 
   
   ### Run for all the CNVs - TODO: implement in parallel
+  if (verbose) 
+    message("Fit each CNV segment in the model - LMM")
   all.pvalues <- NULL
   for(loV in 1:length(probes.cnv.gr)){
     cod <- c("update(m1, . ~ . + Vx)")
     cod <- gsub("x", loV, cod)
-    m2 <- eval(parse(text = cod))
+    m2 <- suppressWarnings(eval(parse(text = cod)))
     all.pvalues[loV] <- as.numeric(anova(m1, m2)$'Pr(>Chisq)'[2])
   }
   
+  if (verbose) 
+  message("Associate probes with segments - LMM")
   #map.probes$all.pvalues <- all.pvalues
   
   ### Associate the p-values with the segments
