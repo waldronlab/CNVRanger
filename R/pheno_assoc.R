@@ -81,7 +81,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
                     method.m.test = "fdr", lo.phe = 1, chr.code.name = NULL, genotype.nodes = "CNVGenotype", 
                     coding.translate = "all", path.files = NULL, list.of.files = NULL, produce.gds = TRUE, 
                     run.lrr = FALSE, assign.probe = "min.pvalue", correct.inflation = FALSE, both.up.down = FALSE, 
-                    verbose = FALSE) {
+                    model=NULL, method.to.run="plink", verbose = FALSE) {
   
   phenotypesSam <- phen.info$phenotypesSam
   phenotypesSamX <- phenotypesSam[, c(1, (lo.phe + 1))]
@@ -102,6 +102,12 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     probes.cnv.gr <- .prodProbes(phen.info, lo.phe, freq.cn)
   }
   
+  # Produce CNV segments
+  if (verbose) 
+    message("Produce CNV segments")
+  all.segs.gr <- .prodCNVseg(all.paths, probes.cnv.gr, min.sim, both.up.down)
+  
+  if (method.to.run=="plink"){
   # Produce PLINK map 
   if (verbose) 
     message("Produce PLINK map")
@@ -122,18 +128,24 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     message("Run PLINK")
   suppressMessages(.runPLINK(all.paths))
   
-  # Produce CNV segments
-  if (verbose) 
-    message("Produce CNV segments")
-  all.segs.gr <- .prodCNVseg(all.paths, probes.cnv.gr, min.sim, both.up.down)
-  
   # Associate SNPs with CNV segments
   if (verbose) 
     message("Associate SNPs with CNV segments")
   segs.pvalue.gr <- .assoPrCNV(all.paths, all.segs.gr, phenotypesSamX, method.m.test, 
                                probes.cnv.gr, assign.probe, correct.inflation = correct.inflation)
-  
-  
+  }else if (method.to.run=="lmm"){
+  ### Run LMM if model exists
+  if(!is.null(model)){
+  segs.pvalue.gr <- lmmCNV(all.paths=all.paths, all.segs.gr=all.segs.gr, phen.info=phen.info, 
+                           method.m.test=method.m.test, model=model, probes.cnv.gr=probes.cnv.gr, 
+                           assign.probe=assign.probe, correct.inflation=correct.inflation,
+                           phenotypesSamX=phenotypesSamX, n.cor=n.cor)}else{
+                             message("No model specified for the LMM run")
+                           }
+  }else{
+    message("Only plink and lmm options available")
+  }
+    
   # Plot the QQ-plot of the analysis
   if (verbose) 
     message("Plot the QQ-plot of the analysis")
@@ -193,9 +205,11 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 #' names containing probe name, chromosome and coordinate must be named as: Name, 
 #' Chr and Position. Tab delimited. If NULL, artificial probes will be generated 
 #' based on the CNV breakpoints.
-#' @param folder Choose manually the project folder (i.e. path as the root folder). 
+#' @param folder Choose manually the project folder (i.e. root folder with all project files). 
 #' Otherwise, user-specific data dir will be used automatically.  
 #' @param pops.names Indicate the name of the populations, if using more than one.
+#' @param pedigree.loc Path to the pedigree information (i.e. sample sire and dam). One merged file
+#' for multiple populations. 
 #' @param n.cor Number of cores
 #' @return List \sQuote{phen.info} with \sQuote{samplesPhen}, \sQuote{phenotypes}, 
 #' \sQuote{phenotypesdf}, \sQuote{phenotypesSam}, \sQuote{FamID}, \sQuote{SexIds}, 
@@ -215,7 +229,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 #' @export
 
 setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = NULL, 
-                         pops.names = NULL, n.cor = 1) {
+                         pops.names = NULL, pedigree.loc=NULL, n.cor = 1) {
   
   ## Create the folder structure for all subsequent analysis
   all.paths <- .createFolderTree(name, folder)
@@ -300,6 +314,13 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
   
   phen.info$all.paths <- all.paths
   phen.info$phenotypesSam$samplesPhen <- as.character(phen.info$phenotypesSam$samplesPhen)
+  
+  ## Import pedigree information
+  if(!is.null(pedigree.loc)){
+  pedigree <- .loadPedi(all.paths, pedigree.loc)}
+  
+  phen.info$pedigree <- as.data.frame(pedigree)
+  
   return(phen.info)
 }
 
@@ -1637,7 +1658,8 @@ testit <- function(x) {
 # HELPER - Associate probes with CNV segments and draw p-values
 
 .assoPrCNV <- function(all.paths, all.segs.gr, phenotypesSamX, method.m.test, 
-                       probes.cnv.gr, assign.probe = "min.pvalue", correct.inflation) {
+                       probes.cnv.gr, assign.probe = "min.pvalue", correct.inflation,
+                       association.method="plink", all.pvalues=NULL) {
   
   segs.pvalue.gr <- unlist(all.segs.gr)
   segs.pvalue.gr$SegName <- seq_along(segs.pvalue.gr)
@@ -1645,6 +1667,7 @@ testit <- function(x) {
   cnv.gds <- file.path(all.paths[1], "CNV.gds")
   genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
   
+  if(association.method=="plink"){
   gvar.name <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "phenotype"))
   gvar.name <- names(gvar.name)[[2]]
   sum.file <- paste0("plink.gvar.summary.", gvar.name)
@@ -1675,7 +1698,33 @@ testit <- function(x) {
   
   resultsp <- resultsp[order(resultsp$VALUE), ]
   resultspGr <- GenomicRanges::makeGRangesFromDataFrame(resultsp, seqnames.field = "Chr", 
-                                                        start.field = "Position", end.field = "Position", keep.extra.columns = TRUE)
+                                                        start.field = "Position", end.field = "Position", 
+                                                        keep.extra.columns = TRUE)
+  
+  }else if(association.method=="p.values"){
+    lmm.results <- probes.cnv.gr
+    values(lmm.results)$VALUE <- all.pvalues 
+    colnames(mcols(lmm.results))[1] <- "NAME"
+    #colnames(mcols(lmm.results))[length(colnames(mcols(lmm.results)))] <- "VALUE"
+    
+    if (correct.inflation) {
+      #### Calculating chi-square distribution based on original P-values
+      chisq.n <- qchisq(values(lmm.results)$VALUE, 1, lower.tail = FALSE)
+      ### Estimating genomic inflation factor
+      lambda <- estlambda(values(lmm.results)$VALUE, filter = FALSE)$estimate
+      ### correcting the qui-square distribution with lambda
+      chisq_corr = chisq.n/lambda
+      #### re-calculating corrected P values
+      values(lmm.results)$VALUE = pchisq(chisq_corr, 1, lower.tail = FALSE)
+    }
+    resultspGr <- lmm.results
+    #resultspGr <- GenomicRanges::makeGRangesFromDataFrame(lmm.results, seqnames.field = "chr", 
+    #                                                      start.field = "position", end.field = "position",
+    #                                                      keep.extra.columns = TRUE)
+    
+  }else{
+    stop("Only plink or lmm.pedigree permitted")
+  }
   
   ######## Assign the lowest p-value to the CNV segment
   
@@ -1873,4 +1922,108 @@ estlambda <- function(data, plot = FALSE, proportion = 1, method = "regression",
     graphics::par(mar = oldmargins)
   }
   out
+}
+
+# HELPER - Load the pedigree
+
+.loadPedi <- function(all.paths, pedigree.loc){
+
+## Import the phenotype and sample info from external folder
+file.copy(pedigree.loc, file.path(all.paths[1], "/PhenotypePedigreeAndVariables.txt"), overwrite = TRUE)
+  
+### Load the file
+pedigree.table <- file.path(all.paths[1], "PhenotypePedigreeAndVariables.txt")
+pedigree <- data.table::fread(pedigree.table, sep = "\t", header = TRUE)
+  
+return(pedigree)  
+    
+}
+
+# HELPER - Linear mixed model for GWAS - considering pedigree
+
+#segs.pvalue.gr <- lmmCNV(all.paths, all.segs.gr, phen.info, method.m.test, model, 
+#                         probes.cnv.gr, assign.probe, correct.inflation = correct.inflation,
+#                         n.cor)
+
+lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model, 
+                   probes.cnv.gr, assign.probe, correct.inflation, phenotypesSamX,
+                   n.cor){
+  
+  ### Extract pedigree from the phen.info object
+  ped <- as.data.frame(phen.info$pedigree)
+  ped <- ped[!duplicated(ped),]
+  ped <- pedigree::add.Inds(ped)   
+  #both <- unique(c(ped$sire, ped$dam))
+  #ped$sire <- factor(ped$sire, levels=both)
+  #ped$dam <- factor(ped$dam, levels=both)
+  ped$sire <- factor(ped$sire)
+  ped$dam <- factor(ped$dam)
+  #ped$sample.id <- factor(ped$sample.id, levels())
+  #ped <- ped[,-c(4:6)]
+  #colnames(ped)[1] <- "id"
+  #ped <- subset(ped, select = c(id, sire, dam))
+  
+  
+  p1 <-    new("pedigree",
+            sire = as.integer(ped$sire),
+            dam = as.integer(ped$dam),
+            label = as.character(ped$sample.id))
+            #label = as.character(seq_along((ped$id))))
+  
+  #p1 <- pedigree(sire = as.integer(ped$sire),
+   #             dam  = as.integer(ped$dam), 
+  #              label = as.character(ped$id))
+  
+  #p1 <- pedigree(sire = c(NA,NA,1, 1,4,5),
+  #               dam  = c(NA,NA,2,NA,3,2), 
+  #                label= 1:6)
+  
+  
+  A <- getA(p1)
+  
+  ### Map of the CNV probes
+  cnv.gds <- file.path(all.paths[1], "CNV.gds")
+  genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
+  
+  #map.probes <- data.frame(snp.id = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.id")), 
+  #                  chr = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome")), 
+  #                  position = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.position")), 
+  #                  probes = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id")), stringsAsFactors = FALSE)
+  
+  ## Produce the cnv-pedigree file
+  cnv.geno <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype")))
+  sample.id <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id")))
+  
+  colnames(cnv.geno) <- sample.id
+  cnv.geno <- t(cnv.geno)
+  cnv.geno <- as.data.frame(cnv.geno)
+  cnv.geno$sample.id <- rownames(cnv.geno)
+  
+  #phen.ped.back <- phen.ped
+  #phen.ped <- phen.ped[!is.na(phen.ped$CentredLD),]
+  cnv.geno <- merge(ped, cnv.geno, by="sample.id")
+  
+  ### Fit the model
+  mod <- lme4qtl::relmatLmer(model, cnv.geno, relmat = list(id = A))
+  m1 <- mod 
+  
+  ### Run for all the CNVs - TODO: implement in parallel
+  all.pvalues <- NULL
+  for(loV in 1:length(probes.cnv.gr)){
+    cod <- c("update(m1, . ~ . + Vx)")
+    cod <- gsub("x", loV, cod)
+    m2 <- eval(parse(text = cod))
+    all.pvalues[loV] <- as.numeric(anova(m1, m2)$'Pr(>Chisq)'[2])
+  }
+  
+  #map.probes$all.pvalues <- all.pvalues
+  
+  ### Associate the p-values with the segments
+  SNPRelate::snpgdsClose(genofile)
+
+  segs.pvalue.gr <- .assoPrCNV(all.paths=all.paths, all.segs.gr=all.segs.gr, phenotypesSamX=phenotypesSamX,
+                               method.m.test=method.m.test, probes.cnv.gr=probes.cnv.gr, assign.probe=assign.probe, 
+                               correct.inflation=correct.inflation, association.method="p.values", 
+                               all.pvalues=all.pvalues)
+  return(segs.pvalue.gr)
 }

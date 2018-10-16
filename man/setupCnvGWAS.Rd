@@ -5,7 +5,7 @@
 \title{Setup the folders and files to run CNV-GWAS analysis}
 \usage{
 setupCnvGWAS(name, phen.loc, cnv.out.loc, map.loc = NULL,
-  folder = NULL, pops.names = NULL, n.cor = 1)
+  folder = NULL, pops.names = NULL, pedigree.loc = NULL, n.cor = 1)
 }
 \arguments{
 \item{name}{String with a project code or name (e.g. 'Project1')}
@@ -22,10 +22,13 @@ names containing probe name, chromosome and coordinate must be named as: Name,
 Chr and Position. Tab delimited. If NULL, artificial probes will be generated 
 based on the CNV breakpoints.}
 
-\item{folder}{Choose manually the project folder (i.e. path as the root folder). 
+\item{folder}{Choose manually the project folder (i.e. root folder with all project files). 
 Otherwise, user-specific data dir will be used automatically.}
 
 \item{pops.names}{Indicate the name of the populations, if using more than one.}
+
+\item{pedigree.loc}{Path to the pedigree information (i.e. sample sire and dam). One merged file
+for multiple populations.}
 
 \item{n.cor}{Number of cores}
 }

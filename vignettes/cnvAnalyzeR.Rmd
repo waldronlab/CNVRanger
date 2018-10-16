@@ -299,8 +299,12 @@ phen.loc <- file.path(data.dir, "Pheno.txt")
 cnv.out.loc <- file.path(data.dir, "CNVOut.txt")
 ## Genomic positions of the probes used in the CNV call
 map.loc <-  file.path(data.dir, "MapPenn.txt")
+## Phenotypes, pedigree and variables, if running LMM 
+pedigree.loc <-  file.path(data.dir, "PhenotypePedigreeAndVariables.txt")
+
 phen.info <- setupCnvGWAS(name="example", 
-    phen.loc=phen.loc, cnv.out.loc=cnv.out.loc, map.loc=map.loc)
+    phen.loc=phen.loc, cnv.out.loc=cnv.out.loc, map.loc=map.loc,
+    pedigree.loc=pedigree.loc)
 phen.info 
 ```
 
@@ -448,6 +452,13 @@ segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, produce.gds=FA
 ## Running a CNV-GWAS considering pedigree and multiple entries per sample TODO
 
 Linear regression without can generate false positives in structured populations even when the 
-estimated breeding values (EBV) are used as the response variable (DJ PAPER). 
+estimated breeding values (EBV) are used as the response variable (**DJ PAPER**). 
 
+```{r LMM}
+## Define the model to fit
+model <- formula(BT ~ Age + Year + (1|sample.id))
 
+## Run a GWAS using a Linear Mixed Model with variables and pedigree matrix
+segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, produce.gds=FALSE,
+model=model, method.to.run="lmm")
+```
