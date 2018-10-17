@@ -1,2 +1,2 @@
-# cnvAnalyzeR
-Functionality for CNV analysis
+# CNVRanger
+Summarization and expression/phenotype association analysis of CNV ranges
