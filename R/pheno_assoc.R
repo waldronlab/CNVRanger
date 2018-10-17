@@ -81,7 +81,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
                     method.m.test = "fdr", lo.phe = 1, chr.code.name = NULL, genotype.nodes = "CNVGenotype", 
                     coding.translate = "all", path.files = NULL, list.of.files = NULL, produce.gds = TRUE, 
                     run.lrr = FALSE, assign.probe = "min.pvalue", correct.inflation = FALSE, both.up.down = FALSE, 
-                    model=NULL, method.to.run="plink", verbose = FALSE) {
+                    model=NULL, method.to.run="plink", model.cnv.interactions="Vx", verbose = FALSE) {
   
   phenotypesSam <- phen.info$phenotypesSam
   phenotypesSamX <- phenotypesSam[, c(1, (lo.phe + 1))]
@@ -139,7 +139,8 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
   segs.pvalue.gr <- lmmCNV(all.paths=all.paths, all.segs.gr=all.segs.gr, phen.info=phen.info, 
                            method.m.test=method.m.test, model=model, probes.cnv.gr=probes.cnv.gr, 
                            assign.probe=assign.probe, correct.inflation=correct.inflation,
-                           phenotypesSamX=phenotypesSamX, n.cor=n.cor, verbose=verbose)}else{
+                           phenotypesSamX=phenotypesSamX, n.cor=n.cor, model.cnv.interactions=model.cnv.interactions,
+                           verbose=verbose)}else{
                              message("No model specified for the LMM run")
                            }
   }else{
@@ -1806,6 +1807,7 @@ testit <- function(x) {
   segs.pvalue.gr$MinPvalueAdjusted <- stats::p.adjust(segs.pvalue.gr$MinPvalue, 
                                                       method = method.m.test, n = length(segs.pvalue.gr))
   segs.pvalue.gr$Phenotype <- names(phenotypesSamX)[[2]]
+  segs.pvalue.gr$MinPvalueAdjusted <- round(segs.pvalue.gr$MinPvalueAdjusted, 5)
   SNPRelate::snpgdsClose(genofile)
   
   return(segs.pvalue.gr)
@@ -1949,7 +1951,7 @@ return(pedigree)
 
 lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model, 
                    probes.cnv.gr, assign.probe, correct.inflation, phenotypesSamX,
-                   n.cor, verbose=FALSE){
+                   n.cor, verbose=FALSE, model.cnv.interactions="Vx"){
   
   ### Extract pedigree from the phen.info object
   ped <- as.data.frame(phen.info$pedigree)
@@ -2007,7 +2009,8 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
   cnv.geno <- merge(ped, cnv.geno, by="sample.id")
   
   ### Fit the model
-  mod <- lme4qtl::relmatLmer(model, cnv.geno, relmat = list(id = A))
+  #mod <- lme4qtl::relmatLmer(model, cnv.geno, relmat = list(id = A))
+  mod <- lme4qtl::relmatLmer(model, cnv.geno, relmat = list(sample.id = A))
   m1 <- mod 
   
   ### Run for all the CNVs - TODO: implement in parallel
@@ -2015,10 +2018,10 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
     message("Fit each CNV segment in the model - LMM")
   all.pvalues <- NULL
   for(loV in 1:length(probes.cnv.gr)){
-    cod <- c("update(m1, . ~ . + Vx)")
+    cod <- paste0("update(m1, . ~ . + ", model.cnv.interactions, ")") ##Vx
     cod <- gsub("x", loV, cod)
     m2 <- suppressWarnings(eval(parse(text = cod)))
-    all.pvalues[loV] <- as.numeric(anova(m1, m2)$'Pr(>Chisq)'[2])
+    all.pvalues[loV] <-  suppressMessages(as.numeric(anova(m1, m2)$'Pr(>Chisq)'[2]))
   }
   
   if (verbose) 
@@ -2033,4 +2036,5 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
                                correct.inflation=correct.inflation, association.method="p.values", 
                                all.pvalues=all.pvalues)
   return(segs.pvalue.gr)
+  
 }
