@@ -1,5 +1,5 @@
 ---
-title: "A comprehensive tool suite for CNV analysis"
+title: "Summarization and expression/phenotype association of CNV ranges"
 author:
   - name: Vinicius Henrique da Silva
     affiliation:
@@ -10,9 +10,9 @@ author:
   - name: Ludwig Geistlinger
     affiliation: School of Public Health, City University of New York
     email: ludwig.geistlinger@sph.cuny.edu
-package: cnvAnalyzeR
+package: CNVRanges
 abstract: >
-    The _cnvAnalyzeR_ package implements a comprehensive tool suite for CNV analysis.
+    The _CNVRanges_ package implements a comprehensive tool suite for CNV analysis.
     This includes functionality for summarizing individual CNV calls across a population,
     assessing overlap with functional genomic regions, and association analysis 
     with expression and quantitative phenotypes.
@@ -21,13 +21,13 @@ output:
     toc: true
     toc_depth: 2
 vignette: >
-  % \VignetteIndexEntry{A comprehensive tool suite for CNV analysis}
+  % \VignetteIndexEntry{Summarization and expression/phenotype association of CNV ranges}
   % \VignetteEngine{knitr::rmarkdown}
 ---
 
 ```{r setup, echo=FALSE}
 suppressPackageStartupMessages({ 
-    library(cnvAnalyzeR)
+    library(CNVRanger)
     library(AnnotationHub)
     library(regioneR)
     library(BSgenome.Btaurus.UCSC.bosTau6.masked)
@@ -52,7 +52,7 @@ sample under study, genomic regions that are duplicated or deleted with respect
 to a reference. 
 
 Such regions are termed _CNV calls_ in the following and will be considered the 
-starting point for analysis with the `r Biocpkg("cnvAnalyzeR")` package.  
+starting point for analysis with the `r Biocpkg("CNVRanger")` package.  
 
 The key parts of the functionality implemented in the package were developed,
 described, and applied in several previous studies:
@@ -71,14 +71,14 @@ described, and applied in several previous studies:
 
 # Reading and accessing CNV data
 
-The `r Biocpkg("cnvAnalyzeR")` package uses Bioconductor core data strutures 
+The `r Biocpkg("CNVRanger")` package uses Bioconductor core data strutures 
 implemented in the `r Biocpkg("GenomicRanges")` and `r Biocpkg("RaggedExperiment")` 
 packages to represent, access, and manipulate CNV data.
 
 We start by loading the package.
 
 ```{r lib}
-library(cnvAnalyzeR)
+library(CNVRanger)
 ```
 
 ## Input data format
@@ -89,7 +89,7 @@ Brazilian cattle breed.
 [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)
 
 ```{r readCalls}
-data.dir <- system.file("extdata", package="cnvAnalyzeR")
+data.dir <- system.file("extdata", package="CNVRanger")
 call.file <- file.path(data.dir, "Silva16_PONE_CNV_calls.csv")
 calls <- read.csv(call.file, as.is=TRUE)
 nrow(calls)
@@ -174,7 +174,7 @@ summarized regions.
 However, this typically inflates CNV region size and more appropriate approaches
 have been developed for this purpose.
 
-The `r Biocpkg("cnvAnalyzeR")` package implements three frequently used
+The `r Biocpkg("CNVRanger")` package implements three frequently used
 approaches for summarizing CNV calls:
 
 1. The [CNVRuler](http://www.ircgp.com/CNVRuler) procedure that trims region 

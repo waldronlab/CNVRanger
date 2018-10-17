@@ -1,6 +1,6 @@
-Package: cnvAnalyzeR
+Package: CNVRanger
 Version: 0.99.2
-Title: A comprehensive tool suite for CNV analysis
+Title: Summarization and expression/phenotype association of CNV ranges
 Author: Vinicius Henrique da Silva and Ludwig Geistlinger
 Maintainer: Ludwig Geistlinger <Ludwig.Geistlinger@sph.cuny.edu>
 Depends: 
@@ -31,10 +31,10 @@ Suggests:
     knitr,
     regioneR,
     rmarkdown 
-Description: The cnvAnalyzeR package implements a comprehensive tool suite for CNV analysis.
+Description: The CNVRanger package implements a comprehensive tool suite for CNV analysis.
     This includes functionality for summarizing individual CNV calls across a population,
     assessing overlap with functional genomic regions, and association analysis 
-    with expression and quantitative phenotypes.
+    with gene expression and quantitative phenotypes.
 License: Artistic-2.0
 Encoding: UTF-8
 VignetteBuilder: knitr
