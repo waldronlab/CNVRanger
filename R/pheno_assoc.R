@@ -140,7 +140,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
                            method.m.test=method.m.test, model=model, probes.cnv.gr=probes.cnv.gr, 
                            assign.probe=assign.probe, correct.inflation=correct.inflation,
                            phenotypesSamX=phenotypesSamX, n.cor=n.cor, model.cnv.interactions=model.cnv.interactions,
-                           verbose=verbose)}else{
+                           run.lrr=run.lrr, verbose=verbose)}else{
                              message("No model specified for the LMM run")
                            }
   }else{
@@ -1951,7 +1951,7 @@ return(pedigree)
 
 lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model, 
                    probes.cnv.gr, assign.probe, correct.inflation, phenotypesSamX,
-                   n.cor, verbose=FALSE, model.cnv.interactions="Vx"){
+                   n.cor, verbose=FALSE, model.cnv.interactions="Vx", run.lrr=FALSE){
   
   ### Extract pedigree from the phen.info object
   ped <- as.data.frame(phen.info$pedigree)
@@ -1996,7 +1996,13 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
   #                  probes = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id")), stringsAsFactors = FALSE)
   
   ## Produce the cnv-pedigree file
-  cnv.geno <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype")))
+  if(run.lrr){
+  cnv.geno <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "LRR")))
+  cnv.geno[is.na(cnv.geno)] <- 0
+  }else{
+  cnv.geno <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype")))  
+  }
+  
   sample.id <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id")))
   
   colnames(cnv.geno) <- sample.id
