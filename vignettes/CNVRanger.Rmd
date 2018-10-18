@@ -10,9 +10,9 @@ author:
   - name: Ludwig Geistlinger
     affiliation: School of Public Health, City University of New York
     email: ludwig.geistlinger@sph.cuny.edu
-package: CNVRanges
+package: CNVRanger
 abstract: >
-    The _CNVRanges_ package implements a comprehensive tool suite for CNV analysis.
+    The _CNVRanger_ package implements a comprehensive tool suite for CNV analysis.
     This includes functionality for summarizing individual CNV calls across a population,
     assessing overlap with functional genomic regions, and association analysis 
     with expression and quantitative phenotypes.
