@@ -1000,7 +1000,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
     # 0n
     CNVsGr0n <- CNVsGr[CNVsGr$sample == sampleX]
     CNVsGr0n <- CNVsGr0n[CNVsGr0n$type == "state1,cn=0"]
-    seqlevels(CNVsGr0n) <- seqlevels(probes.cnv.gr)
+    GenomeInfoDb::seqlevels(CNVsGr0n) <- GenomeInfoDb::seqlevels(probes.cnv.gr)
     probes.cnv.gr.0n <- IRanges::subsetByOverlaps(probes.cnv.gr, 
         CNVsGr0n)
     
@@ -1009,7 +1009,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
     # 1n
     CNVsGr1n <- CNVsGr[CNVsGr$sample == sampleX]
     CNVsGr1n <- CNVsGr1n[CNVsGr1n$type == "state2,cn=1"]
-    seqlevels(CNVsGr1n) <- seqlevels(probes.cnv.gr)
+    GenomeInfoDb::seqlevels(CNVsGr1n) <- GenomeInfoDb::seqlevels(probes.cnv.gr)
     probes.cnv.gr.1n <- IRanges::subsetByOverlaps(probes.cnv.gr, 
         CNVsGr1n)
     
@@ -1018,7 +1018,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
     # 3n
     CNVsGr3n <- CNVsGr[CNVsGr$sample == sampleX]
     CNVsGr3n <- CNVsGr3n[CNVsGr3n$type == "state5,cn=3"]
-    seqlevels(CNVsGr3n) <- seqlevels(probes.cnv.gr)
+    GenomeInfoDb::seqlevels(CNVsGr3n) <- GenomeInfoDb::seqlevels(probes.cnv.gr)
     probes.cnv.gr.3n <- IRanges::subsetByOverlaps(probes.cnv.gr, 
         CNVsGr3n)
     
@@ -1027,7 +1027,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
     # 4n
     CNVsGr4n <- CNVsGr[CNVsGr$sample == sampleX]
     CNVsGr4n <- CNVsGr4n[CNVsGr4n$type == "state6,cn=4"]
-    seqlevels(CNVsGr4n) <- seqlevels(probes.cnv.gr)
+    GenomeInfoDb::seqlevels(CNVsGr4n) <- GenomeInfoDb::seqlevels(probes.cnv.gr)
     probes.cnv.gr.4n <- IRanges::subsetByOverlaps(probes.cnv.gr, 
         CNVsGr4n)
     
@@ -1181,7 +1181,7 @@ testit <- function(x) {
     all.samples <- unique(as.character(CNVsGr$V5))
     
     ###################### Select probes within CNVs
-    seqlevels(CNVsGr) <- seqlevels(probesGr)
+    GenomeInfoDb::seqlevels(CNVsGr) <- GenomeInfoDb::seqlevels(probesGr)
     probesCNV <- as.character(IRanges::subsetByOverlaps(probesGr, 
         CNVsGr)$Name)
     probesCNV <- unique(unlist(probesCNV))
@@ -1576,7 +1576,7 @@ testit <- function(x) {
             }
             seqLar <- GenomicRanges::GRanges(as.character(GenomeInfoDb::seqnames(prx)), 
                 IRanges::IRanges(GenomicRanges::start(prx), LimPrx))
-            seqlevels(seqLar) <- seqlevels(probes.cnv.gr)
+            GenomeInfoDb::seqlevels(seqLar) <- GenomeInfoDb::seqlevels(probes.cnv.gr)
             seqPrbs <- IRanges::subsetByOverlaps(probes.cnv.gr, 
                 seqLar)
             seqx <- GenomicRanges::GRanges(as.character(GenomeInfoDb::seqnames(prx)), 
@@ -1663,12 +1663,12 @@ testit <- function(x) {
     
     if (assign.probe == "high.freq") {
         for (se in seq_along(segs.pvalue.gr)) {
-            seqlevels(segs.pvalue.gr) <- seqlevels(probes.cnv.gr)
+            GenomeInfoDb::seqlevels(segs.pvalue.gr) <- GenomeInfoDb::seqlevels(probes.cnv.gr)
             probe.sel <- IRanges::subsetByOverlaps(probes.cnv.gr, 
                 segs.pvalue.gr[se])
             probe.sel <- probe.sel[rev(order(probe.sel$freq))][1]
             ## Take the first probe if the position is duplicated
-            seqlevels(probe.sel) <- seqlevels(resultspGr)
+            GenomeInfoDb::seqlevels(probe.sel) <- GenomeInfoDb::seqlevels(resultspGr)
             resultX <- IRanges::subsetByOverlaps(resultspGr, probe.sel)[1]
             values.all[[se]] <- resultX$VALUE
             names.all[[se]] <- as.character(probe.sel$Name)
@@ -1678,13 +1678,13 @@ testit <- function(x) {
     
     if (assign.probe == "median") {
         for (se in seq_along(segs.pvalue.gr)) {
-            seqlevels(segs.pvalue.gr) <- seqlevels(probes.cnv.gr)
+            GenomeInfoDb::seqlevels(segs.pvalue.gr) <- GenomeInfoDb::seqlevels(probes.cnv.gr)
             probe.sel <- IRanges::subsetByOverlaps(probes.cnv.gr, 
                 segs.pvalue.gr[se])
             absdiff <- abs(probe.sel$freq - median(probe.sel$freq))
             probe.sel <- probe.sel[which.min(absdiff)]
             ## Take the first probe if the position is duplicated
-            seqlevels(probe.sel) <- seqlevels(resultspGr)
+            GenomeInfoDb::seqlevels(probe.sel) <- GenomeInfoDb::seqlevels(resultspGr)
             resultX <- IRanges::subsetByOverlaps(resultspGr, probe.sel)[1]
             values.all[[se]] <- resultX$VALUE
             names.all[[se]] <- as.character(probe.sel$Name)
@@ -1694,13 +1694,13 @@ testit <- function(x) {
     
     if (assign.probe == "mean") {
         for (se in seq_along(segs.pvalue.gr)) {
-          seqlevels(segs.pvalue.gr) <- seqlevels(probes.cnv.gr)  
+          GenomeInfoDb::seqlevels(segs.pvalue.gr) <- GenomeInfoDb::seqlevels(probes.cnv.gr)  
             probe.sel <- IRanges::subsetByOverlaps(probes.cnv.gr, 
                 segs.pvalue.gr[se])
             absdiff <- abs(probe.sel$freq - mean(probe.sel$freq))
             probe.sel <- probe.sel[which.min(absdiff)]
             ## Take the first probe if the position is duplicated
-            seqlevels(probe.sel) <- seqlevels(resultspGr)  
+            GenomeInfoDb::seqlevels(probe.sel) <- GenomeInfoDb::seqlevels(resultspGr)  
             resultX <- IRanges::subsetByOverlaps(resultspGr, probe.sel)[1]
             values.all[[se]] <- resultX$VALUE
             names.all[[se]] <- as.character(probe.sel$Name)

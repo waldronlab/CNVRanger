@@ -1,5 +1,5 @@
 ---
-title: "Summarization and expression/phenotype association of CNV ranges"
+title: "Summarization and quantitative trait analysis of CNV ranges"
 author:
   - name: Vinicius Henrique da Silva
     affiliation:
@@ -15,13 +15,13 @@ abstract: >
     The _CNVRanger_ package implements a comprehensive tool suite for CNV analysis.
     This includes functionality for summarizing individual CNV calls across a population,
     assessing overlap with functional genomic regions, and association analysis 
-    with expression and quantitative phenotypes.
+    with gene expression and quantitative phenotypes.
 output:
   BiocStyle::html_document:
     toc: true
     toc_depth: 2
 vignette: >
-  % \VignetteIndexEntry{Summarization and expression/phenotype association of CNV ranges}
+  % \VignetteIndexEntry{Summarization and quantitative trait analysis of CNV ranges}
   % \VignetteEngine{knitr::rmarkdown}
 ---
 
@@ -71,7 +71,7 @@ described, and applied in several previous studies:
 
 # Reading and accessing CNV data
 
-The `r Biocpkg("CNVRanger")` package uses Bioconductor core data strutures 
+The `r Biocpkg("CNVRanger")` package uses Bioconductor core data structures 
 implemented in the `r Biocpkg("GenomicRanges")` and `r Biocpkg("RaggedExperiment")` 
 packages to represent, access, and manipulate CNV data.
 
@@ -164,7 +164,7 @@ colData(ra)
 
 # Summarizing individual CNV calls across a population
 
-In CNV analysis, it is often of interest to summarize invidual calls across
+In CNV analysis, it is often of interest to summarize individual calls across
 the population, (i.e. to define CNV regions), for subsequent association
 analysis with e.g. phenotype data.
 
@@ -344,14 +344,14 @@ defines CNV segments based on CNV genotype similarity of subsequent SNP probes.
 
 The default is `min.sim=0.95`, which will continuously add probe positions to a 
 given CNV segment until the pairwise genotype similarity drops below 95%. 
-Detailed up-down CNV genotype concordance that are used for the construction of 
-CNV segments will look like the S12 Table in 
+An example of detailed up-down CNV genotype concordance that is used for the 
+construction of CNV segments is given in S12 Table in 
 [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711). 
 
 As `PLINK` returns a _p_-value for each probe, only one of the _p_-values of the
 probes contained in a CNV segment is chosen as the segment _p_-value. 
 
-This is similar to an approach used in differential expression (DE) analysis of 
+This is similar to a common approach used in differential expression (DE) analysis of 
 microarray gene expression data, where typically the most significant DE probe
 is chosen in case of multiple probes mapping to the same gene. 
 

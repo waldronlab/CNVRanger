@@ -81,8 +81,8 @@ populationRanges <- function(grl, density=0.1)
 #'
 #' Reciprocal overlap of 0.51 between two genomic regions A and B:
 #'
-#' requires that B overlap at least 51% of A, 
-#'   *and* that A also overlaps at least 51% of B
+#' requires that B overlap at least 51\% of A, 
+#'   *and* that A also overlaps at least 51\% of B
 #'
 #' Approach:
 #'
@@ -133,30 +133,94 @@ populationRanges <- function(grl, density=0.1)
 #' populationRangesRO(grl, ro.thresh=0.5)
 #'
 #' @export
-populationRangesRO <- function(grl, ro.thresh=0.5, multi.assign=FALSE)
+populationRangesRO <- function(grl, 
+    ro.thresh=0.5, multi.assign=FALSE, verbose=FALSE)
 {
     gr <- unlist(grl)
+    S4Vectors::mcols(gr) <- NULL  
 
     # build initial clusters
     init.clusters <- GenomicRanges::reduce(gr)
-    message(paste("TODO:", length(init.clusters)))
+    # check 1269
+    # init.clusters <- init.clusters[2500:2652]
+    
+    if(verbose) message(paste("TODO:", length(init.clusters)))
 
     # cluster within each initial cluster
+    olaps <- GenomicRanges::findOverlaps(init.clusters, gr)
+    qh <- S4Vectors::queryHits(olaps)
+    sh <- S4Vectors::subjectHits(olaps)
     cl.per.iclust <- lapply(seq_along(init.clusters), 
         function(i)
         {
-            message(i)
-            ic <- init.clusters[i]
+            if(verbose) message(i)
             # get calls of cluster
-            ccalls <- IRanges::subsetByOverlaps(gr, ic)
+            ind <- sh[qh==i]
+            ccalls <- gr[ind]
+            if(length(ccalls) < 2) return(ccalls) 
             clusters <- .clusterCalls(ccalls, ro.thresh, multi.assign)
-            clusters <- range(IRanges::extractList(ccalls, clusters))
-            clusters <- sort(unlist(clusters))  
+            if(is.list(clusters)) 
+                clusters <- IRanges::extractList(ccalls, clusters) 
+            clusters <- range(clusters)
+            if(is(clusters, "GRangesList")) clusters <- sort(unlist(clusters))  
+            return(clusters)
     })
     ro.ranges <- unname(unlist(GenomicRanges::GRangesList(cl.per.iclust)))
     return(ro.ranges)
 }
 
+# the clustering itself then goes sequentially through the identified RO hits, 
+# touching each hit once, and checks whether this hit could be merged to 
+# already existing clusters
+.clusterCalls <- function(calls, ro.thresh=0.5, multi.assign=FALSE)
+{
+    hits <- .getROHits(calls, ro.thresh)        
+    
+    # exit here if not 2 or more hits
+    if(length(hits) < 2) return(calls)       
+  
+    # worst case: there are as many clusters as hits
+    cid <- seq_along(hits)
+    
+    # touch each hit once and check whether ... 
+    # ... it could be merged to a previous cluster
+    for(i in 2:length(hits))
+    {
+        # has this hit already been merged?
+        if(cid[i] != i) next 
+        curr.hit <- hits[i]
+       
+        # check each previous cluster
+        for(j in seq_len(i-1))
+        {
+            # has this hit already been merged?
+            if(cid[j] != j) next 
+            
+            # if not, check it
+            prev.cluster <- hits[cid == j]
+            mergeIndex <- .getMergeIndex(curr.hit, prev.cluster, hits)
+            
+            if(!is.null(mergeIndex))
+            {
+                if(length(mergeIndex) == 1) cid[i] <- j
+                else cid[mergeIndex] <- j
+                break 
+            }
+        }
+    }
+   
+    # compile hit clusters 
+    hit.clusters <- unname(IRanges::splitAsList(hits, cid))
+
+    # extract call clusters
+    call.clusters <- lapply(hit.clusters, 
+        function(h) union(S4Vectors::queryHits(h), S4Vectors::subjectHits(h)))
+    
+    # can calls be assigned to more than one cluster?
+    if(!multi.assign) call.clusters <- .pruneMultiAssign(call.clusters)
+    
+    return(call.clusters)
+}
 
 # given a set individual calls, returns overlaps (hits) between them 
 # that satisfy the RO threshold
@@ -187,7 +251,8 @@ populationRangesRO <- function(grl, ro.thresh=0.5, multi.assign=FALSE)
     
     qh <- S4Vectors::queryHits(hits)
     sh <- S4Vectors::subjectHits(hits)       
-    hits <- S4Vectors::Hits(qh[ind], sh[ind], S4Vectors::queryLength(hits), S4Vectors::subjectLength(hits))
+    hits <- S4Vectors::Hits(qh[ind], sh[ind], 
+                S4Vectors::queryLength(hits), S4Vectors::subjectLength(hits))
     S4Vectors::mcols(hits)$RO1 <- rovlp1[ind]
     S4Vectors::mcols(hits)$RO2 <- rovlp2[ind]
 
@@ -251,56 +316,5 @@ populationRangesRO <- function(grl, ro.thresh=0.5, multi.assign=FALSE)
     return(pruned.clusters)
 }
 
-# the clustering itself then goes sequentially through the identified RO hits, 
-# touching each hit once, and checks whether this hit could be merged to 
-# already existing clusters
-.clusterCalls <- function(calls, ro.thresh=0.5, multi.assign=FALSE)
-{
-    hits <- .getROHits(calls, ro.thresh)        
-    
-    # exit here if not 2 or more hits
-    if(length(hits) < 2) return(hits)       
-  
-    # worst case: there as many clusters as hits
-    cid <- seq_along(hits)
-    
-    # touch each hit once and check whether ... 
-    # ... it could be merged to a previous cluster
-    for(i in 2:length(hits))
-    {
-        # has this hit already been merged?
-        if(cid[i] != i) next 
-        curr.hit <- hits[i]
-       
-        # check each previous cluster
-        for(j in seq_len(i-1))
-        {
-            # has this hit already been merged?
-            if(cid[j] != j) next 
-            
-            # if not, check it
-            prev.cluster <- hits[cid == j]
-            mergeIndex <- .getMergeIndex(curr.hit, prev.cluster, hits)
-            
-            if(!is.null(mergeIndex))
-            {
-                if(length(mergeIndex) == 1) cid[i] <- j
-                else cid[mergeIndex] <- j
-                break 
-            }
-        }
-    }
-   
-    # compile hit clusters 
-    hit.clusters <- unname(IRanges::splitAsList(hits, cid))
 
-    # extract call clusters
-    call.clusters <- lapply(hit.clusters, 
-        function(h) union(S4Vectors::queryHits(h), S4Vectors::subjectHits(h)))
-    
-    # can calls be assigned to more than one cluster?
-    if(!multi.assign) call.clusters <- .pruneMultiAssign(call.clusters)
-    
-    return(call.clusters)
-}
 
