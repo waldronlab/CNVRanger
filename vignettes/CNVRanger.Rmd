@@ -40,19 +40,15 @@ Copy number variation (CNV) is a frequently observed deviation from the diploid
 state due to duplication or deletion of genomic regions.
 
 CNVs can be experimentally detected based on comparative genomic hybridization [CGH]. 
-On the other hand, CNVs can also be computationally inferred from SNP-arrays. 
-A frequently used algorithm to infer CNVs from SNP-chip data is 
-[PennCNV](http://penncnv.openbioinformatics.org), 
-which shows good consistency with the CGH gold standard. 
-In addition, recent developments have also enabled the detection of CNVs from 
+On the other hand, CNVs can also be computationally inferred from SNP-arrays and 
 next-generation sequencing data.
 
-The named technologies for CNV detection have in common that they report, for each
+The technologies for CNV detection have in common that they report, for each
 sample under study, genomic regions that are duplicated or deleted with respect 
 to a reference. 
 
-Such regions are termed _CNV calls_ in the following and will be considered the 
-starting point for analysis with the `r Biocpkg("CNVRanger")` package.  
+Such regions are denoted as _CNV calls_ in the following and will be considered 
+the starting point for analysis with the `r Biocpkg("CNVRanger")` package.  
 
 The key parts of the functionality implemented in the package were developed,
 described, and applied in several previous studies:
@@ -233,7 +229,7 @@ bt.genes
 
 Select only genes on chromosome 1 and 2 for demonstration:
 ```{r formatBtGenes}
-sel.genes <- bt.genes[seqnames(bt.genes) %in% c("1","2")]
+sel.genes <- bt.genes[seqnames(bt.genes) %in% c("chr1", "chr2")]
 sel.genes <- sel.genes[sel.genes$gene_biotype == "protein_coding"]
 sel.genes
 ```
@@ -255,7 +251,7 @@ Here, we analyze differences in expression between CN states based on the
 
 
 ```{r rseqdata}
-rseq.file <- file.path(data.dir, "all_counts_cleaned.txt")
+rseq.file <- file.path(data.dir, "counts_cleaned.txt")
 rcounts <- read.delim(rseq.file, row.names=1, stringsAsFactors=FALSE)
 rcounts <- as.matrix(rcounts)
 dim(rcounts)

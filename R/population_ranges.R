@@ -11,73 +11,21 @@
 
 #' Summarizing genomic ranges across a population
 #'
-#' CNVRuler procedure that trims region margins based on regional density
-#'
 #' In CNV analysis, it is often of interest to summarize invidual calls across 
 #' the population, (i.e. to define CNV regions), for subsequent association 
-#' analysis with e.g. phenotype data.
+#' analysis with e.g. phenotype data. 
 #'
-#' In the simplest case, this just merges overlapping individual calls into 
-#' summarized regions.
-#' However, this typically inflates CNVR size and trimming low-density areas
-#' (usually <10\% of the total contributing individual calls within a summarized
-#' region) is advisable.
+#' @details
+#' \itemize{
+#' \item CNVRuler procedure that trims region margins based on regional density
+#'
+#' Trims low-density areas (usually <10\% of the total contributing individual 
+#' calls within a summarized region).
 #' 
 #' An illustration of the concept can be found here: 
 #' https://www.ncbi.nlm.nih.gov/pubmed/22539667 (Figure 1)
 #'
-#' @param grl A \code{\linkS4class{GRangesList}}.
-#' @param density Numeric. Defaults to 0.1. 
-#'
-#' @return A \code{\linkS4class{GRanges}} object containing the summarized
-#' genomic ranges. 
-#'
-#' @references 
-#' Kim JH et al. (2012) CNVRuler: a copy number variation-based case-control
-#' association analysis tool. Bioinformatics, 28(13):1790-2.
-#'
-#' @author Martin Morgan
-#' @seealso \code{\link{findOverlaps}}
-#' 
-#' @examples
-#'
-#' grl <- GRangesList(
-#'      sample1 = GRanges( c("chr1:1-10", "chr2:15-18", "chr2:25-34") ),
-#'      sample2 = GRanges( c("chr1:1-10", "chr2:11-18" , "chr2:25-36") ),
-#'      sample3 = GRanges( c("chr1:2-11", "chr2:14-18", "chr2:26-36") ),
-#'      sample4 = GRanges( c("chr1:1-12", "chr2:18-35" ) ),
-#'      sample5 = GRanges( c("chr1:1-12", "chr2:11-17" , "chr2:26-34") ) ,
-#'      sample6 = GRanges( c("chr1:1-12", "chr2:12-18" , "chr2:25-35") )
-#' )
-#'
-#' # default as chosen in the original CNVRuler procedure
-#' populationRanges(grl, density=0.1)
-#'
-#' # density = 0 merges all overlapping regions, 
-#' # equivalent to: reduce(unlist(grl))
-#' populationRanges(grl, density=0) 
-#'
-#' # density = 1 disjoins all overlapping regions, 
-#' # equivalent to: disjoin(unlist(grl))
-#' populationRanges(grl, density=1)
-#'
-#' @export
-populationRanges <- function(grl, density=0.1)
-{
-    gr <- unlist(grl)
-    cover <- GenomicRanges::reduce(gr)
-    disjoint <- GenomicRanges::disjoin(gr)
-
-    dj_covered_hits <- S4Vectors::subjectHits(GenomicRanges::findOverlaps(disjoint, cover))
-    cover_support <- GenomicRanges::countOverlaps(cover, gr)[dj_covered_hits]
-    ppn <- GenomicRanges::countOverlaps(disjoint, gr) / cover_support
-    GenomicRanges::reduce(disjoint[ppn >= density])
-}
-
-
-#' Summarizing genomic ranges based on reciprocal overlap across a population
-#'
-#' Reciprocal overlap (RO) approach (e.g. Conrad et al., Nature, 2010)
+#' \item Reciprocal overlap (RO) approach (e.g. Conrad et al., Nature, 2010)
 #'
 #' Reciprocal overlap of 0.51 between two genomic regions A and B:
 #'
@@ -100,23 +48,30 @@ populationRanges <- function(grl, density=0.1)
 #'       within the region to be added. When no additional calls may be added, 
 #'       move to next step.
 #' \item If calls remain, return to 1. Otherwise exit.
-#' }
+#' }}
 #'
 #' @param grl A \code{\linkS4class{GRangesList}}.
+#' @param mode Character. Should population ranges be computed based on regional
+#' density ("density") or reciprocal overlap ("RO"). See Details.
+#' @param density Numeric. Defaults to 0.1. 
 #' @param ro.thresh Numeric. Threshold for reciprocal overlap required for merging
 #' two overlapping regions. Defaults to 0.5.
 #' @param multi.assign Logical. Allow regions to be assigned to several region clusters?
 #' Defaults to FALSE.
-#' 
+#' @param verbose Logical. Report progress messages? Defaults to FALSE.
+#'
 #' @return A \code{\linkS4class{GRanges}} object containing the summarized
 #' genomic ranges. 
 #'
 #' @references 
+#' Kim et al. (2012) CNVRuler: a copy number variation-based case-control
+#' association analysis tool. Bioinformatics, 28(13):1790-2.
+#'
 #' Conrad et al. (2010) Origins and functional impact of copy number variation 
 #' in the human genome. Nature, 464(7289):704-12.
 #'
-#' @author Ludwig Geistlinger
-#' @seealso \code{\link{subsetByOverlaps}}
+#' @author Ludwig Geistlinger, Martin Morgan
+#' @seealso \code{\link{findOverlaps}}
 #' 
 #' @examples
 #'
@@ -130,10 +85,42 @@ populationRanges <- function(grl, density=0.1)
 #' )
 #'
 #' # default as chosen in the original CNVRuler procedure
-#' populationRangesRO(grl, ro.thresh=0.5)
+#' populationRanges(grl, mode="density", density=0.1)
+#'
+#' # density = 0 merges all overlapping regions, 
+#' # equivalent to: reduce(unlist(grl))
+#' populationRanges(grl, mode="density", density=0) 
+#'
+#' # density = 1 disjoins all overlapping regions, 
+#' # equivalent to: disjoin(unlist(grl))
+#' populationRanges(grl, mode="density", density=1)
+#'
+#' # RO procedure
+#' populationRanges(grl, mode="RO", ro.thresh=0.5)
 #'
 #' @export
-populationRangesRO <- function(grl, 
+populationRanges <- function(grl, mode=c("density", "RO"), 
+    density=0.1, ro.thresh=0.5, multi.assign=FALSE, verbose=FALSE)
+{
+    mode <- match.arg(mode)
+    if(mode == "density") .densityPopRanges(grl, density)
+    else .roPopRanges(grl, ro.thresh, multi.assign, verbose)
+}
+
+.densityPopRanges <- function(grl, density)
+{
+    gr <- unlist(grl)
+    cover <- GenomicRanges::reduce(gr)
+    disjoint <- GenomicRanges::disjoin(gr)
+
+    dj_covered_hits <- S4Vectors::subjectHits(GenomicRanges::findOverlaps(disjoint, cover))
+    cover_support <- GenomicRanges::countOverlaps(cover, gr)[dj_covered_hits]
+    ppn <- GenomicRanges::countOverlaps(disjoint, gr) / cover_support
+    GenomicRanges::reduce(disjoint[ppn >= density])
+
+}
+
+.roPopRanges <- function(grl, 
     ro.thresh=0.5, multi.assign=FALSE, verbose=FALSE)
 {
     gr <- unlist(grl)
@@ -181,7 +168,9 @@ populationRangesRO <- function(grl,
   
     # worst case: there are as many clusters as hits
     cid <- seq_along(hits)
-    
+    qh <- S4Vectors::queryHits(hits)   
+    sh <- S4Vectors::subjectHits(hits)   
+ 
     # touch each hit once and check whether ... 
     # ... it could be merged to a previous cluster
     for(i in 2:length(hits))
@@ -285,16 +274,16 @@ populationRangesRO <- function(grl,
         # check whether the call which is not part of the cluster
         # has sufficient RO with all others in the cluster 
         npart <- c(curr.qh, curr.sh)[!is.part]
-        req.hits <- S4Vectors::Hits(   rep(npart, length(prev.members)), 
+        len <- length(prev.members)
+        req.hits <- S4Vectors::Hits(   rep.int(npart, len), 
                             prev.members, 
                             S4Vectors::queryLength(hits), 
-                            S4Vectors::subjectLength(hits))
+                            S4Vectors::subjectLength(hits))        
         is.gr <- S4Vectors::queryHits(req.hits) > S4Vectors::subjectHits(req.hits) 
         req.hits[is.gr] <- t(req.hits[is.gr])
         mergeIndex <- match(req.hits, hits)        
         if(any(is.na(mergeIndex))) mergeIndex <- NULL
     }
-
     return(mergeIndex)
 }
 
@@ -306,7 +295,7 @@ populationRangesRO <- function(grl,
 {
     cid <- seq_along(clusters)
     times <- lengths(clusters)
-    cid <- rep(cid, times)
+    cid <- rep.int(cid, times)
     ind <- unlist(clusters)
     ndup <- !duplicated(ind)
     ind <- ind[ndup]

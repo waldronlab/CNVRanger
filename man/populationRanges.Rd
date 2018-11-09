@@ -4,33 +4,68 @@
 \alias{populationRanges}
 \title{Summarizing genomic ranges across a population}
 \usage{
-populationRanges(grl, density = 0.1)
+populationRanges(grl, mode = c("density", "RO"), density = 0.1,
+  ro.thresh = 0.5, multi.assign = FALSE, verbose = FALSE)
 }
 \arguments{
 \item{grl}{A \code{\linkS4class{GRangesList}}.}
 
+\item{mode}{Character. Should population ranges be computed based on regional
+density ("density") or reciprocal overlap ("RO"). See Details.}
+
 \item{density}{Numeric. Defaults to 0.1.}
+
+\item{ro.thresh}{Numeric. Threshold for reciprocal overlap required for merging
+two overlapping regions. Defaults to 0.5.}
+
+\item{multi.assign}{Logical. Allow regions to be assigned to several region clusters?
+Defaults to FALSE.}
+
+\item{verbose}{Logical. Report progress messages? Defaults to FALSE.}
 }
 \value{
 A \code{\linkS4class{GRanges}} object containing the summarized
 genomic ranges.
 }
 \description{
-CNVRuler procedure that trims region margins based on regional density
-}
-\details{
 In CNV analysis, it is often of interest to summarize invidual calls across 
 the population, (i.e. to define CNV regions), for subsequent association 
 analysis with e.g. phenotype data.
+}
+\details{
+\itemize{
+\item CNVRuler procedure that trims region margins based on regional density
 
-In the simplest case, this just merges overlapping individual calls into 
-summarized regions.
-However, this typically inflates CNVR size and trimming low-density areas
-(usually <10\% of the total contributing individual calls within a summarized
-region) is advisable.
+Trims low-density areas (usually <10\% of the total contributing individual 
+calls within a summarized region).
 
 An illustration of the concept can be found here: 
 https://www.ncbi.nlm.nih.gov/pubmed/22539667 (Figure 1)
+
+\item Reciprocal overlap (RO) approach (e.g. Conrad et al., Nature, 2010)
+
+Reciprocal overlap of 0.51 between two genomic regions A and B:
+
+requires that B overlap at least 51\% of A, 
+  *and* that A also overlaps at least 51\% of B
+
+Approach:
+
+At the top level of the hierarchy, all contiguous bases overlapping at least 
+1bp of indvidual calls are merged into one region. 
+Within each region, we further define reciprocally overlapping regions with 
+the following algorithm:
+
+\itemize{
+\item Calculate reciprocal overlap (RO) between all remaining calls.
+\item Identify pair of calls with greatest RO. If RO > threshold, merge and 
+      create a new CNV. If not, exit.
+\item Continue adding unclustered calls to the region, in order of best overlap. 
+      In order to add a call, the new call must have > threshold to all calls 
+      within the region to be added. When no additional calls may be added, 
+      move to next step.
+\item If calls remain, return to 1. Otherwise exit.
+}}
 }
 \examples{
 
@@ -44,24 +79,30 @@ grl <- GRangesList(
 )
 
 # default as chosen in the original CNVRuler procedure
-populationRanges(grl, density=0.1)
+populationRanges(grl, mode="density", density=0.1)
 
 # density = 0 merges all overlapping regions, 
 # equivalent to: reduce(unlist(grl))
-populationRanges(grl, density=0) 
+populationRanges(grl, mode="density", density=0) 
 
 # density = 1 disjoins all overlapping regions, 
 # equivalent to: disjoin(unlist(grl))
-populationRanges(grl, density=1)
+populationRanges(grl, mode="density", density=1)
+
+# RO procedure
+populationRanges(grl, mode="RO", ro.thresh=0.5)
 
 }
 \references{
-Kim JH et al. (2012) CNVRuler: a copy number variation-based case-control
+Kim et al. (2012) CNVRuler: a copy number variation-based case-control
 association analysis tool. Bioinformatics, 28(13):1790-2.
+
+Conrad et al. (2010) Origins and functional impact of copy number variation 
+in the human genome. Nature, 464(7289):704-12.
 }
 \seealso{
 \code{\link{findOverlaps}}
 }
 \author{
-Martin Morgan
+Ludwig Geistlinger, Martin Morgan
 }
