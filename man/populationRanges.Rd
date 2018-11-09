@@ -46,7 +46,7 @@ https://www.ncbi.nlm.nih.gov/pubmed/22539667 (Figure 1)
 
 Reciprocal overlap of 0.51 between two genomic regions A and B:
 
-requires that B overlap at least 51\% of A, 
+requires that B overlaps at least 51\% of A, 
   *and* that A also overlaps at least 51\% of B
 
 Approach:
@@ -79,15 +79,15 @@ grl <- GRangesList(
 )
 
 # default as chosen in the original CNVRuler procedure
-populationRanges(grl, mode="density", density=0.1)
+populationRanges(grl, density=0.1)
 
 # density = 0 merges all overlapping regions, 
 # equivalent to: reduce(unlist(grl))
-populationRanges(grl, mode="density", density=0) 
+populationRanges(grl, density=0) 
 
 # density = 1 disjoins all overlapping regions, 
 # equivalent to: disjoin(unlist(grl))
-populationRanges(grl, mode="density", density=1)
+populationRanges(grl, density=1)
 
 # RO procedure
 populationRanges(grl, mode="RO", ro.thresh=0.5)

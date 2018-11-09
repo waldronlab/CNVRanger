@@ -29,7 +29,7 @@
 #'
 #' Reciprocal overlap of 0.51 between two genomic regions A and B:
 #'
-#' requires that B overlap at least 51\% of A, 
+#' requires that B overlaps at least 51\% of A, 
 #'   *and* that A also overlaps at least 51\% of B
 #'
 #' Approach:
@@ -85,15 +85,15 @@
 #' )
 #'
 #' # default as chosen in the original CNVRuler procedure
-#' populationRanges(grl, mode="density", density=0.1)
+#' populationRanges(grl, density=0.1)
 #'
 #' # density = 0 merges all overlapping regions, 
 #' # equivalent to: reduce(unlist(grl))
-#' populationRanges(grl, mode="density", density=0) 
+#' populationRanges(grl, density=0) 
 #'
 #' # density = 1 disjoins all overlapping regions, 
 #' # equivalent to: disjoin(unlist(grl))
-#' populationRanges(grl, mode="density", density=1)
+#' populationRanges(grl, density=1)
 #'
 #' # RO procedure
 #' populationRanges(grl, mode="RO", ro.thresh=0.5)
@@ -113,11 +113,14 @@ populationRanges <- function(grl, mode=c("density", "RO"),
     cover <- GenomicRanges::reduce(gr)
     disjoint <- GenomicRanges::disjoin(gr)
 
-    dj_covered_hits <- S4Vectors::subjectHits(GenomicRanges::findOverlaps(disjoint, cover))
-    cover_support <- GenomicRanges::countOverlaps(cover, gr)[dj_covered_hits]
-    ppn <- GenomicRanges::countOverlaps(disjoint, gr) / cover_support
-    GenomicRanges::reduce(disjoint[ppn >= density])
-
+    olaps <- GenomicRanges::findOverlaps(disjoint, cover)
+    covered.hits <- S4Vectors::subjectHits(olaps)
+    cover.support <- GenomicRanges::countOverlaps(cover, gr)[covered.hits]
+    ppn <- GenomicRanges::countOverlaps(disjoint, gr) / cover.support
+    
+    pranges <- GenomicRanges::reduce(disjoint[ppn >= density])
+    pranges <- pranges[GenomicRanges::width(pranges) > 1]
+    return(pranges)    
 }
 
 .roPopRanges <- function(grl, 

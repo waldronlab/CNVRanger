@@ -39,11 +39,10 @@ suppressPackageStartupMessages({
 Copy number variation (CNV) is a frequently observed deviation from the diploid 
 state due to duplication or deletion of genomic regions.
 
-CNVs can be experimentally detected based on comparative genomic hybridization [CGH]. 
-On the other hand, CNVs can also be computationally inferred from SNP-arrays and 
-next-generation sequencing data.
+CNVs can be experimentally detected based on comparative genomic hybridization, 
+and also be computationally inferred from SNP-arrays and next-generation sequencing data.
 
-The technologies for CNV detection have in common that they report, for each
+These technologies for CNV detection have in common that they report, for each
 sample under study, genomic regions that are duplicated or deleted with respect 
 to a reference. 
 
@@ -81,8 +80,8 @@ library(CNVRanger)
 
 For demonstration, we consider CNV calls as obtained with 
 [PennCNV](http://penncnv.openbioinformatics.org) from SNP-chip data in a 
-Brazilian cattle breed. 
-[da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)
+Brazilian cattle breed 
+([da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)).
 
 ```{r readCalls}
 data.dir <- system.file("extdata", package="CNVRanger")
@@ -193,6 +192,9 @@ in
 [Kim et al., 2012](https://doi.org/10.1093/bioinformatics/bts239)
 an illustration of the approach). 
 
+This trims low-density areas as defined by the `density` argument, 
+which is set here to <10\% of the number of calls within a summarized region.
+
 ```{r cnvrs}
 cnvrs <- populationRanges(grl, density=0.1)
 cnvrs
@@ -200,8 +202,19 @@ cnvrs
 
 ## Reciprocal overlap
 
-We also provide an implementation of the _Reciprocal Overlap (RO)_ procedure.
+We also provide an implementation of the _Reciprocal Overlap (RO)_ procedure that 
+requires calls to sufficiently with one another as e.g. used by 
+[Conrad et al., 2010](https://doi.org/10.1038/nature08516).
 
+This merges calls with an RO above a threshold as given by the `ro.thresh` argument.
+
+For example, an RO of 0.51 between two genomic regions _A_ and _B_ requires that 
+_B_ overlaps at least 51\% of _A_, *and* that _A_ also overlaps at least 51\% of _B_.
+
+```{r cnvrsRO}
+ro.cnvrs <- populationRanges(grl[1:100], mode="RO", ro.thresh=0.51)
+ro.cnvrs
+```
 
 ## Identifying recurrent regions
 
@@ -379,15 +392,15 @@ plotManhattan(all.paths, segs.pvalue.gr, chr.size.order, plot.pdf=FALSE)
 
 ## Using relative signal intensities 
 
-CNV detection using SNP-chip intensities and allele frequencies is usually 
-challenging and can produce biased CNV frequencies 
+CNV detection using SNP-chip intensities and allele frequencies can produce 
+biased CNV frequencies 
 ([da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)). 
 
 Therefore, we also provide the option to carry out the GWAS based on the 
 relative signal intensity (log R ratio, LRR).
-GWAS using LRR values directly facilitates the identification of CNV segments 
-associated with the phenotype, disregarding putatively biased frequency estimates 
-from the CNV calling procedure. 
+Directly using LRR values for the GWAS thereby facilitates the identification of
+CNV segments associated with the phenotype, disregarding putatively biased 
+frequency estimates from the CNV calling procedure. 
 
 To perform the GWAS using LRR values, import the LRR/BAF values and set `run.lrr=TRUE` 
 in the `cnvGWAS` function:
