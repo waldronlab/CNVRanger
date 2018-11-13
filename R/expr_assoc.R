@@ -90,8 +90,8 @@
 #' 
 #' @examples 
 #'
+#' # (1) CNV calls
 #' states <- sample(c(0,1,3,4), 17, replace=TRUE)
-#' 
 #' calls <- GRangesList(
 #'      sample1 = GRanges( c("chr1:1-10", "chr2:15-18", "chr2:25-34"), state=states[1:3]),
 #'      sample2 = GRanges( c("chr1:1-10", "chr2:11-18" , "chr2:25-36"), state=states[4:6] ),
@@ -101,9 +101,21 @@
 #'      sample6 = GRanges( c("chr1:1-12", "chr2:12-18" , "chr2:25-35"), state=states[15:17] )
 #' ) 
 #'
+#' # (2) summarized CNV regions
 #' cnvrs <- populationRanges(calls, density=0.1)
 #'
-#' 
+#' # (3) RNA-seq read counts
+#' genes <- GRanges(c("chr1:2-9", "chr1:100-150", "chr1:200-300",
+#'                    "chr2:16-17", "chr2:100-150", "chr2:200-300", "chr2:26-33"))
+#' y <- matrix(rnbinom(42,size=1,mu=10),7,6)
+#' names(genes) <- rownames(y) <- paste0("gene", 1:7)
+#' colnames(y) <- paste0("sample", 1:6)
+#'
+#' library(SummarizedExperiment) 
+#' rse <- SummarizedExperiment(assays=list(counts=y), rowRanges=granges(genes))
+#'
+#' # (4) perform the association analysis
+#' res <- cnvExprAssoc(cnvrs, calls, rse, min.samples=1) 
 #'
 #' @export
 cnvExprAssoc <- function(cnvrs, calls, rcounts, 
@@ -118,9 +130,6 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
 
     if(is(calls, "GRangesList")) 
         calls <- RaggedExperiment::RaggedExperiment(calls)
-
-    stopifnot(is.integer(RaggedExperiment::assay(calls)), 
-                is.integer(SummarizedExperiment::assay(rcounts)))
 
     # consider samples in cnv AND expression data
     sampleIds <- sort(intersect(colnames(calls), colnames(rcounts)))
@@ -259,7 +268,7 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
     return(w)
 }
 
-.getStates <- function(cnvrs, calls, multi.calls="largest", min.samples=10)
+.getStates <- function(cnvrs, calls, multi.calls="largest", min.samples=10, verbose=FALSE)
 {
     #TODO: additional pre-defined options for multi.calls
     stopifnot(is.character(multi.calls) || is.function(multi.calls))
@@ -283,7 +292,8 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
     } 
     ind <- vapply(tab, .isTestable, logical(1))
     nr.excl <- sum(!ind)
-    if(nr.excl) message(paste("Excluding", nr.excl, 
+    if(nr.excl && verbose) 
+        message(paste("Excluding", nr.excl, 
                                 "cnvrs not satisfying min.samples threshold"))
     stopifnot(length(cnvrs) > nr.excl)
     cnv.states <- cnv.states[ind,]
