@@ -38,14 +38,11 @@ suppressPackageStartupMessages({
 # Setup
 Copy number variation (CNV) is a frequently observed deviation from the diploid 
 state due to duplication or deletion of genomic regions.
-
 CNVs can be experimentally detected based on comparative genomic hybridization, 
-and also be computationally inferred from SNP-arrays and next-generation sequencing data.
-
+and computationally inferred from SNP-arrays or next-generation sequencing data.
 These technologies for CNV detection have in common that they report, for each
 sample under study, genomic regions that are duplicated or deleted with respect 
 to a reference. 
-
 Such regions are denoted as _CNV calls_ in the following and will be considered 
 the starting point for analysis with the `r Biocpkg("CNVRanger")` package.  
 
@@ -162,10 +159,8 @@ colData(ra)
 In CNV analysis, it is often of interest to summarize individual calls across
 the population, (i.e. to define CNV regions), for subsequent association
 analysis with e.g. phenotype data.
-
 In the simplest case, this just merges overlapping individual calls into 
 summarized regions.
-
 However, this typically inflates CNV region size and more appropriate approaches
 have been developed for this purpose.
 
@@ -191,7 +186,6 @@ to summarize CNV calls to CNV regions (see
 in 
 [Kim et al., 2012](https://doi.org/10.1093/bioinformatics/bts239)
 an illustration of the approach). 
-
 This trims low-density areas as defined by the `density` argument, 
 which is set here to <10\% of the number of calls within a summarized region.
 
@@ -203,7 +197,7 @@ cnvrs
 ## Reciprocal overlap
 
 We also provide an implementation of the _Reciprocal Overlap (RO)_ procedure that 
-requires calls to sufficiently with one another as e.g. used by 
+requires calls to sufficiently overlap with one another as e.g. used by 
 [Conrad et al., 2010](https://doi.org/10.1038/nature08516).
 
 This merges calls with an RO above a threshold as given by the `ro.thresh` argument.
@@ -274,19 +268,24 @@ rcounts[1:5, 1:5]
 ```{r rse}
 library(SummarizedExperiment)
 rse <- SummarizedExperiment(assays=list(rcounts=rcounts), 
-                rowRanges=granges(bt.genes)[rownames(rcounts)])
+                rowRanges=granges(sel.genes)[rownames(rcounts)])
 rse
 ```
 
+```{r cnvExprAssoc}
+res <- cnvExprAssoc(cnvrs, grl, rse, window="1Mbp")
+head(res)
+```
 
 # CNV-phenotype association analysis
 
-For CNV calls inferred from SNP-chip data, we additionally provide probe-by-probe
-genome-wide association analysis (GWA) between CNVs and quantitative phenotypes as 
-previously described ([da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)).
+For CNV calls inferred from SNP-chip data, we additionally provide functionality
+to carry out a probe-level genome-wide association study (GWAS) between CNVs 
+and quantitative phenotypes as previously described 
+([da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)).
 
 This treats common CN polymorphisms (CNPs, allele frequency >1%) as SNPs of 
-equal frequency and carries out GWA as implemented in 
+equal frequency and carries out a GWAS as implemented in 
 [PLINK](http://zzz.bwh.harvard.edu/plink/gvar.shtml).
 
 For demonstration, we use CNV data of a wild population of songbirds 

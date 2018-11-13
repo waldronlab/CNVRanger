@@ -12,19 +12,56 @@
 #' Testing CNV regions for effects on the expression level of genes in defined
 #' genomic windows.  
 #'  
-#' Details here.
+#' @details
+#' Association testing between CNV regions and RNA-seq read counts is carried 
+#' out using edgeR, which applies generalized linear models (GLMs) based on the 
+#' negative-binomial distribution while incorporating normalization factors for 
+#' different library sizes. 
+#' 
+#' In the case of only one CN state deviating from 2n for a CNV region under 
+#' investigation, this reduces to the classical 2-group comparison. 
+#' For more than two states (e.g. 0n, 1n, 2n), edgeR’s ANOVA-like test is applied 
+#' to test all deviating groups for significant expression differences relative 
+#' to 2n. 
 #'
+#' To avoid artificial effects due to low expression of a gene or insufficient 
+#' sample size in deviating groups, it is typically recommended to exclude from 
+#' the analysis (i) genes with fewer than r reads per million reads mapped 
+#' (cpm, counts per million) in the maximally expressed sample group, 
+#' and (ii) CNV regions with fewer than s samples in a group deviating from 2n.
+#' Use the \code{min.cpm} and \code{min.samples} arguments, respectively. 
+#'
+#' When testing local effects (adjacent or coinciding genes of a CNV region), 
+#' suitable thresholds for candidate discovery are r = 3, s = 4, and a nominal 
+#' significance level of 0.05; as such effects have a clear biological indication 
+#' and the number of genes tested is typically small.
+#'  
+#' For distal effects (i.e. when testing genes far away from a CNV region)
+#' more stringent thresholds such as r = 20 and s = 10 for distal effects in 
+#' conjunction with multiple testing correction using a conservative adjusted 
+#' significance level such as 0.01 is typically recommended (due to power 
+#' considerations and to avoid detection of spurious effects).
 #'
 #' @param cnvrs A \code{\linkS4class{GRanges}} object containing the summarized
 #' CNV regions as e.g. obtained with \code{\link{populationRanges}}.
 #' @param calls A \code{\linkS4class{GRangesList}} or a 
-#' \code{linkS4class{RaggedExperiment}} storing the individual CNV calls for 
+#' \code{\linkS4class{RaggedExperiment}} storing the individual CNV calls for 
 #' each sample.
 #' @param rcounts A \code{\linkS4class{RangedSummarizedExperiment}} storing the 
 #' raw RNA-seq read counts in a rectangular fashion (genes x samples).
-#' @param window Defaults to \code{"1Mbp"}.
-#' @param multi.calls Character or a function. Defaults to \code{"largest"}.
-#' @param min.samples Integer. Defaults to 10.
+#' @param window Numeric or Character. Size of the genomic window in base pairs 
+#' by which each CNV region is extended up- and downstream. This determines which 
+#' genes are tested for each CNV region. Character notation is supported for 
+#' convenience such as "100kbp" (same as 100000) or "1Mbp" (same as 1000000). 
+#' Defaults to \code{"1Mbp"}.
+#' @param multi.calls Character or a function. Determines how to summarize the 
+#' CN state in a CNV region when there are multiple (potentially conflicting) 
+#' calls for one sample in that region. Defaults to \code{"largest"}, which 
+#' assigns the CN state of the call that covers the largest part of the CNV
+#' region tested. A user-defined function that is passed on to 
+#' \code{\link{qreduceAssay}} can also be provided for customized behavior. 
+#' @param min.samples Integer. Minimum number of samples with at least one call
+#' overlapping the CNV region tested. Defaults to 10. See details.
 #' @param min.cpm Integer. Should genes not satisfying a minimum counts-per-million 
 #' (cpm) threshold be excluded from the analysis? This is typically recommended. 
 #' See the edgeR vignette for details. The default filter is to exclude genes 
@@ -35,13 +72,19 @@
 #' For available methods see the man page of the function \code{\link{p.adjust}}. 
 #' Defaults to \code{"BH"}.
 #' @param verbose Logical. Display progress messages? Defaults to \code{FALSE}.
-#' @return TODO
+#' @return A result list with a entry for each CNV region tested. Each entry a is
+#' a \code{\link{data.frame}} containing measures of association for each gene tested 
+#' in the genomic window around the CNV region.
 #' @author Ludwig Geistlinger <Ludwig.Geistlinger@@sph.cuny.edu>
 #' @seealso \code{\link{findOverlaps}} to find overlaps between sets of genomic 
-#' regions, \code{\link{qreduceAssay}} to summarize ragged genomic location data 
-#' in defined genomic regions, \code{\link{glmQLFit}} and \code{\link{glmQLFTest}}
-#' to conduct negative binomial generalized linear models for RNA-seq read 
-#' count data.
+#' regions, 
+#'
+#' \code{\link{qreduceAssay}} to summarize ragged genomic location data 
+#' in defined genomic regions,
+#' 
+#' \code{\link{glmQLFit}} and \code{\link{glmQLFTest}} to conduct negative 
+#' binomial generalized linear models for RNA-seq read count data.
+#'
 #' @references Geistlinger et al. (2018) Widespread modulation of gene expression
 #' by copy number variation in skeletal muscle. Sci Rep, 8(1):1399.
 #' 
@@ -251,11 +294,12 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
 {
     return.type <- class(scores[[1]])
     default.value <- do.call(return.type, list(1))
-    ind <- which.max(width(ranges))
+    ind <- IRanges::which.max(GenomicRanges::width(ranges))
     res <- vapply(seq_along(scores), 
            function(i) scores[[i]][ind[i]], default.value)
     return(res)
 }
+
 
 .weightedmean <- function(scores, ranges, qranges)
 {
