@@ -105,8 +105,11 @@ populationRanges <- function(grl, mode=c("density", "RO"),
     mode <- match.arg(mode)
     if(mode == "density") .densityPopRanges(grl, density)
     else .roPopRanges(grl, ro.thresh, multi.assign, verbose)
+    #TODO: classify regs
+    #TODO: filter for freq and size
 }
 
+## (1) Density approach
 .densityPopRanges <- function(grl, density)
 {
     gr <- unlist(grl)
@@ -123,6 +126,38 @@ populationRanges <- function(grl, mode=c("density", "RO"),
     return(pranges)    
 }
 
+.classifyRegs <- function(regs, calls, state.thresh=0.1)
+{
+    olaps <- GenomicRanges::findOverlaps(regs, calls)
+    qh <- S4Vectors::queryHits(olaps)
+    sh <- S4Vectors::subjectHits(olaps)
+    
+    # number of samples
+    sampL <- split(names(calls)[sh], qh)
+    .nrSamples <- function(x) length(unique(x))
+    samples <- vapply(sampL, .nrSamples, numeric(1), USE.NAMES=FALSE)
+    regs$freq <- samples 
+    
+    # type: gain, loss, both
+    stateL <- split(calls$State[sh], qh)
+    types <- vapply(stateL, .getType, character(1), 
+                        state.thresh=state.thresh, USE.NAMES=FALSE)    
+    regs$type <- types
+
+    return(regs)
+}
+
+.getType <- function(states, state.thresh=0.1)
+{
+    fract.amp <- mean(states > 2)
+    fract.del <- mean(states < 2)    
+    type <- c(fract.amp, fract.del) > state.thresh
+    type <- c("gain", "loss")[type]
+    if(length(type) > 1) type <- "both"
+    return(type)
+}   
+
+## (2) RO approach
 .roPopRanges <- function(grl, 
     ro.thresh=0.5, multi.assign=FALSE, verbose=FALSE)
 {
@@ -158,6 +193,7 @@ populationRanges <- function(grl, mode=c("density", "RO"),
     ro.ranges <- unname(unlist(GenomicRanges::GRangesList(cl.per.iclust)))
     return(ro.ranges)
 }
+
 
 # the clustering itself then goes sequentially through the identified RO hits, 
 # touching each hit once, and checks whether this hit could be merged to 
@@ -309,4 +345,65 @@ populationRanges <- function(grl, mode=c("density", "RO"),
 }
 
 
+## (3) Recurrence approach
+.recurrentPopRanges <- function(regs, calls, mode=c("approx", "perm"),
+    perm=1000, genome="hg19")
+{
+    mode <- match.arg(mode)
+    calls <- unlist(calls)
+    obs.scores <- lapply(seq_along(regs), 
+                function(i) .scoreRegion(regs[i], calls))
+    
 
+    # genome specified?
+    g <- GenomeInfoDb::genome(regs)
+    ind <- !is.na(g)
+    if(any(ind)) genome <- g[ind] 
+    
+    
+    rregs <- regioneR::randomizeRegions(calls, genome=genome, mask=NA, 
+                    allow.overlaps=TRUE, per.chromosome=TRUE)
+    pvals <- vapply(seq_along(regs)) 
+}
+
+.scoreRegion <- function(r, calls, fract.thresh=0.1)
+{
+    chr <- GenomicRanges::seqnames(r)
+    chr <- as.character(chr)
+
+    ind <- GenomicRanges::seqnames(calls) == chr
+    rcalls <- GenomicRanges::restrict(calls[ind],
+                        start=GenomicRanges::start(r), 
+                        end=GenomicRanges::end(r))
+
+    type <- .getType(rcalls$State, fract.thresh) 
+    if(type != "both") score <- .getFreq(rcalls, type)
+    else score <- vapply(c("gain", "loss"), 
+                    function(type) .getFreq(rcalls, type), numeric(1))
+    return(score) 
+}
+
+.getFreq <- function(calls, type=c("gain", "loss"))
+{   
+    type <- match.arg(type)
+    is.amp <- type == "gain"
+
+    chr <- GenomicRanges::seqnames(calls)[1]
+    chr <- as.character(chr)
+    
+    ind <- if(is.amp) calls$State > 2 else calls$State < 2
+    scalls <- calls[ind]
+    
+    w <- scalls$State + ifelse(is.amp, -2, 2)
+    x <- GenomicRanges::coverage(scalls, weight=w)[[chr]]
+    cs <- cumsum(S4Vectors::runLength(x))
+
+    len <- length(cs)
+    grid <- seq_len(len-1)
+    starts <-  cs[grid] + 1 
+    ends <- cs[grid + 1]
+    cov <- S4Vectors::runValue(x)[grid + 1]
+    
+    max.score <- max(cov)
+    return(max.score)
+}
