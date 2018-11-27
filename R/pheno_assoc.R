@@ -47,9 +47,21 @@
 #' Use with argument \code{method.m.test} to generate strict p-values. 
 #' @param both.up.down Check for CNV genotype similarity in both directions. 
 #' Default is FALSE (i.e. only downstream)
+#' @param model Linear mixed model to fit (without the CNV). Use \code{\link{formula}}
+#' @param method.to.run GWAS method. Linear regression with PLINK is \sQuote{plink} and 
+#' linear mixed model is \sQuote{lmm} 
+#' @param model.cnv.interactions 'CNV' or 'LRR' effect to be compared with the fitted model without CNV effect
+#' (using ANOVA)
+#' @param use.grm Genomic relationship matrix which is "SNP.based", "CNV.based" or 
+#' NULL to use pedigree instead (if available).
+#' @param use.pca If PCA analysis should be used from external SNP.gds or automatically created
+#' within the CNV.gds. Options are "SNP.based", "CNV.based" or 
+#' NULL to use pedigree instead (if available).
+#' @param lrr.to.use Use a median of LRR across de probes overlapping the CNV segment instead individual
+#' LRR probe values
 #' @param verbose Show progress in the analysis
-#' @return The CNV segments and the representative probes and their respective p-value
-#' @author Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
+#' @return CNV segments, representative probes and their respective p-values
+#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @seealso \code{link{setupCnvGWAS}} to setup files needed for the CNV-GWAS.
 #' @references da Silva et al. (2016) Genome-wide detection of CNVs and their 
 #' association with meat tenderness in Nelore cattle. PLoS One, 11(6):e0157711.
@@ -78,10 +90,12 @@
 #' @export
 
 cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.matrix = FALSE, 
-                    method.m.test = "fdr", lo.phe = 1, chr.code.name = NULL, genotype.nodes = "CNVGenotype", 
+                    method.m.test = "fdr", lo.phe = 1, chr.code.name = NULL, genotype.nodes = c("CNVGenotype", "CNVgenotypeSNPlike"), 
                     coding.translate = "all", path.files = NULL, list.of.files = NULL, produce.gds = TRUE, 
                     run.lrr = FALSE, assign.probe = "min.pvalue", correct.inflation = FALSE, both.up.down = FALSE, 
-                    model=NULL, method.to.run="plink", model.cnv.interactions="Vx", verbose = FALSE) {
+                    model=NULL, method.to.run="plink", model.cnv.interactions="CNVx", verbose = FALSE,
+                    snp.gds=NULL, use.grm=NULL, use.pca=NULL, norm.lrr=TRUE, max.lrr=0.9, min.lrr=0.1,
+                    lrr.to.use="standard") {
   
   phenotypesSam <- phen.info$phenotypesSam
   phenotypesSamX <- phenotypesSam[, c(1, (lo.phe + 1))]
@@ -101,7 +115,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
       message("Using existent gds file")
     probes.cnv.gr <- .prodProbes(phen.info, lo.phe, freq.cn)
   }
-  
+    
   # Produce CNV segments
   if (verbose) 
     message("Produce CNV segments")
@@ -140,7 +154,9 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
                            method.m.test=method.m.test, model=model, probes.cnv.gr=probes.cnv.gr, 
                            assign.probe=assign.probe, correct.inflation=correct.inflation,
                            phenotypesSamX=phenotypesSamX, n.cor=n.cor, model.cnv.interactions=model.cnv.interactions,
-                           run.lrr=run.lrr, verbose=verbose)}else{
+                           run.lrr=run.lrr, verbose=verbose, snp.gds=snp.gds, use.grm=use.grm,
+                           use.pca=use.pca, norm.lrr=norm.lrr, max.lrr, min.lrr,
+                           lrr.to.use=lrr.to.use)}else{
                              message("No model specified for the LMM run")
                            }
   }else{
@@ -155,7 +171,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
   qq.plot.pdf <- paste0(uphen, "-LRR-", run.lrr, "QQ-PLOT.pdf")
   qq.plot.pdf <- file.path(all.paths[3], qq.plot.pdf)
   pdf(qq.plot.pdf)
-  print(.qqunifPlot(segs.pvalue.gr$MinPvalueAdjusted, 
+  print(qqunifPlot(segs.pvalue.gr$MinPvalueAdjusted, 
                     auto.key = list(corner = c(0.95, 0.05))))
   invisible(dev.off())
   
@@ -210,12 +226,14 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 #' Otherwise, user-specific data dir will be used automatically.  
 #' @param pops.names Indicate the name of the populations, if using more than one.
 #' @param pedigree.loc Path to the pedigree information (i.e. sample sire and dam). One merged file
-#' for multiple populations. 
+#' for multiple populations.
+#' @param snp.gds External GDS file with SNP genotypes and two additional nodes (optional): PCA and 
+#' genomic relationship matrix (GRM) nodes. 
 #' @param n.cor Number of cores
 #' @return List \sQuote{phen.info} with \sQuote{samplesPhen}, \sQuote{phenotypes}, 
 #' \sQuote{phenotypesdf}, \sQuote{phenotypesSam}, \sQuote{FamID}, \sQuote{SexIds}, 
 #' \sQuote{pops.names} (if more than one population) and \sQuote{all.paths}
-#' @author Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
+#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @examples
 #' 
 #' data.dir <- system.file("extdata", package="cnvAnalyzeR")
@@ -230,10 +248,14 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 #' @export
 
 setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = NULL, 
-                         pops.names = NULL, pedigree.loc=NULL, n.cor = 1) {
+                         pops.names = NULL, pedigree.loc=NULL, snp.gds=NULL, n.cor = 1) {
   
   ## Create the folder structure for all subsequent analysis
   all.paths <- .createFolderTree(name, folder)
+  
+  if(!is.null(snp.gds)){
+    file.copy(snp.gds, file.path(all.paths[1], "/SNP.gds"), overwrite = TRUE)
+  }
   
   ## Only one population
   if (length(phen.loc) == 1 && length(cnv.out.loc) == 1) {
@@ -351,7 +373,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
 #' @param n.cor Number of cores
 #' @return probes.cnv.gr Object with information about all probes to be used in 
 #' the downstream CNV-GWAS. Only numeric chromosomes
-#' @author Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
+#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @examples
 #' 
 #' # Load phenotype-CNV information
@@ -447,8 +469,8 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
                               snp.position = GenomicRanges::start(probes.cnv.gr))
   
   
-  genotype.nodes <- match.arg(genotype.nodes)    
-  if (genotype.nodes == "CNVGenotype") {
+  #genotype.nodes <- match.arg(genotype.nodes)    
+  if ("CNVGenotype" %in% genotype.nodes) {
     # Replace genotype matrix with CNV genotypes
     genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
     n <- gdsfmt::add.gdsn(genofile, "CNVgenotype", CNVBiMa, replace = TRUE)
@@ -470,7 +492,8 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
     testit(15)  ## Wait to make sure that gds is writen in parallel
     SNPRelate::snpgdsClose(genofile)
   }
-  else {
+  
+  if ("CNVgenotypeSNPlike" %in% genotype.nodes){
     # CNVgenotypeSNPlike
     genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, 
                                       readonly = FALSE)
@@ -549,7 +572,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
 #' @param list.of.files Data-frame with two columns where the (i) is the file 
 #' name with signals and (ii) is the correspondent name of the sample in the gds file
 #' @param verbose Print the samples while importing
-#' @author Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
+#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @examples
 #' 
 #' # Load phenotype-CNV information
@@ -1693,10 +1716,14 @@ testit <- function(x) {
     chisq.n <- qchisq(resultsp$VALUE, 1, lower.tail = FALSE)
     ### Estimating genomic inflation factor
     lambda <- estlambda(resultsp$VALUE, filter = FALSE)$estimate
+    if(TRUE){ ## TODO: Continue with Sandrine strategy?
     ### correcting the qui-square distribution with lambda
     chisq_corr = chisq.n/lambda
     #### re-calculating corrected P values
-    resultsp$VALUE = pchisq(chisq_corr, 1, lower.tail = FALSE)
+    resultsp$VALUE = pchisq(chisq_corr, 1, lower.tail = FALSE)}
+    if(FALSE){ 
+      resultsp$VALUE = resultsp$VALUE/lambda
+    }
   }
   
   resultsp <- resultsp[order(resultsp$VALUE), ]
@@ -1708,8 +1735,7 @@ testit <- function(x) {
     lmm.results <- probes.cnv.gr
     values(lmm.results)$VALUE <- all.pvalues 
     colnames(mcols(lmm.results))[1] <- "NAME"
-    #colnames(mcols(lmm.results))[length(colnames(mcols(lmm.results)))] <- "VALUE"
-    
+
     if (correct.inflation) {
       #### Calculating chi-square distribution based on original P-values
       chisq.n <- qchisq(values(lmm.results)$VALUE, 1, lower.tail = FALSE)
@@ -1721,10 +1747,7 @@ testit <- function(x) {
       values(lmm.results)$VALUE = pchisq(chisq_corr, 1, lower.tail = FALSE)
     }
     resultspGr <- lmm.results
-    #resultspGr <- GenomicRanges::makeGRangesFromDataFrame(lmm.results, seqnames.field = "chr", 
-    #                                                      start.field = "position", end.field = "position",
-    #                                                      keep.extra.columns = TRUE)
-    
+
   }else{
     stop("Only plink or lmm.pedigree permitted")
   }
@@ -1800,6 +1823,28 @@ testit <- function(x) {
     }
   }
   
+  if (assign.probe == "combine.pvalue") {
+    for (se in seq_along(segs.pvalue.gr)) {
+      seqlevels(segs.pvalue.gr) <- seqlevels(probes.cnv.gr)
+      probe.sel <- IRanges::subsetByOverlaps(probes.cnv.gr, 
+                                             segs.pvalue.gr[se])
+      #absdiff <- abs(probe.sel$freq - median(probe.sel$freq))
+      #probe.sel <- probe.sel[which.min(absdiff)]
+      ## Take the first probe if the position is duplicated
+      seqlevels(probe.sel) <- seqlevels(resultspGr)
+      resultX <- IRanges::subsetByOverlaps(resultspGr, probe.sel)
+      #combined.pvalue <- survcomp::combine.test(resultX$VALUE, na.rm = TRUE, method ="z.transform")
+      combined.pvalue <- median(resultX$VALUE)
+      absdiff <- abs(resultX$VALUE - median(resultX$VALUE))
+      resultX <- resultX[which.min(absdiff)][1]
+      probe.sel <- IRanges::subsetByOverlaps(probe.sel, resultX)
+      values.all[[se]] <- combined.pvalue
+      probe.sel <- probe.sel[1] ## Improve to select probe with the p-value closest to the combined
+      names.all[[se]] <- as.character(probe.sel$Name)
+      freqs.all[[se]] <- as.character(probe.sel$freq[1])
+    }
+  }
+  
   segs.pvalue.gr$MinPvalue <- unlist(values.all)
   segs.pvalue.gr$NameProbe <- unlist(names.all)
   segs.pvalue.gr$Frequency <- unlist(freqs.all)
@@ -1808,6 +1853,9 @@ testit <- function(x) {
                                                       method = method.m.test, n = length(segs.pvalue.gr))
   segs.pvalue.gr$Phenotype <- names(phenotypesSamX)[[2]]
   segs.pvalue.gr$MinPvalueAdjusted <- round(segs.pvalue.gr$MinPvalueAdjusted, 5)
+  
+  ## Write the probe-pvalues
+  gdsfmt::add.gdsn(genofile, name = "probe.pvalues", val= values(resultspGr)$VALUE, replace = TRUE)
   SNPRelate::snpgdsClose(genofile)
   
   return(segs.pvalue.gr)
@@ -1945,62 +1993,111 @@ return(pedigree)
 
 # HELPER - Linear mixed model for GWAS - considering pedigree
 
-#segs.pvalue.gr <- lmmCNV(all.paths, all.segs.gr, phen.info, method.m.test, model, 
-#                         probes.cnv.gr, assign.probe, correct.inflation = correct.inflation,
-#                         n.cor)
-
 lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model, 
                    probes.cnv.gr, assign.probe, correct.inflation, phenotypesSamX,
-                   n.cor, verbose=FALSE, model.cnv.interactions="Vx", run.lrr=FALSE){
+                   n.cor, verbose=FALSE, model.cnv.interactions="+ CNVx", run.lrr=FALSE, 
+                   snp.gds=NULL, use.grm=NULL, use.pca=NULL, norm.lrr=TRUE, max.lrr, min.lrr,
+                   lrr.to.use="standard"){
   
   ### Extract pedigree from the phen.info object
   ped <- as.data.frame(phen.info$pedigree)
   ped <- ped[!duplicated(ped),]
   ped <- pedigree::add.Inds(ped)   
-  #both <- unique(c(ped$sire, ped$dam))
-  #ped$sire <- factor(ped$sire, levels=both)
-  #ped$dam <- factor(ped$dam, levels=both)
   ped$sire <- factor(ped$sire)
   ped$dam <- factor(ped$dam)
-  #ped$sample.id <- factor(ped$sample.id, levels())
-  #ped <- ped[,-c(4:6)]
-  #colnames(ped)[1] <- "id"
-  #ped <- subset(ped, select = c(id, sire, dam))
-  
-  if (verbose) 
-    message("Fit the model - LMM")
-  p1 <-    new("pedigree",
-            sire = as.integer(ped$sire),
-            dam = as.integer(ped$dam),
-            label = as.character(ped$sample.id))
-            #label = as.character(seq_along((ped$id))))
-  
-  #p1 <- pedigree(sire = as.integer(ped$sire),
-   #             dam  = as.integer(ped$dam), 
-  #              label = as.character(ped$id))
-  
-  #p1 <- pedigree(sire = c(NA,NA,1, 1,4,5),
-  #               dam  = c(NA,NA,2,NA,3,2), 
-  #                label= 1:6)
-  
-  
-  A <- getA(p1)
   
   ### Map of the CNV probes
   cnv.gds <- file.path(all.paths[1], "CNV.gds")
   genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
   
-  #map.probes <- data.frame(snp.id = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.id")), 
-  #                  chr = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome")), 
-  #                  position = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.position")), 
-  #                  probes = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id")), stringsAsFactors = FALSE)
+  if(!is.null(snp.gds)){
+    snp.gds <- file.path(all.paths[1], "SNP.gds")
+    genofile.snp <- SNPRelate::snpgdsOpen(snp.gds, allow.fork = TRUE, readonly = FALSE)
+}
+
+  if(is.null(use.grm)){
+    p1 <-    new("pedigree",
+                 sire = as.integer(ped$sire),
+                 dam = as.integer(ped$dam),
+                 label = as.character(ped$sample.id))
+    
+    A <- getA(p1)
+  }
   
-  ## Produce the cnv-pedigree file
+  if("SNP.based" %in% use.grm){
+    if(!is.null(gdsfmt::index.gdsn(genofile.snp, "GRM", silent=TRUE))){
+      GRM <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile.snp, "GRM"))
+    }
+    #A <- Matrix::Matrix(GRM)
+    #A <- GRM
+    GRM.m <- GRM$grm
+    colnames(GRM.m) <- GRM$sample.id
+    rownames(GRM.m) <- GRM$sample.id
+    A <- GRM.m
+  }
+  
+  if("CNV.based" %in% use.grm){
+    
+    if(is.null(gdsfmt::index.gdsn(genofile, "GRM", silent=TRUE))){
+    ## HELPER - GRM  
+      cnvGRM <- function(genofile){
+        ### change nodes to perform the PCA analysis
+        genoBack <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "genotype")))  
+        CNVgeno <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotypeSNPlike")))  
+        
+        n <- gdsfmt::add.gdsn(genofile, "genotype", CNVgeno, replace=TRUE)
+        gdsfmt::read.gdsn(n)
+        cor.matrix <- SNPRelate::snpgdsGRM(genofile, autosome.only=FALSE)
+        add.gdsn(genofile, "GRM", cor.matrix, replace=TRUE)
+        n <- gdsfmt::add.gdsn(genofile, "genotype", genoBack, replace=TRUE)
+        gdsfmt::read.gdsn(n)
+        return(cor.matrix)
+      }
+    cor.matrix <- cnvGRM(genofile) 
+    add.gdsn(genofile, "GRM", cor.matrix, replace=TRUE)
+    }
+    
+    if(!is.null(gdsfmt::index.gdsn(genofile, "GRM", silent=TRUE))){
+      GRM <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "GRM"))
+    }
+    #A <- Matrix::Matrix(GRM)
+    GRM.m <- GRM$grm
+    colnames(GRM.m) <- GRM$sample.id
+    rownames(GRM.m) <- GRM$sample.id
+    A <- GRM.m
+  }
+  
+  ## Produce the cnv.lrr-pedigree file
   if(run.lrr){
+  if(lrr.to.use=="standard"){
   cnv.geno <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "LRR")))
+  }
+  if(lrr.to.use=="median"){
+    if(is.null(gdsfmt::index.gdsn(genofile, "LRR.median", silent=TRUE))){
+      .createSegLRR(genofile, unlist(all.segs.gr), probes.cnv.gr, method="median")
+      }
+  cnv.geno <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "LRR.median")))
+  
+  }
+  if(lrr.to.use=="mean"){
+    if(is.null(gdsfmt::index.gdsn(genofile, "LRR.mean", silent=TRUE))){
+      .createSegLRR(genofile, unlist(all.segs.gr), probes.cnv.gr, method="mean")
+    }
+    cnv.geno <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "LRR.mean")))
+  }
+    
+  if(norm.lrr){
+    cnv.geno <- .normLRR(cnv.geno, max.lrr, min.lrr)  
+  }
+    
   cnv.geno[is.na(cnv.geno)] <- 0
+  rownames(cnv.geno) <- paste0("LRR", seq_len(nrow(cnv.geno))) ## Put 'LRR' colnames
+  cnv.geno.cn <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype")))  
+  rownames(cnv.geno.cn) <- paste0("CNV", seq_len(nrow(cnv.geno.cn))) ## Put 'CNV' colnames
+  cnv.geno <- rbind(cnv.geno, cnv.geno.cn)
   }else{
-  cnv.geno <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype")))  
+  cnv.geno <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"))) 
+  rownames(cnv.geno) <- paste0("CNV", seq_len(nrow(cnv.geno))) ## Put 'CNV' colnames
   }
   
   sample.id <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id")))
@@ -2009,30 +2106,72 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
   cnv.geno <- t(cnv.geno)
   cnv.geno <- as.data.frame(cnv.geno)
   cnv.geno$sample.id <- rownames(cnv.geno)
-  
-  #phen.ped.back <- phen.ped
-  #phen.ped <- phen.ped[!is.na(phen.ped$CentredLD),]
   cnv.geno <- merge(ped, cnv.geno, by="sample.id")
   
+  ### Attach the PCA results
+  if("CNV.based" %in% use.pca){
+    if(!is.null(gdsfmt::index.gdsn(genofile, "PCA", silent=TRUE))){
+      PCA <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "PCA"))
+      ### merge with CNV genotypes
+      cnv.geno <- merge(cnv.geno, PCA, by="sample.id", sort=FALSE, all.x=TRUE, all.y=FALSE)
+    }else{
+      stop("To create a CNV.based PCA analysis one needs to run with use.pca=NULL at least one time")
+    }
+    
+  }
+  
+  if("SNP.based" %in% use.pca){
+  if(!is.null(gdsfmt::index.gdsn(genofile.snp, "PCA", silent=TRUE))){
+    PCA <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile.snp, "PCA"))
+  }
+    ### merge with CNV genotypes
+    cnv.geno <- merge(cnv.geno, PCA, by="sample.id", sort=FALSE, all.x=TRUE, all.y=FALSE)
+  }
+  
+  if(!is.null(snp.gds)){
+  SNPRelate::snpgdsClose(genofile.snp)}
+  
   ### Fit the model
-  #mod <- lme4qtl::relmatLmer(model, cnv.geno, relmat = list(id = A))
+  if (verbose)
+  message("Fit the model - LMM")
   mod <- lme4qtl::relmatLmer(model, cnv.geno, relmat = list(sample.id = A))
   m1 <- mod 
   
   ### Run for all the CNVs - TODO: implement in parallel
   if (verbose) 
     message("Fit each CNV segment in the model - LMM")
-  all.pvalues <- NULL
-  for(loV in 1:length(probes.cnv.gr)){
+  
+  ## Produce gvar file in parallel processing Identify the SO
+    
+  ### HELPER - update p-values for the fitted model  
+  .updateModel <- function(loV, model.cnv.interactions, m1, cnv.geno){
     cod <- paste0("update(m1, . ~ . + ", model.cnv.interactions, ")") ##Vx
     cod <- gsub("x", loV, cod)
     m2 <- suppressWarnings(eval(parse(text = cod)))
-    all.pvalues[loV] <-  suppressMessages(as.numeric(anova(m1, m2)$'Pr(>Chisq)'[2]))
+   pvalues <-  suppressMessages(as.numeric(anova(m1, m2)$'Pr(>Chisq)'[2])) 
+   return(pvalues) 
   }
+    
+    if (rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac") {
+      multicoreParam <- BiocParallel::MulticoreParam(workers = n.cor)
+      all.pvalues <- suppressMessages(BiocParallel::bplapply(1:length(probes.cnv.gr), .updateModel, 
+                                                      BPPARAM = multicoreParam, 
+                                                      model.cnv.interactions=model.cnv.interactions, m1=m1,
+                                                      cnv.geno=cnv.geno))
+    }
+    
+    if (rappdirs:::get_os() == "win") {
+      param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
+      all.pvalues <- suppressMessages(BiocParallel::bplapply(1:length(probes.cnv.gr), .updateModel, 
+                                                      BPPARAM = param,
+                                                      model.cnv.interactions=model.cnv.interactions, m1=m1,
+                                                      cnv.geno=cnv.geno))
+    }
+  
+  all.pvalues <- unlist(all.pvalues)
   
   if (verbose) 
-  message("Associate probes with segments - LMM")
-  #map.probes$all.pvalues <- all.pvalues
+  message("Assign probes to CNV segments - LMM")
   
   ### Associate the p-values with the segments
   SNPRelate::snpgdsClose(genofile)
@@ -2041,6 +2180,247 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
                                method.m.test=method.m.test, probes.cnv.gr=probes.cnv.gr, assign.probe=assign.probe, 
                                correct.inflation=correct.inflation, association.method="p.values", 
                                all.pvalues=all.pvalues)
+  
+  
+   ### Run a CNV based PCA 
+  cnv.gds <- file.path(all.paths[1], "CNV.gds")
+  genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
+  ### Add association test to the GDS
+  gdsfmt::add.gdsn(genofile, name = "CNV.seg.pvalue", val = as.data.frame(segs.pvalue.gr), replace = TRUE)
+  if(!is.null(gdsfmt::index.gdsn(genofile, "CNVgenotypeSNPlike", silent=TRUE))){
+  if(is.null(gdsfmt::index.gdsn(genofile, "PCA", silent=TRUE))){
+    SNPRelate::snpgdsClose(genofile)
+    PCAcnv(all.paths, segs.pvalue.gr, use.seg=FALSE)
+  }else{
+    SNPRelate::snpgdsClose(genofile)
+  }
+  }else{
+    SNPRelate::snpgdsClose(genofile)
+  }
+  #SNPRelate::snpgdsClose(genofile)
+  
   return(segs.pvalue.gr)
   
 }
+
+
+# HELPER - Normalize LRR values 
+
+.normLRR <- function(dat, max.lrr, min.lrr){
+    remove_outliers <- function(x, na.rm = TRUE, ...) {
+      qnt <- quantile(x, probs=c(min.lrr, max.lrr), na.rm = na.rm, ...)
+      H <- 1.5 * IQR(x, na.rm = na.rm)
+      y <- x
+      y[x < (qnt[1] - H)] <- NA
+      y[x > (qnt[2] + H)] <- NA
+      y
+    }
+    dat <- remove_outliers(dat)
+    N <- length(dat)
+    na.pos <- which(is.na(dat))
+    if (length(na.pos) %in% c(0, N)) {
+      return(dat)
+    }
+    non.na.pos <- which(!is.na(dat))
+    intervals  <- findInterval(na.pos, non.na.pos,
+                               all.inside = TRUE)
+    left.pos   <- non.na.pos[pmax(1, intervals)]
+    right.pos  <- non.na.pos[pmin(N, intervals+1)]
+    left.dist  <- na.pos - left.pos
+    right.dist <- right.pos - na.pos
+    
+    dat[na.pos] <- ifelse(left.dist <= right.dist,
+                          dat[left.pos], dat[right.pos])
+    return(dat)
+  }
+  
+## HELPER Replace LRR values by the median in the segment
+
+.createSegLRR <- function(genofile, segs.pvalue.gr, probes.cnv.gr, method){
+  all.samples  <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id"))
+  LRR  <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "LRR"))
+  LRR.mod <- LRR
+for (se in seq_along(segs.pvalue.gr)) {
+  seqlevels(segs.pvalue.gr) <- seqlevels(probes.cnv.gr)
+  probe.sel <- IRanges::subsetByOverlaps(probes.cnv.gr, 
+                                         segs.pvalue.gr[se])
+  ### Create the median LRR 
+    for(sam in 1:length(all.samples)){
+      seg.probes <- values(probe.sel)$snp.id
+      if(method=="median"){
+      LRR.mod[c(seg.probes),sam] <- rep(median(LRR[seg.probes,sam], na.rm = TRUE), length(seg.probes))
+      message(paste0("Create median for LRR - sample ", sam, " CNV segment ", se))}
+      else if(method=="mean"){
+        LRR.mod[c(seg.probes),sam] <- rep(mean(LRR[seg.probes,sam], na.rm = TRUE), length(seg.probes))
+        message(paste0("Create mean for LRR - sample ", sam, " CNV segment ", se))}
+    }
+}
+  if(method=="median"){
+  gdsfmt::add.gdsn(genofile, name = "LRR.median", val = LRR.mod, replace = TRUE)
+  }else if(method=="mean"){
+  gdsfmt::add.gdsn(genofile, name = "LRR.mean", val= LRR.mod, replace = TRUE)
+    }
+}
+
+## HELPER Create CNV gds by origin (gain and loss separately)
+
+.createOriginCNV <- function(all.paths, segs.pvalue.gr, freq.cn){
+  cnv.gds <- file.path(all.paths[1], "CNV.gds")
+  genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
+  cnv.geno <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"))
+  
+  #### Select only representative CNV probes
+  map <- data.frame(snp.id = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.id")), 
+                    chr = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome")), 
+                    position = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.position")), 
+                    probes = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id")), 
+                    stringsAsFactors = FALSE)
+  
+  map$row.num <- seq(from=1, to=nrow(map))
+  map.rep <- subset(map, probes %in% segs.pvalue.gr$NameProbe)
+  
+  cnv.geno <- cnv.geno[map.rep$row.num,]
+  
+  #### Create a new set of CNV genotypes 
+  origin.cnv <- NULL
+  snp.id <- NULL
+  chr.all <- NULL
+  position.all <- NULL
+  
+  for(rep in 1:nrow(cnv.geno)){
+    cnv.geno.x <- cnv.geno[rep,]
+    cnv.geno.x[cnv.geno.x>4] <- 4
+    # Both, gain or loss?
+    cnv.geno.x.fac <- factor(cnv.geno.x, levels=0:4)
+    loss <- sum(table(cnv.geno.x.fac)[1:2]) ## Loss
+    gain <- sum(table(cnv.geno.x.fac)[4:5]) ## Gain
+    
+    sample.id <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id")))
+    min.sam <- length(sample.id)*freq.cn
+    
+    if(loss>=min.sam && gain>=min.sam){  ## both
+      
+      cnv.geno.x.loss <- cnv.geno.x
+      cnv.geno.x.gain <- cnv.geno.x
+      cnv.geno.x.loss[cnv.geno.x.loss>2] <- 2  
+      cnv.geno.x.gain[cnv.geno.x.gain<2] <- 2  
+      snp.id.loss <- paste0("Seg", rep, ".", 1)
+      snp.id.gain <- paste0("Seg", rep, ".", 2)
+      snp.id[[length(snp.id)+1]] <- snp.id.loss
+      snp.id[[length(snp.id)+1]] <- snp.id.gain
+      
+      ## Get chr and position
+      
+      chr.all[[length(chr.all)+1]] <- map.rep$chr[rep] ## loss
+      position.all[[length(position.all)+1]] <- map.rep$position[rep] ## loss
+      chr.all[[length(chr.all)+1]] <- map.rep$chr[rep] ## gain
+      position.all[[length(position.all)+1]] <- map.rep$position[rep] ## gain
+      
+      ### Transform in SNP-like genotypes (i.e. biallelic)
+      cnv.geno.x.loss <- .replaceStringGeno(cnv.geno.x.loss, type="loss")
+      cnv.geno.x.gain <- .replaceStringGeno(cnv.geno.x.gain, type="gain")
+      
+      origin.cnv <- rbind(origin.cnv,cnv.geno.x.loss)
+      origin.cnv <- rbind(origin.cnv,cnv.geno.x.gain)
+      #origin.cnv[[length(origin.cnv)+1]] <- cnv.geno.x.loss
+      #origin.cnv[[length(origin.cnv)+1]] <- cnv.geno.x.gain
+      
+      
+      }else if(loss>=min.sam && gain<min.sam){ ## loss
+    
+      cnv.geno.x.loss <- cnv.geno.x
+      cnv.geno.x.loss[cnv.geno.x.loss>2] <- 2  
+      #origin.cnv <- rbind(origin.cnv,cnv.geno.x.loss)
+      snp.id.loss <- paste0("Seg", rep, ".", 1)
+      snp.id[[length(snp.id)+1]] <- snp.id.loss
+      
+      ### Get chr and position
+      
+      chr.all[[length(chr.all)+1]] <- map.rep$chr[rep] ## loss
+      position.all[[length(position.all)+1]] <- map.rep$position[rep] ## loss
+      
+      ### Transform in SNP-like genotypes (i.e. biallelic)
+      cnv.geno.x.loss <- .replaceStringGeno(cnv.geno.x.loss, type="loss")
+      
+      origin.cnv <- rbind(origin.cnv,cnv.geno.x.loss)
+      #origin.cnv[[length(origin.cnv)+1]] <- cnv.geno.x.loss
+    
+      }else if(loss<min.sam && gain>=min.sam){ ## gain
+    
+      cnv.geno.x.gain <- cnv.geno.x
+      cnv.geno.x.gain[cnv.geno.x.gain<2] <- 2  
+      #origin.cnv <- rbind(origin.cnv,cnv.geno.x.gain)
+      snp.id.gain <- paste0("Seg", rep, ".", 2)
+      snp.id[[length(snp.id)+1]] <- snp.id.gain
+      
+      ## Get chr and position
+      
+      chr.all[[length(chr.all)+1]] <- map.rep$chr[rep] ## loss
+      position.all[[length(position.all)+1]] <- map.rep$position[rep] ## loss
+      
+      ### Transform in SNP-like genotypes (i.e. biallelic)
+      cnv.geno.x.gain <- .replaceStringGeno(cnv.geno.x.gain, type="gain")
+      
+      origin.cnv <- rbind(origin.cnv,cnv.geno.x.gain)
+      #origin.cnv[[length(origin.cnv)+1]] <- cnv.geno.x.gain
+      
+      }
+  
+  }
+  SNPRelate::snpgdsClose(genofile)
+  
+  .createGdsOrigin(all.paths, list(snp.id, origin.cnv, sample.id, chr.all, position.all))
+  
+  return(list(snp.id, origin.cnv, sample.id, chr.all, position.all))
+}
+  
+#origin.cnv <- .createOriginCNV(all.paths, segs.pvalue.gr, freq.cn)
+
+##### HELPER - replace string
+
+.replaceStringGeno <- function(cnv.geno.x, type){
+  ### Replace
+  cnv.geno.x <- gsub("0", "0n", cnv.geno.x)
+  cnv.geno.x <- gsub("1", "1n", cnv.geno.x)
+  cnv.geno.x <- gsub("2", "2n", cnv.geno.x)
+  cnv.geno.x <- gsub("3", "3n", cnv.geno.x)
+  cnv.geno.x <- gsub("4", "4n", cnv.geno.x)
+  
+  if(type=="loss"){
+  cnv.geno.x <- gsub("0n", "0", cnv.geno.x)
+  cnv.geno.x <- gsub("1n", "1", cnv.geno.x)
+  cnv.geno.x <- gsub("2n", "2", cnv.geno.x)
+  
+  }else if(type=="gain"){
+  cnv.geno.x <- gsub("2n", "0", cnv.geno.x)
+  cnv.geno.x <- gsub("3n", "1", cnv.geno.x)
+  cnv.geno.x <- gsub("4n", "2", cnv.geno.x)
+
+  }else{
+  stop("Not a valid option")
+}
+  return(cnv.geno.x)
+}
+
+#### HELPER - Create GDS with origin CNV genotypes
+
+.createGdsOrigin <- function(all.paths, origin.cnv){
+  
+  cnv.gds <- file.path(all.paths[1], "CNV.gds")
+  genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
+  
+  sample.id <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id")))
+  SNPRelate::snpgdsClose(genofile)
+  
+  origin.cnv.m <- mapply(as.matrix(origin.cnv[[2]]), FUN=as.numeric)
+  origin.cnv.m <- matrix(data=origin.cnv.m, ncol=ncol(as.matrix(origin.cnv[[2]])), nrow=nrow(as.matrix(origin.cnv[[2]])))
+  
+  # Create a GDS with chr and SNP names to numeric
+  cnv.gds <- file.path(all.paths[1], "origin.CNV.gds")
+  SNPRelate::snpgdsCreateGeno(cnv.gds, genmat = origin.cnv.m, sample.id = sample.id, 
+                              snp.id = origin.cnv[[1]], 
+                              snp.chromosome = origin.cnv[[4]], 
+                              snp.position = origin.cnv[[5]])
+  
+}
+
