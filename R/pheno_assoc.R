@@ -187,7 +187,8 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 #' and sample info. When using more than one population, for populations without
 #' phenotypes include the string 'INEXISTENT' instead the path for a file.
 #' @param cnv.out.loc Path(s) to the CNV analysis output (i.e. PennCNV output, 
-#' SNP-chip general format or sequencing general format)
+#' SNP-chip general format or sequencing general format). It is also possible to
+#' use a GRangesList object if the run includes only one population.
 #' @param map.loc Path to the probe map (e.g. used in PennCNV analysis). Column 
 #' names containing probe name, chromosome and coordinate must be named as: Name, 
 #' Chr and Position. Tab delimited. If NULL, artificial probes will be generated 
@@ -215,9 +216,21 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 
 setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = NULL, 
     pops.names = NULL, n.cor = 1) {
-    
+  
     ## Create the folder structure for all subsequent analysis
     all.paths <- .createFolderTree(name, folder)
+    
+    ## Check if the CNVs are in GRanges format   
+    if(class(cnv.out.loc)[[1]][1] == "CompressedGRangesList"){
+      message("Using GRangesList as CNV input allows only one population in the analysis")
+      
+      df.cnv <- as.data.frame(cnv.out.loc)
+      df.cnv <- subset(df.cnv, select = c(seqnames, start, end, group_name, State))
+      colnames(df.cnv) <- c("chr",	"start",	"end",	"sample.id",	"state")
+      write.table(df.cnv, file.path(all.paths[1], "CNVOut.txt"), sep = "\t", 
+                  col.names = TRUE, row.names = FALSE)
+      cnv.out.loc <- file.path(all.paths[1], "CNVOut.txt")
+    }   
     
     ## Only one population
     if (length(phen.loc) == 1 && length(cnv.out.loc) == 1) {
@@ -1834,3 +1847,5 @@ estlambda <- function(data, plot = FALSE, proportion = 1, method = "regression",
   }
   out
 }
+
+
