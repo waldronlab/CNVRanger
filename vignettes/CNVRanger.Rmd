@@ -312,6 +312,7 @@ cnvs <- read.table(file.path(data.dir, "CNVOut.txt"), sep = "", header = TRUE)  
 cnvs <- makeGRangesListFromDataFrame(cnvs, 
     split.field="sample.id", keep.extra.columns=TRUE)
 cnv.out.loc <- cnvs
+cnv.out.loc
 
 ## Genomic positions of the probes used in the CNV call
 map.loc <-  file.path(data.dir, "MapPenn.txt")
