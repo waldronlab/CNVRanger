@@ -225,11 +225,16 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
       message("Using GRangesList as CNV input allows only one population in the analysis")
       
       df.cnv <- as.data.frame(cnv.out.loc)
-      df.cnv <- subset(df.cnv, select = c(seqnames, start, end, group_name, State))
+      if(all(c("num.snps",	"start.probe",	"end.probe")  %in%  colnames(df.cnv))){ 
+      df.cnv <- subset(df.cnv, select = c(seqnames, start, end, group_name, state, num.snps,	start.probe,	end.probe))
+      colnames(df.cnv) <- c("chr",	"start",	"end",	"sample.id",	"state", "num.snps",	"start.probe",	"end.probe")
+    }else{
+      df.cnv <- subset(df.cnv, select = c(seqnames, start, end, group_name, state))
       colnames(df.cnv) <- c("chr",	"start",	"end",	"sample.id",	"state")
-      write.table(df.cnv, file.path(all.paths[1], "CNVOut.txt"), sep = "\t", 
+    }
+      write.table(df.cnv, file.path(all.paths[1], "CNVOutN.txt"), sep = "\t", 
                   col.names = TRUE, row.names = FALSE)
-      cnv.out.loc <- file.path(all.paths[1], "CNVOut.txt")
+      cnv.out.loc <- file.path(all.paths[1], "CNVOutN.txt")
     }   
     
     ## Only one population
@@ -246,7 +251,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
     ## Multiple populations
     if (length(phen.loc) != length(cnv.out.loc)) 
         stop("phen.loc and cnv.out.loc should have the same length. Use the string INEXISTENT if phenotypes are missing")
-    
+      
     if (length(phen.loc) > 1 && length(cnv.out.loc) > 1) {
         
         pheno.file.all <- NULL

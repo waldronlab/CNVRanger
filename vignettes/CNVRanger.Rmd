@@ -279,7 +279,7 @@ head(res)
 
 # CNV-phenotype association analysis
 
-For CNV calls inferred from SNP-chip data, we additionally provide functionality
+For CNV calls inferred from SNP-chip or sequencing data, we additionally provide functionality
 to carry out a probe-level genome-wide association study (GWAS) between CNVs 
 and quantitative phenotypes as previously described 
 ([da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)).
@@ -303,8 +303,16 @@ The information required for analysis is then stored in the resulting `phen.info
 ```{r importPhen}
 ## GEBV values
 phen.loc <- file.path(data.dir, "Pheno.txt")
+
 ## CNV calls
-cnv.out.loc <- file.path(data.dir, "CNVOut.txt")
+cnv.out.loc <- file.path(data.dir, "CNVOut.txt") 
+
+## Alternatively, if only one population is being tested, GRangesList can be used instead
+cnvs <- read.table(file.path(data.dir, "CNVOut.txt"), sep = "", header = TRUE)  ### CNV table 
+cnvs <- makeGRangesListFromDataFrame(cnvs, 
+    split.field="sample.id", keep.extra.columns=TRUE)
+cnv.out.loc <- cnvs
+
 ## Genomic positions of the probes used in the CNV call
 map.loc <-  file.path(data.dir, "MapPenn.txt")
 phen.info <- setupCnvGWAS(name="example", 
