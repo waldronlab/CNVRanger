@@ -78,7 +78,7 @@ In this release only the p-value for the copy number is available  (i.e. 'P(CNP)
 \examples{
 
 # Load phenotype-CNV information
-data.dir <- system.file("extdata", package="cnvAnalyzeR")
+data.dir <- system.file("extdata", package="CNVRanger")
 
 phen.loc <- file.path(data.dir, "Pheno.txt")
 cnv.out.loc <- file.path(data.dir, "CNVOut.txt")

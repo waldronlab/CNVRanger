@@ -23,7 +23,7 @@ Manhattan plot for p-values of a CNV-GWAS
 \examples{
 
 # Load phenotype-CNV information
-data.dir <- system.file("extdata", package="cnvAnalyzeR")
+data.dir <- system.file("extdata", package="CNVRanger")
 
 phen.loc <- file.path(data.dir, "Pheno.txt")
 cnv.out.loc <- file.path(data.dir, "CNVOut.txt")
@@ -34,15 +34,11 @@ all.paths <- phen.info$all.paths
 segs.pvalue.gr <- cnvGWAS(phen.info)
 
 # Define the chromosome order in the plot
-order.chrs <- c(1:24, "25LG1", "25LG2", 26:28, "LGE22", "1A", "4A")
+order.chrs <- c(1:24, "25LG1", "25LG2", 27:28, "LGE22", "1A", "4A")
 
 # Chromosome sizes
-chr.sizes <- c(  114059860, 150265477, 111636321, 68030631, 61875929, 34342011,
-                 37653027, 31324166, 25106277, 20202851, 20315886, 20466350,
-                 16480340, 16193477, 13820886, 10486032, 11572643, 9871655,
-                 14661763, 7693166, 4276343, 6655392, 6808513, 1092960, 809223,
-                 6596997, 4327975, 5101010, 773534, 71365269, rep(19934923,2))
-
+chr.size.file <- file.path(data.dir, "Parus_major_chr_sizes.txt")
+chr.sizes <- scan(chr.size.file)
 chr.size.order <- data.frame(chr=order.chrs, sizes=chr.sizes, stringsAsFactors=FALSE)
 
 # Plot Manhatthan to a pdf within the 'Results' workfolder

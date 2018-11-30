@@ -15,7 +15,8 @@ and sample info. When using more than one population, for populations without
 phenotypes include the string 'INEXISTENT' instead the path for a file.}
 
 \item{cnv.out.loc}{Path(s) to the CNV analysis output (i.e. PennCNV output, 
-SNP-chip general format or sequencing general format)}
+SNP-chip general format or sequencing general format). It is also possible to
+use a GRangesList object if the run includes only one population.}
 
 \item{map.loc}{Path to the probe map (e.g. used in PennCNV analysis). Column 
 names containing probe name, chromosome and coordinate must be named as: Name, 
@@ -48,7 +49,7 @@ one phenotype per run.
 }
 \examples{
 
-data.dir <- system.file("extdata", package="cnvAnalyzeR")
+data.dir <- system.file("extdata", package="CNVRanger")
 
 phen.loc <- file.path(data.dir, "Pheno.txt")
 cnv.out.loc <- file.path(data.dir, "CNVOut.txt")

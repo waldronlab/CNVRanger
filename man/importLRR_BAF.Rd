@@ -28,7 +28,7 @@ used to perform a GWAS directly as an alternative to copy number dosage
 \examples{
 
 # Load phenotype-CNV information
-data.dir <- system.file("extdata", package="cnvAnalyzeR")
+data.dir <- system.file("extdata", package="CNVRanger")
 
 phen.loc <- file.path(data.dir, "Pheno.txt")
 cnv.out.loc <- file.path(data.dir, "CNVOut.txt")

@@ -291,33 +291,32 @@ equal frequency and carries out a GWAS as implemented in
 For demonstration, we use CNV data of a wild population of songbirds 
 ([da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)).
 
-Using genomic estimated breeding values (GEBVs) for breeding time (BT) as the 
-quantitative phenotype, we accordingly analyze for each CNV region whether change 
+As before we read in the CNV calls and store them in a `GRangesList`.
+
+```{r readCalls2}
+cnv.loc <- file.path(data.dir, "CNVOut.txt") 
+cnv.calls <- read.delim(cnv.loc, as.is=TRUE) 
+cnv.calls <- makeGRangesListFromDataFrame(cnv.calls, 
+    split.field="sample.id", keep.extra.columns=TRUE)
+cnv.calls
+```
+
+Here, we use genomic estimated breeding values (GEBVs) for breeding time (BT) as the 
+quantitative phenotype, and accordingly analyze for each CNV region whether change 
 in copy number is associated with change in the genetic potential for breeding time. 
 
 ## Setting up a CNV-GWAS
 
-The function `setupCnvGWAS` imports phenotype information, CNV calls, and the probe map (if available).
+The function `setupCnvGWAS` imports CNV calls, phenotype information, and the probe map (if available).
 The information required for analysis is then stored in the resulting `phen.info` list:
 
 ```{r importPhen}
 ## GEBV values
 phen.loc <- file.path(data.dir, "Pheno.txt")
 
-## CNV calls
-cnv.out.loc <- file.path(data.dir, "CNVOut.txt") 
-
-## Alternatively, if only one population is being tested, GRangesList can be used instead
-cnvs <- read.table(file.path(data.dir, "CNVOut.txt"), sep = "", header = TRUE)  ### CNV table 
-cnvs <- makeGRangesListFromDataFrame(cnvs, 
-    split.field="sample.id", keep.extra.columns=TRUE)
-cnv.out.loc <- cnvs
-cnv.out.loc
-
 ## Genomic positions of the probes used in the CNV call
-map.loc <-  file.path(data.dir, "MapPenn.txt")
-phen.info <- setupCnvGWAS(name="example", 
-    phen.loc=phen.loc, cnv.out.loc=cnv.out.loc, map.loc=map.loc)
+map.loc <- file.path(data.dir, "MapPenn.txt")
+phen.info <- setupCnvGWAS("example", phen.loc, cnv.calls, map.loc)
 phen.info 
 ```
 
@@ -386,12 +385,8 @@ Results can then be displayed as for regular GWAS via a Manhattan plot
 order.chrs <- c(1:24, "25LG1", "25LG2", 27:28, "LGE22", "1A", "4A")
 
 ## Chromosome sizes
-chr.sizes <- c(114059860, 150265477, 111636321, 68030631, 61875929, 34342011,
-                37653027, 31324166, 25106277, 20202851, 20315886, 20466350, 
-                16480340, 16193477, 13820886, 10486032, 11572643, 9871655, 
-                14661763, 7693166, 4276343, 6655392, 6808513, 1092960, 809223,
-                6596997, 4327975, 5101010, 773534, 71365269, 19934923)
-
+chr.size.file <- file.path(data.dir, "Parus_major_chr_sizes.txt")
+chr.sizes <- scan(chr.size.file)
 chr.size.order <- data.frame(chr=order.chrs, sizes=chr.sizes, stringsAsFactors=FALSE)
 
 ## Plot a pdf file with a manhatthan within the 'Results' workfolder

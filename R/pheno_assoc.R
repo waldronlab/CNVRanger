@@ -57,7 +57,7 @@
 #' @examples
 #' 
 #' # Load phenotype-CNV information
-#' data.dir <- system.file("extdata", package="cnvAnalyzeR")
+#' data.dir <- system.file("extdata", package="CNVRanger")
 #' 
 #' phen.loc <- file.path(data.dir, "Pheno.txt")
 #' cnv.out.loc <- file.path(data.dir, "CNVOut.txt")
@@ -203,7 +203,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
 #' @examples
 #' 
-#' data.dir <- system.file("extdata", package="cnvAnalyzeR")
+#' data.dir <- system.file("extdata", package="CNVRanger")
 #' 
 #' phen.loc <- file.path(data.dir, "Pheno.txt")
 #' cnv.out.loc <- file.path(data.dir, "CNVOut.txt")
@@ -221,20 +221,21 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
     all.paths <- .createFolderTree(name, folder)
     
     ## Check if the CNVs are in GRanges format   
-    if(class(cnv.out.loc)[[1]][1] == "CompressedGRangesList"){
-      message("Using GRangesList as CNV input allows only one population in the analysis")
-      
-      df.cnv <- as.data.frame(cnv.out.loc)
-      if(all(c("num.snps",	"start.probe",	"end.probe")  %in%  colnames(df.cnv))){ 
-      df.cnv <- subset(df.cnv, select = c(seqnames, start, end, group_name, state, num.snps,	start.probe,	end.probe))
-      colnames(df.cnv) <- c("chr",	"start",	"end",	"sample.id",	"state", "num.snps",	"start.probe",	"end.probe")
-    }else{
-      df.cnv <- subset(df.cnv, select = c(seqnames, start, end, group_name, state))
-      colnames(df.cnv) <- c("chr",	"start",	"end",	"sample.id",	"state")
-    }
-      write.table(df.cnv, file.path(all.paths[1], "CNVOutN.txt"), sep = "\t", 
-                  col.names = TRUE, row.names = FALSE)
-      cnv.out.loc <- file.path(all.paths[1], "CNVOutN.txt")
+    if(is(cnv.out.loc, "GRangesList"))
+    {
+        df.cnv <- as.data.frame(cnv.out.loc)
+        if(all(c("num.snps", "start.probe", "end.probe") %in% colnames(df.cnv)))
+        { 
+            rel.cols <- c("seqnames", "start", "end", 
+                "group_name", "state", "num.snps", "start.probe", "end.probe")
+            df.cnv <- df.cnv[,rel.cols]
+            colnames(df.cnv)[c(1,4)] <- c("chr", "sample.id")
+        }
+        else df.cnv <- df.cnv[,c("seqnames", "start", "end", "group_name", "state")]
+        colnames(df.cnv)[c(1,4)] <- c("chr", "sample.id")
+        
+        cnv.out.loc <- file.path(all.paths[1], "CNVOutN.txt")
+        write.table(df.cnv, file=cnv.out.loc, sep="\t", row.names=FALSE, quote=FALSE)
     }   
     
     ## Only one population
@@ -298,13 +299,13 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
     
     phen.info <- .loadPhen(pheno.file, all.paths, pops.names = pops.names, n.cor)
     plink.dir <- dir(all.paths[2], pattern = "plink-1*")
-    plink.bin <- file.path(all.paths[2], plink.dir, "plink")
     
-    if (!file.exists(plink.bin)) {
+    if (!length(plink.dir)) {
         got.plink <- .getPLINK(all.paths[2])
-        if (!got.plink) 
-            stop("PLINK setup failed")
+        if (!got.plink) stop("PLINK setup failed")
+        plink.dir <- dir(all.paths[2], pattern = "plink-1*")
     }
+    plink.bin <- file.path(all.paths[2], plink.dir, "plink")
     all.paths[2] <- dirname(plink.bin)
     
     phen.info$all.paths <- all.paths
@@ -342,7 +343,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
 #' @examples
 #' 
 #' # Load phenotype-CNV information
-#' data.dir <- system.file("extdata", package="cnvAnalyzeR")
+#' data.dir <- system.file("extdata", package="CNVRanger")
 #' 
 #' phen.loc <- file.path(data.dir, "Pheno.txt")
 #' cnv.out.loc <- file.path(data.dir, "CNVOut.txt")
@@ -535,7 +536,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
 #' @examples
 #' 
 #' # Load phenotype-CNV information
-#' data.dir <- system.file("extdata", package="cnvAnalyzeR")
+#' data.dir <- system.file("extdata", package="CNVRanger")
 #' 
 #' phen.loc <- file.path(data.dir, "Pheno.txt")
 #' cnv.out.loc <- file.path(data.dir, "CNVOut.txt")
@@ -662,7 +663,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
     
     # data dir
     if (is.null(folder)) 
-        folder <- rappdirs::user_data_dir("cnvAnalyzeR")
+        folder <- rappdirs::user_data_dir("CNVRanger")
     if (!file.exists(folder)) 
         dir.create(folder, recursive = TRUE)
     
