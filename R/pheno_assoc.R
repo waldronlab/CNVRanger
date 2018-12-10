@@ -19,7 +19,7 @@
 #'   
 #' @param phen.info Returned by \code{\link{setupCnvGWAS}}
 #' @param n.cor Number of cores to be used
-#' @param min.sim Minimum CNV genotype distribuition similarity among subsequent
+#' @param min.sim Minimum CNV genotype distribution similarity among subsequent
 #' probes. Default is 0.95 (i.e. 95\%)
 #' @param freq.cn Minimum CNV frequency where 1 (i.e. 100\%), or all samples 
 #' deviating from diploid state. Default 0.01 (i.e. 1\%)
@@ -183,7 +183,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 #' one phenotype per run. 
 #' 
 #' @param name String with a project code or name (e.g. 'Project1')
-#' @param phen.loc Path/paths to the tab separated text file cointaining phenotype 
+#' @param phen.loc Path/paths to the tab separated text file containing phenotype 
 #' and sample info. When using more than one population, for populations without
 #' phenotypes include the string 'INEXISTENT' instead the path for a file.
 #' @param cnv.out.loc Path(s) to the CNV analysis output (i.e. PennCNV output, 
@@ -331,7 +331,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
 #' and the original name in the second for each chromosome previously converted to numeric
 #' @param genotype.nodes Nodes with CNV genotypes to be produced in the gds file. 
 #' Use 'CNVGenotype' for dosage-like genotypes (i.e. from 0 to Inf). 
-#' Use 'CNVgenotypeSNPlike' alonside for SNP-like CNV genotype in a separated 
+#' Use 'CNVgenotypeSNPlike' alongside for SNP-like CNV genotype in a separated 
 #' node (i.e.  '0, 1, 2, 3, 4' as '0/0, 0/1, 1/1, 1/2, 2/2').
 #' @param coding.translate For 'CNVgenotypeSNPlike'. If NULL or unrecognized 
 #' string use only biallelic CNVs. If 'all' code multiallelic CNVs as 0 for loss; 

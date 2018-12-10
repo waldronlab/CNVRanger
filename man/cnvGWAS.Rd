@@ -16,7 +16,7 @@ cnvGWAS(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01,
 
 \item{n.cor}{Number of cores to be used}
 
-\item{min.sim}{Minimum CNV genotype distribuition similarity among subsequent
+\item{min.sim}{Minimum CNV genotype distribution similarity among subsequent
 probes. Default is 0.95 (i.e. 95\%)}
 
 \item{freq.cn}{Minimum CNV frequency where 1 (i.e. 100\%), or all samples 

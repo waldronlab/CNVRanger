@@ -10,7 +10,7 @@ setupCnvGWAS(name, phen.loc, cnv.out.loc, map.loc = NULL,
 \arguments{
 \item{name}{String with a project code or name (e.g. 'Project1')}
 
-\item{phen.loc}{Path/paths to the tab separated text file cointaining phenotype 
+\item{phen.loc}{Path/paths to the tab separated text file containing phenotype 
 and sample info. When using more than one population, for populations without
 phenotypes include the string 'INEXISTENT' instead the path for a file.}
 

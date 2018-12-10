@@ -23,7 +23,7 @@ and the original name in the second for each chromosome previously converted to 
 
 \item{genotype.nodes}{Nodes with CNV genotypes to be produced in the gds file. 
 Use 'CNVGenotype' for dosage-like genotypes (i.e. from 0 to Inf). 
-Use 'CNVgenotypeSNPlike' alonside for SNP-like CNV genotype in a separated 
+Use 'CNVgenotypeSNPlike' alongside for SNP-like CNV genotype in a separated 
 node (i.e.  '0, 1, 2, 3, 4' as '0/0, 0/1, 1/1, 1/2, 2/2').}
 
 \item{coding.translate}{For 'CNVgenotypeSNPlike'. If NULL or unrecognized 

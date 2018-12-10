@@ -158,7 +158,7 @@ colData(ra)
 
 In CNV analysis, it is often of interest to summarize individual calls across
 the population, (i.e. to define CNV regions), for subsequent association
-analysis with e.g. phenotype data.
+analysis with expression and phenotype data.
 In the simplest case, this just merges overlapping individual calls into 
 summarized regions.
 However, this typically inflates CNV region size and more appropriate approaches
@@ -175,7 +175,7 @@ approaches for summarizing CNV calls:
    [Conrad et al., 2010](https://doi.org/10.1038/nature08516), and
 3. the [GISTIC](http://www.broadinstitute.org/cancer/cga/gistic) procedure that
    identifies recurrent CNV regions 
-   [Mermel et al., 2011](https://doi.org/10.1186/gb-2011-12-4-r41).
+   [Beroukhim et al., 2007](https://doi.org/10.1073/pnas.0710052104).
 
 
 ## Trimming low-density areas
@@ -185,7 +185,7 @@ to summarize CNV calls to CNV regions (see
 [Figure 1](https://academic.oup.com/view-large/figure/83392426/bts239f1.jpeg)
 in 
 [Kim et al., 2012](https://doi.org/10.1093/bioinformatics/bts239)
-an illustration of the approach). 
+for an illustration of the approach). 
 This trims low-density areas as defined by the `density` argument, 
 which is set here to <10\% of the number of calls within a summarized region.
 
@@ -194,14 +194,16 @@ cnvrs <- populationRanges(grl, density=0.1)
 cnvrs
 ```
 
+Note that CNV frequency (number of samples overlapping each region) and CNV type
+(gain, loss, or both) have also been annotated in the columns `freq` and `type`,
+respectively.
+
 ## Reciprocal overlap
 
 We also provide an implementation of the _Reciprocal Overlap (RO)_ procedure that 
 requires calls to sufficiently overlap with one another as e.g. used by 
 [Conrad et al., 2010](https://doi.org/10.1038/nature08516).
-
 This merges calls with an RO above a threshold as given by the `ro.thresh` argument.
-
 For example, an RO of 0.51 between two genomic regions _A_ and _B_ requires that 
 _B_ overlaps at least 51\% of _A_, *and* that _A_ also overlaps at least 51\% of _B_.
 
@@ -212,13 +214,56 @@ ro.cnvrs
 
 ## Identifying recurrent regions
 
-A `GISTIC`-like procedure for detecting recurrent CNVs is also in preparation.
+In particular in cancer, it is important to distinguish driver from 
+passenger mutations, i.e. to distinguish meaningful events from random 
+background aberrations. 
+The [GISTIC](http://www.broadinstitute.org/cancer/cga/gistic) method identifies 
+those regions of the genome that are aberrant more often than would be expected 
+by chance, with greater weight given to high amplitude events 
+(high-level copy-number gains or homozygous deletions) that are less likely to 
+represent random aberrations 
+([Beroukhim et al., 2007](https://doi.org/10.1073/pnas.0710052104)).
+
+By setting `est.recur=TRUE`, we deploy a `GISTIC`-like significance estimation 
+
+```{r gistic}
+cnvrs <- populationRanges(grl, density=0.1, est.recur=TRUE)
+cnvrs
+```
+
+and filter for recurrent CNVs that exceed a significance threshold of 0.05. 
+
+```{r recurr}
+cnvrs[cnvrs$pvalue < 0.05]
+```
 
 # Overlap analysis of CNVs with functional genomic regions
 
-Here, we compare the CNV overlap with distinct features in the genome using the `r Biocpkg("regioneR")` package.
+Once individual CNV calls have been summarized across the population, it is 
+typically of interest whether the resulting CNV regions overlap with functional 
+genomic regions such as genes, promoters, or enhancers. 
+As a certain amount of overlap can be expected just by chance, an assessment of 
+statistical significance is needed to decide whether the observed overlap is 
+greater (enrichment) or less (depletion) than expected by chance. 
 
-Check for available _Bos taurus_ annotation from Ensembl: 
+The `r Biocpkg("regioneR")` package implements a general framework for testing 
+overlaps of genomic regions based on permutation sampling.
+This allows to repeatedly sample random regions from the genome, matching size 
+and chromosomal distribution of the region set under study (here: the CNV regions).
+By recomputing the overlap with the functional features in each permutation, 
+statistical significance of the observed overlap can be assessed.
+
+We demonstrate in the following how this strategy can be used to assess the 
+overlap between the detected CNV regions and protein-coding regions in the 
+cattle genome. 
+We expect to find a depletion as protein-coding regions are highly conserved and
+rarely subject to long-range structural variation such as CNV. 
+Hence, is the overlap between CNVs and protein-coding genes less than expected by
+chance?
+
+To obtain the location of protein-coding genes, we query available 
+_Bos taurus_ annotation from Ensembl 
+
 ```{r getBtGenes}
 library(AnnotationHub)
 ah <- AnnotationHub()
@@ -226,7 +271,8 @@ ahDb <- query(ah, pattern = c("Bos taurus", "EnsDb"))
 ahDb
 ```
 
-Get genomic coordinates of genes for UMD3.1 assembly (Ensembl 92):
+and retrieve gene coordinates in the UMD3.1 assembly (Ensembl 92).
+
 ```{r getBtGenes2}
 ahEdb <- ahDb[["AH60948"]]
 bt.genes <- genes(ahEdb)
@@ -234,28 +280,77 @@ seqlevels(bt.genes) <- paste0("chr", seqlevels(bt.genes))
 bt.genes
 ```
 
-Select only genes on chromosome 1 and 2 for demonstration:
+To speed up the example, we restrict analysis to chromosomes 21 and 22. 
+
 ```{r formatBtGenes}
 sel.genes <- bt.genes[seqnames(bt.genes) %in% c("chr1", "chr2")]
 sel.genes <- sel.genes[sel.genes$gene_biotype == "protein_coding"]
-sel.genes
+sel.cnvrs <- cnvrs[seqnames(cnvrs) %in% c("chr1", "chr2")]
 ```
 
-Perform overlap permutation test:
+Now, we are applying an overlap permutation test with 100 permutations
+(`ntimes=100`), while maintaining chromosomal distribution of the CNV
+region set (`per.chromosome=TRUE`). 
+Furthermore, we use the option `count.once=TRUE` to count an overlapping CNV 
+region only once, even if it overlaps with 2 or more genes.
+We also allow random regions to be sampled from the entire genome (`mask=NA`),
+although in certain scenarios masking certain regions such as telomeres and 
+centromeres is advisable.
+Also note that we use 100 permutations for demonstration only.
+To draw robust conclusions a minimum of 1000 permutations should be carried out.
+
 ```{r ovlpTest}
 library(regioneR)
 library(BSgenome.Btaurus.UCSC.bosTau6.masked)
-sel.cnvrs <- cnvrs[seqnames(cnvrs) %in% c("chr1", "chr2")]
 res <- suppressWarnings(overlapPermTest(A=sel.cnvrs, B=sel.genes, ntimes=100, 
     genome="bosTau6", mask=NA, per.chromosome=TRUE, count.once=TRUE))
 res
 ```
 
+```{r permDist}
+summary(res[[1]]$permuted)
+```
+
+The resulting permutation *p*-value indicates a significant depletion. Out of
+the `r length(sel.cnvrs)` CNV regions, `r res[[1]]$observed` overlap with at 
+least one gene. 
+In contrast, when repeatedly drawing random regions matching the CNV regions in 
+size and chromosomal distribution, the mean number of overlapping
+regions across permutations was `r round(mean(res[[1]]$permuted), digits=1)` 
+$\pm$ `r round(sd(res[[1]]$permuted), digits=1)`.
+
+This finding is consistent with our observations across the whole genome
+([da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)) 
+and findings from the 1000 Genomes Poject 
+([Sudmant et al., 2015](https://www.nature.com/articles/nature15394)).
+
+Note: the function `regioneR::permTest` allows to incorporate user-defined
+functions for randomizing regions and evaluating additional measures of overlap
+such as total genomic size in bp.
+
 # CNV-expression association analysis
 
-Here, we analyze differences in expression between CN states based on the
-`r Biocpkg("edgeR")` package.
+Studies of expression quantitative trait loci (eQTLs) aim at the discovery of 
+genetic variants that explain variation in gene expression levels 
+([Nica and Dermitzakis, 2013](https://www.ncbi.nlm.nih.gov/pubmed/23650636)).
+Mainly applied in the context of SNPs, the concept also naturally extends to the
+analysis of CNVs. 
 
+The `r Biocpkg("CNVRanger")` package implements association testing between CNV 
+regions and RNA-seq read counts using `r Biocpkg("edgeR")`, which applies 
+generalized linear models based on the negative-binomial distribution 
+while incorporating normalization factors for different library sizes.
+
+In the case of only one CN state deviating from 2n for a CNV region under 
+investigation, this reduces to the classical 2-group
+comparison.  For more than two states (e.g. 0n, 1n, 2n), edgeR’s
+ANOVA-like test is applied to test all deviating groups for
+significant expression differences relative to 2n.
+
+We demonstrate the functionality by loading RNA-seq read count data from 
+skeletal muscle samples for 183 Nelore cattle steers, which we analyzed for 
+CNV-expression effects as previously described 
+([Geistlinger et al., 2018](https://doi.org/10.1038/s41598-018-19782-4)).
 
 ```{r rseqdata}
 rseq.file <- file.path(data.dir, "counts_cleaned.txt")
@@ -265,6 +360,9 @@ dim(rcounts)
 rcounts[1:5, 1:5]
 ```
 
+For demonstration, we restrict analysis to the 939 genes on chromosome 1 and 2, 
+and store the RNA-seq expression data in a `r Biocpkg("SummarizedExperiment")`.
+
 ```{r rse}
 library(SummarizedExperiment)
 rse <- SummarizedExperiment(assays=list(rcounts=rcounts), 
@@ -272,10 +370,42 @@ rse <- SummarizedExperiment(assays=list(rcounts=rcounts),
 rse
 ```
 
+Assuming distinct modes of action, effects observed in the CNV-expression analysis 
+are typically divided into (i) local effects (*cis*), where expression changes 
+coincide with CNVs in the respective genes, and (ii) distal effects (*trans*), where
+CNVs supposedly affect trans-acting regulators such as transcription factors.
+
+However, due to power considerations and to avoid detection of spurious effects,
+stringent filtering of (i) not sufficiently expressed genes, and (ii) CNV regions
+with insufficient sample size in groups deviating from 2n, should be carried out 
+when testing for distal effects. 
+Local effects have a clear spatial indication and the number of genes locating 
+in or close to a CNV region of interest is typically small; testing for 
+differential expression between CN states is thus generally better powered for 
+local effects and less stringent filter criteria can be applied. 
+
+In the following, we carry out CNV-expression association analysis by providing 
+the CNV regions to test (`cnvrs`), the individual CNV calls (`grl`) to determine 
+per-sample CN state in each CNV region, the RNA-seq read counts (`rse`),
+and the size of the genomic window around each CNV region (`window`).
+The `window` argument thereby determines which genes are considered for testing 
+for each CNV region and is set here to 1 Mbp. 
+
+Further, use the `min.cpm` and `min.samples` arguments to exclude from the 
+analysis (i) genes with fewer than `min.cpm` reads per million reads mapped 
+(cpm, counts per million), and (ii) CNV 
+regions with fewer than `min.samples` samples in a group deviating from 2n.
+
 ```{r cnvExprAssoc}
 res <- cnvExprAssoc(cnvrs, grl, rse, window="1Mbp")
 head(res)
 ```
+
+The resulting `list` contains an entry for each CNV region tested. 
+Each entry contains the genes tested in the genomic window around the CNV region,
+and reports (i) log2 fold change with respect to the 2n group, (ii) edgeR's DE 
+_p_-value, and (iii) the (per default) Benjamini-Hochberg adjusted _p_-value. 
+
 
 # CNV-phenotype association analysis
 
@@ -455,6 +585,11 @@ probes.cnv.gr
 
 ## Run GWAS with existent GDS file
 segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, produce.gds=FALSE)
+```
+
+# Session info
+```{r sessionInfo}
+sessionInfo()
 ```
 
 

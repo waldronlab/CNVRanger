@@ -72,7 +72,7 @@
 #' For available methods see the man page of the function \code{\link{p.adjust}}. 
 #' Defaults to \code{"BH"}.
 #' @param verbose Logical. Display progress messages? Defaults to \code{FALSE}.
-#' @return A result list with a entry for each CNV region tested. Each entry a is
+#' @return A result list with an entry for each CNV region tested. Each entry is
 #' a \code{\link{data.frame}} containing measures of association for each gene tested 
 #' in the genomic window around the CNV region.
 #' @author Ludwig Geistlinger <Ludwig.Geistlinger@@sph.cuny.edu>
