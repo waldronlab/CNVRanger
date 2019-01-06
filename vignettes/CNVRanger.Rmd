@@ -12,7 +12,7 @@ author:
     email: ludwig.geistlinger@sph.cuny.edu
 package: CNVRanger
 abstract: >
-    The _CNVRanger_ package implements a comprehensive tool suite for CNV analysis.
+    The _CNVRanger_ package implements a comprehensive tool suite for the analysis of copy number variation (CNV).
     This includes functionality for summarizing individual CNV calls across a population,
     assessing overlap with functional genomic regions, and association analysis 
     with gene expression and quantitative phenotypes.
@@ -35,7 +35,7 @@ suppressPackageStartupMessages({
 })
 ```
 
-# Setup
+# Introduction
 Copy number variation (CNV) is a frequently observed deviation from the diploid 
 state due to duplication or deletion of genomic regions.
 CNVs can be experimentally detected based on comparative genomic hybridization, 
@@ -46,7 +46,7 @@ to a reference.
 Such regions are denoted as _CNV calls_ in the following and will be considered 
 the starting point for analysis with the `r Biocpkg("CNVRanger")` package.  
 
-The key parts of the functionality implemented in the package were developed,
+The key parts of the functionality implemented in CNVRanger were developed,
 described, and applied in several previous studies:
 
 - Genome-wide detection of CNVs and their association with meat tenderness in 
@@ -60,6 +60,24 @@ described, and applied in several previous studies:
 - CNVs are associated with genomic architecture in a songbird 
     [da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)
 
+The `r Biocpkg("CNVRanger")` package implements three frequently used
+approaches for summarizing CNV calls:
+
+1. The [CNVRuler](http://www.ircgp.com/CNVRuler) procedure that trims region 
+   margins based on regional density 
+   [Kim et al., 2012](https://doi.org/10.1093/bioinformatics/bts239), 
+2. the reciprocal overlap (RO) procedure that requires calls to sufficiently 
+   overlap with one another 
+   [Conrad et al., 2010](https://doi.org/10.1038/nature08516), and
+3. the [GISTIC](http://www.broadinstitute.org/cancer/cga/gistic) procedure that
+   identifies recurrent CNV regions 
+   [Beroukhim et al., 2007](https://doi.org/10.1073/pnas.0710052104).
+
+`r Biocpkg("CNVRanger")` also provides analysis of the overlap of CNVs with
+functional genomic regions such as genes, promoters, and enhancers. Finally, it
+interfaces with the `r Biocpkg("edgeR")` package to provide gene expression (or other)
+Quantitative Trait Loci (QTL) analysis with convenient options for common analyses 
+including restriction by genomic regions and cis-QTLs.
 
 # Reading and accessing CNV data
 
@@ -138,9 +156,9 @@ easily accessed and subsetted.
 assay(ra[1:5,1:5])
 ```
 
-As for a `r Biocpkg("SummarizedExperiment")`, additional information for 
+As with `r Biocpkg("SummarizedExperiment")` objects, additional information for 
 the samples are annotated in the `colData` slot.
-For example, we annotate the steer weight and its feed conversion ratio (FCR).
+For example, we annotate the steer weight and its feed conversion ratio (FCR) using simulated data.
 Feed conversion ratio is the ratio of dry matter intake to live-weight gain. 
 A typical range of feed conversion ratios is 4.5 -7.5 with a lower number being 
 more desirable as it would indicate that a steer required less feed per pound of
@@ -161,22 +179,8 @@ the population, (i.e. to define CNV regions), for subsequent association
 analysis with expression and phenotype data.
 In the simplest case, this just merges overlapping individual calls into 
 summarized regions.
-However, this typically inflates CNV region size and more appropriate approaches
+However, this typically inflates CNV region size, and more appropriate approaches
 have been developed for this purpose.
-
-The `r Biocpkg("CNVRanger")` package implements three frequently used
-approaches for summarizing CNV calls:
-
-1. The [CNVRuler](http://www.ircgp.com/CNVRuler) procedure that trims region 
-   margins based on regional density 
-   [Kim et al., 2012](https://doi.org/10.1093/bioinformatics/bts239), 
-2. the reciprocal overlap (RO) procedure that requires calls to sufficiently 
-   overlap with one another 
-   [Conrad et al., 2010](https://doi.org/10.1038/nature08516), and
-3. the [GISTIC](http://www.broadinstitute.org/cancer/cga/gistic) procedure that
-   identifies recurrent CNV regions 
-   [Beroukhim et al., 2007](https://doi.org/10.1073/pnas.0710052104).
-
 
 ## Trimming low-density areas
 
@@ -474,7 +478,7 @@ chr.code.name<- data.frame(
 ## Running a CNV-GWAS
 
 We can then run the actual CNV-GWAS, here without correction for multiple testing
-which is *only done for exemplification*. 
+which is done *for demonstration only*. 
 In real analyses, multiple testing correction is recommended to avoid inflation 
 of false positive findings.  
 
