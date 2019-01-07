@@ -12,8 +12,9 @@ author:
     email: ludwig.geistlinger@sph.cuny.edu
 package: CNVRanger
 abstract: >
-    The _CNVRanger_ package implements a comprehensive tool suite for the analysis of copy number variation (CNV).
-    This includes functionality for summarizing individual CNV calls across a population,
+    The _CNVRanger_ package implements a comprehensive tool suite for the analysis 
+    of copy number variation (CNV). This includes functionality for summarizing 
+    individual CNV calls across a population,
     assessing overlap with functional genomic regions, and association analysis 
     with gene expression and quantitative phenotypes.
 output:
@@ -73,11 +74,14 @@ approaches for summarizing CNV calls:
    identifies recurrent CNV regions 
    [Beroukhim et al., 2007](https://doi.org/10.1073/pnas.0710052104).
 
-`r Biocpkg("CNVRanger")` also provides analysis of the overlap of CNVs with
-functional genomic regions such as genes, promoters, and enhancers. Finally, it
-interfaces with the `r Biocpkg("edgeR")` package to provide gene expression (or other)
-Quantitative Trait Loci (QTL) analysis with convenient options for common analyses 
-including restriction by genomic regions and cis-QTLs.
+In addition, `r Biocpkg("CNVRanger")` provides functionality for the analysis of the 
+overlap of CNVs with functional genomic regions such as genes, promoters, and enhancers. 
+The package also implements RNA-seq expression Quantitative Trait Loci (eQTL) analysis for CNVs 
+by interfacing with the `r Biocpkg("edgeR")` package with convenient options
+for common analyses including restriction by genomic regions and cis-eQTLs.
+Similarly, `r Biocpkg("CNVRanger")` also interfaces with 
+[PLINK](http://zzz.bwh.harvard.edu/plink), thereby enabling traditional genome-wide 
+association studies (GWAS) between CNVs and quantitative phenotypes.
 
 # Reading and accessing CNV data
 
@@ -98,6 +102,9 @@ For demonstration, we consider CNV calls as obtained with
 Brazilian cattle breed 
 ([da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)).
 
+Here, we use a data subset and only consider CNV calls on chromosome 1 and 2,
+for which there are roughly 3000 CNV calls as obtained for 711 samples. 
+
 ```{r readCalls}
 data.dir <- system.file("extdata", package="CNVRanger")
 call.file <- file.path(data.dir, "Silva16_PONE_CNV_calls.csv")
@@ -105,8 +112,6 @@ calls <- read.csv(call.file, as.is=TRUE)
 nrow(calls)
 head(calls)
 ```
-
-In total, there are roughly 50,000 calls obtained for 723 samples. 
 
 ```{r nrSamples}
 length(unique(calls[,"NE_id"]))
@@ -158,9 +163,10 @@ assay(ra[1:5,1:5])
 
 As with `r Biocpkg("SummarizedExperiment")` objects, additional information for 
 the samples are annotated in the `colData` slot.
-For example, we annotate the steer weight and its feed conversion ratio (FCR) using simulated data.
+For example, we annotate the steer weight and its feed conversion ratio (FCR) 
+using simulated data.
 Feed conversion ratio is the ratio of dry matter intake to live-weight gain. 
-A typical range of feed conversion ratios is 4.5 -7.5 with a lower number being 
+A typical range of feed conversion ratios is 4.5-7.5 with a lower number being 
 more desirable as it would indicate that a steer required less feed per pound of
 gain.
 

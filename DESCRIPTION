@@ -1,7 +1,8 @@
 Package: CNVRanger
 Version: 0.99.0
 Title: Summarization and expression/phenotype association of CNV ranges
-Author: Vinicius Henrique da Silva and Ludwig Geistlinger
+Author: Ludwig Geistlinger [aut,cre], Vinicius Henrique da Silva [aut], 
+    Marcel Ramos [ctb], Levi Waldron [ctb]  
 Maintainer: Ludwig Geistlinger <Ludwig.Geistlinger@sph.cuny.edu>
 Depends: 
     R(>= 3.5.0), 
