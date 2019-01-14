@@ -440,14 +440,16 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
         genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
         n <- gdsfmt::add.gdsn(genofile, "CNVgenotype", CNVBiMa, replace = TRUE)
         
-        if (rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac") {
+        system.det <- rappdirs:::get_os()
+        
+        if (system.det == "unix" | system.det == "mac") {
             multicoreParam <- BiocParallel::SnowParam(workers = 1, type = "SOCK")
             BiocParallel::bplapply(seq_along(all.samples), .writeProbesCNV, BPPARAM = multicoreParam, 
                 all.samples = all.samples, genofile = genofile, CNVsGr = CNVsGr, 
                 probes.cnv.gr = probes.cnv.gr, n = n)
         }
         
-        if (rappdirs:::get_os() == "win") {
+        if (system.det == "win") {
             param <- BiocParallel::SnowParam(workers = 1, type = "SOCK")
             BiocParallel::bplapply(seq_along(all.samples), .writeProbesCNV, BPPARAM = param, 
                 all.samples = all.samples, genofile = genofile, CNVsGr = CNVsGr, 
@@ -473,14 +475,16 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
             chunk[length(chunk) + 1] <- length(probes.cnv.gr)
         }
         
-        if (rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac") {
+        system.det <- rappdirs:::get_os()
+        
+        if (system.det == "unix" | system.det == "mac") {
             multicoreParam <- BiocParallel::MulticoreParam(workers = 1)
             BiocParallel::bplapply(1:(length(chunk) - 1), .recodeCNVgenotype, BPPARAM = multicoreParam, 
                 genofile = genofile, all.samples = all.samples, n = n, chunk = chunk, 
                 coding.translate = coding.translate)
         }
         
-        if (rappdirs:::get_os() == "win") {
+        if (system.det == "win") {
             param <- BiocParallel::SnowParam(workers = 1, type = "SOCK")
             BiocParallel::bplapply(1:(length(chunk) - 1), .recodeCNVgenotype, BPPARAM = param, 
                 genofile = genofile, all.samples = all.samples, n = n, chunk = chunk, 
@@ -554,7 +558,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
 #' list.of.files$sample.names <- sub(".cnv.txt.adjusted$", "", list.of.files$file.names)
 #' 
 #' # All missing samples will have LRR = '0' and BAF = '0.5' in all SNPs listed in the GDS file
-#' importLRR_BAF(all.paths, data.dir, list.of.files)
+#' importLrrBaf(all.paths, data.dir, list.of.files)
 #' 
 #' # Read the GDS to check if the LRR/BAF nodes were added
 #' cnv.gds <- file.path(all.paths[1], 'CNV.gds')    
@@ -563,7 +567,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
 #' 
 #' @export
 
-importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
+importLrrBaf <- function(all.paths, path.files, list.of.files, verbose=TRUE)
 {
     cnv.gds <- file.path(all.paths[1], "CNV.gds")
     genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork=TRUE, readonly=FALSE)
@@ -600,7 +604,9 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
     nBAF <- gdsfmt::add.gdsn(genofile, "BAF", BAF.matrix, replace = TRUE)
     gdsfmt::read.gdsn(nBAF)
     
-    if (rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac") {
+    system.det <- rappdirs:::get_os()
+    
+    if (system.det == "unix" | system.det == "mac") {
         param <- BiocParallel::SnowParam(workers = 1, type = "SOCK")
         if (verbose)
             message("Start parallel import of LRR/BAF values")
@@ -611,7 +617,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
         
     }
     
-    if (rappdirs:::get_os() == "win") {
+    if (system.det == "win") {
         if (verbose) 
             message("Start parallel import of LRR/BAF values")
        
@@ -930,12 +936,14 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
             return(c(num.snps, start.probe, end.probe))
         }
         
-        if (rappdirs:::get_os() == "win") {
+        system.det <- rappdirs:::get_os()
+        
+        if (system.det == "win") {
             param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
             cnvs.probes <- suppressMessages(BiocParallel::bplapply(seq_along(cnv.seq.gr), 
                 .probeToCNVs, BPPARAM = param, cnv.seq.gr = cnv.seq.gr, probe.like.map.gr = probe.like.map.gr))
         }
-        if (rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac") {
+        if (system.det == "unix" | rappdirs:::get_os() == "mac") {
             multicoreParam <- BiocParallel::MulticoreParam(workers = n.cor)
             cnvs.probes <- suppressMessages(BiocParallel::bplapply(seq_along(cnv.seq.gr), 
                 .probeToCNVs, BPPARAM = multicoreParam, cnv.seq.gr = cnv.seq.gr, 
@@ -1316,14 +1324,17 @@ testit <- function(x) {
     
     ## Produce gvar file in parallel processing Identify the SO
     if (run.lrr) {
-        if (rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac") {
+      
+      system.det <- rappdirs:::get_os()
+      
+        if (system.det == "unix" | system.det == "mac") {
             multicoreParam <- BiocParallel::MulticoreParam(workers = n.cor)
             Gens <- suppressMessages(BiocParallel::bplapply(1:length(sam.gen), .prodGvarLRR, 
                 BPPARAM = multicoreParam, genofile = genofile, sam.gen = sam.gen, 
                 snps = snps, fam.id = fam.id, snp.matrix = snp.matrix))
         }
         
-        if (rappdirs:::get_os() == "win") {
+        if (system.det == "win") {
             param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
             Gens <- suppressMessages(BiocParallel::bplapply(1:length(sam.gen), .prodGvarLRR, 
                 BPPARAM = param, genofile = genofile, sam.gen = sam.gen, snps = snps, 
@@ -1331,14 +1342,17 @@ testit <- function(x) {
         }
         
     } else {
-        if (rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac") {
+      
+      system.det <- rappdirs:::get_os()
+      
+        if (system.det == "unix" | system.det == "mac") {
             multicoreParam <- BiocParallel::MulticoreParam(workers = n.cor)
             Gens <- suppressMessages(BiocParallel::bplapply(1:length(sam.gen), .prodGvar, 
                 BPPARAM = multicoreParam, genofile = genofile, sam.gen = sam.gen, 
                 snps = snps, fam.id = fam.id, snp.matrix = snp.matrix))
         }
         
-        if (rappdirs:::get_os() == "win") {
+        if (system.det == "win") {
             param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
             Gens <- suppressMessages(BiocParallel::bplapply(1:length(sam.gen), .prodGvar, 
                 BPPARAM = param, genofile = genofile, sam.gen = sam.gen, snps = snps, 
@@ -1379,8 +1393,10 @@ testit <- function(x) {
 # HELPER - Run PLINK
 
 .runPLINK <- function(all.paths) {
-    
-    if (rappdirs:::get_os() == "win" | rappdirs:::get_os() == "unix") {
+  
+  system.det <- rappdirs:::get_os()
+  
+    if (system.det == "win" | rappdirs:::get_os() == "unix") {
         plinkPath <- file.path(all.paths[2], "plink")
         #plinkPath <- all.paths[2]
         plinkPath <- gsub("\\\\", "/", plinkPath)
@@ -1388,7 +1404,7 @@ testit <- function(x) {
             file.path(all.paths[2], "plink")), "--noweb"), wait = TRUE, intern = TRUE)
     }
     
-    if (rappdirs:::get_os() == "mac") {
+    if (system.det == "mac") {
         plink.path <- file.path(all.paths[2], "plink")
         mydata <- file.path(all.paths[2], "mydata")
         mydata <- paste0("'", mydata, "'")
@@ -1461,7 +1477,7 @@ testit <- function(x) {
         g1x <- g1x[-(nrow(g1x)), ]
         g2x <- g2x[-1, ]
         ftma <- g1x == g2x
-        SimiLar <- apply(ftma, 1, function(x) as.numeric(table(x)["TRUE"]))
+        SimiLar <- apply(ftma, 1, function(x) as.numeric(table(x)[TRUE]))
         SimiLar[is.na(SimiLar)] <- 0
         
         simX <- as.numeric(SimiLar)/g1CN
@@ -1507,7 +1523,7 @@ testit <- function(x) {
         g1x <- g1x[-(nrow(g1x)), ]
         g2x <- g2x[-1, ]
         ftma <- g1x == g2x
-        SimiLar <- apply(ftma, 1, function(x) as.numeric(table(x)["TRUE"]))
+        SimiLar <- apply(ftma, 1, function(x) as.numeric(table(x)[TRUE]))
         SimiLar[is.na(SimiLar)] <- 0
         
         simX <- as.numeric(SimiLar)/g1CN
@@ -1537,10 +1553,10 @@ testit <- function(x) {
         all.segsch <- NULL
         for (se in seq_along(SimiLarX)) {
             if (SimiLarX[[se]] >= min.sim) {
-                nextP[[se]] <- "TRUE"
+                nextP[[se]] <- TRUE
             }
             if (SimiLarX[[se]] < min.sim) {
-                nextP[[se]] <- "FALSE"
+                nextP[[se]] <- FALSE
             }
             
             if (se == 1) {
@@ -1548,10 +1564,10 @@ testit <- function(x) {
             }
             
             if (se > 1) {
-                if (nextP[[se - 1]] == "TRUE") {
+                if (nextP[[se - 1]] == TRUE) {
                   all.segsch[[se]] <- "cont"
                 }
-                if (nextP[[se - 1]] == "FALSE") {
+                if (nextP[[se - 1]] == FALSE) {
                   all.segsch[[se]] <- "start"
                 }
             }

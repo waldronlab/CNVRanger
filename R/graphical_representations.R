@@ -9,10 +9,12 @@
 #' 
 #' Manhattan plot for p-values of a CNV-GWAS
 #'
-#' @param all.paths TODO. 
+#' @param all.paths Object returned from \code{CreateFolderTree} function with 
+#' the working folder tree
 #' @param regions \code{\linkS4class{GRanges}} as returned by \code{\link{cnvGWAS}}  
 #' @param chr.size.order \code{\link{data.frame}} with two columns: (i) 'chr': chromosome names (character),
-#' and (ii) 'size': length of the chromosomes in bp (integer)
+#' and (ii) 'size': length of the chromosomes in bp (integer). A \code{\linkS4class{GRanges}} containing one
+#' chromosome per range can be used instead (the chromosomes should be in the expected order).
 #' @param plot.pdf Logical plot a to pdf file
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
 #' @examples 
@@ -41,7 +43,21 @@
 #'
 #' @export
 #'  
-plotManhattan <- function(all.paths, regions, chr.size.order = NULL, plot.pdf = TRUE) {
+
+plotManhattan <- function(all.paths, regions, chr.size.order, plot.pdf = FALSE) {
+    
+    ## Check inputs to avoid errors
+    stopifnot(length(all.paths)==3)
+    stopifnot(class(regions)[[1]]=="GRanges")
+    
+    if(class(chr.size.order)[[1]]=="GRanges"){
+      chr.size.order.int <- NULL
+      chr.size.order <- data.frame(chr=as.character(seqnames(probes.cnv.gr)), 
+                                   sizes=as.integer(end(chr.size.order)),
+                                   stringsAsFactors=FALSE)
+    }
+    
+    stopifnot(length(unique(chr.size.order$chr))==length(chr.size.order$chr))
     
     ## Produce chromosome limits
     chr.size.order.start <- chr.size.order
@@ -185,7 +201,6 @@ plotManhattan <- function(all.paths, regions, chr.size.order = NULL, plot.pdf = 
         pvalues <- thin$pvalues
         exp.x <- thin$exp.x
     }
-    gc()
     
     prepanel.qqunif = function(x, y, ...) {
         A = list()

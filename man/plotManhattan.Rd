@@ -5,10 +5,11 @@
 \title{Manhattan Plot}
 \usage{
 plotManhattan(all.paths, regions, chr.size.order = NULL,
-  plot.pdf = TRUE)
+  plot.pdf = FALSE)
 }
 \arguments{
-\item{all.paths}{TODO.}
+\item{all.paths}{Object returned from \code{CreateFolderTree} function with 
+the working folder tree}
 
 \item{regions}{\code{\linkS4class{GRanges}} as returned by \code{\link{cnvGWAS}}}
 

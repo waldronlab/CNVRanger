@@ -2,7 +2,7 @@
 
 export(cnvExprAssoc)
 export(cnvGWAS)
-export(importLRR_BAF)
+export(importLrrBaf)
 export(plotManhattan)
 export(populationRanges)
 export(prodGdsCnv)
