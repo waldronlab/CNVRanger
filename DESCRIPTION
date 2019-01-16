@@ -1,5 +1,5 @@
 Package: CNVRanger
-Version: 0.99.2
+Version: 0.99.3
 Title: Summarization and expression/phenotype association of CNV ranges
 Author: Ludwig Geistlinger [aut,cre], Vinicius Henrique da Silva [aut], 
     Marcel Ramos [ctb], Levi Waldron [ctb]  
@@ -18,13 +18,16 @@ Imports:
     data.table, 
     edgeR,
     gdsfmt,
+    grDevices,
     lattice,
     limma,
     methods,
     plyr,
     qqman, 
     rappdirs,
-    reshape2
+    reshape2,
+    stats,
+    utils
 Suggests:
     AnnotationHub,
     BSgenome.Btaurus.UCSC.bosTau6.masked, 

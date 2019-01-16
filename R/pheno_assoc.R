@@ -220,7 +220,6 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 #' 
 #' 
 #' @export
-
 setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = NULL, 
     pops.names = NULL, ragged.object=NULL, n.cor = 1) {
   
@@ -307,7 +306,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
     
     if (is.null(map.loc)) {
         ## Import the probe map from external folder
-        cnvs <- read.table(file.path(all.paths["Inputs"], "CNVOut.txt"), sep = "", header = F)  ### CNV table 
+        cnvs <- read.table(file.path(all.paths["Inputs"], "CNVOut.txt"), sep = "", header = FALSE)  ### CNV table 
         CNVs <- .checkConvertCNVs(cnvs, all.paths, n.cor)
         
         CGr <- GenomicRanges::makeGRangesFromDataFrame(CNVs)
@@ -551,6 +550,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
 #' (located at all.paths["Inputs"] folder). \sQuote{path.files} and \sQuote{list.of.files}
 #' will be ignored if \sQuote{gds.file} is not NULL
 #' @param verbose Print the samples while importing
+#' @return Writes to the specified GDS file by side effect.
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @examples
 #' 
@@ -807,7 +807,7 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
             ### Include samples with CNV but without phenotypes
             cnv.file <- paste0("CNVOutPop", npop, ".txt")
             
-            cnvs <- read.table(file.path(pheno.path, cnv.file), sep = "", header = F)
+            cnvs <- read.table(file.path(pheno.path, cnv.file), sep = "", header = FALSE)
             CNVs <- .checkConvertCNVs(cnvs, all.paths, n.cor)
             all.samples <- as.character(CNVs$V5)
             all.samples <- unique(all.samples)

@@ -18,6 +18,9 @@ chromosome per range can be used instead (the chromosomes should be in the expec
 
 \item{plot.pdf}{Logical plot a to pdf file}
 }
+\value{
+Plots to graphics device.
+}
 \description{
 Manhattan plot for p-values of a CNV-GWAS
 }

@@ -26,6 +26,9 @@ will be ignored if \sQuote{gds.file} is not NULL}
 
 \item{verbose}{Print the samples while importing}
 }
+\value{
+Writes to the specified GDS file by side effect.
+}
 \description{
 This function imports the LRR/BAF values and create a node for each one in 
 the GDS file at the working folder 'Inputs' created by the 
