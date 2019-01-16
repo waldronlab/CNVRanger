@@ -5,7 +5,8 @@
 \title{Setup the folders and files to run CNV-GWAS analysis}
 \usage{
 setupCnvGWAS(name, phen.loc, cnv.out.loc, map.loc = NULL,
-  folder = NULL, pops.names = NULL, n.cor = 1)
+  folder = NULL, pops.names = NULL, ragged.object = NULL,
+  n.cor = 1)
 }
 \arguments{
 \item{name}{String with a project code or name (e.g. 'Project1')}

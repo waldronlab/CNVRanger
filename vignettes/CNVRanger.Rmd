@@ -456,8 +456,17 @@ phen.loc <- file.path(data.dir, "Pheno.txt")
 
 ## Genomic positions of the probes used in the CNV call
 map.loc <- file.path(data.dir, "MapPenn.txt")
+
 phen.info <- setupCnvGWAS("example", phen.loc, cnv.calls, map.loc)
-phen.info 
+```
+
+```{r importPhenRagged}
+## Phenotypes and CNVs can be also be imported as a RaggedExperiment object
+phen.df <- read.table(phen.loc, header=TRUE, sep="\t")
+colDat <- DataFrame(phen.df)
+ragged.object <- RaggedExperiment(cnv.calls, colData=colDat)
+phen.info <- setupCnvGWAS("example", ragged.object=ragged.object, map.loc=map.loc)
+phen.info
 ```
 
 The last item of the list displays the working directory:

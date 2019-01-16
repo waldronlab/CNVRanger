@@ -4,8 +4,7 @@
 \alias{plotManhattan}
 \title{Manhattan Plot}
 \usage{
-plotManhattan(all.paths, regions, chr.size.order = NULL,
-  plot.pdf = FALSE)
+plotManhattan(all.paths, regions, chr.size.order, plot.pdf = FALSE)
 }
 \arguments{
 \item{all.paths}{Object returned from \code{CreateFolderTree} function with 
@@ -14,7 +13,8 @@ the working folder tree}
 \item{regions}{\code{\linkS4class{GRanges}} as returned by \code{\link{cnvGWAS}}}
 
 \item{chr.size.order}{\code{\link{data.frame}} with two columns: (i) 'chr': chromosome names (character),
-and (ii) 'size': length of the chromosomes in bp (integer)}
+and (ii) 'size': length of the chromosomes in bp (integer). A \code{\linkS4class{GRanges}} containing one
+chromosome per range can be used instead (the chromosomes should be in the expected order).}
 
 \item{plot.pdf}{Logical plot a to pdf file}
 }

@@ -4,7 +4,8 @@
 \alias{importLrrBaf}
 \title{Import LRR and BAF from text files used in the CNV analysis}
 \usage{
-importLrrBaf(all.paths, path.files, list.of.files, verbose = TRUE)
+importLrrBaf(all.paths, path.files, list.of.files, gds.file = NULL,
+  verbose = TRUE)
 }
 \arguments{
 \item{all.paths}{Object returned from \code{CreateFolderTree} function with 
@@ -16,6 +17,12 @@ contain (i) probe name, (ii) Chromosome, (iii) Position, (iv) LRR, and (v) BAF.}
 
 \item{list.of.files}{Data-frame with two columns where the (i) is the file 
 name with signals and (ii) is the correspondent name of the sample in the gds file}
+
+\item{gds.file}{Path to the GDS file which contains nodes harboring respective LRR and 
+BAF values. The \sQuote{snp.rs.id}, \sQuote{sample.id}, \sQuote{LRR} and \sQuote{BAF}
+nodes are mandatory. Both the SNPs and samples should follow the order and length in the CNV.gds
+(located at all.paths["Inputs"] folder). \sQuote{path.files} and \sQuote{list.of.files}
+will be ignored if \sQuote{gds.file} is not NULL}
 
 \item{verbose}{Print the samples while importing}
 }
@@ -49,7 +56,7 @@ list.of.files$sample.names <- sub(".cnv.txt.adjusted$", "", list.of.files$file.n
 importLrrBaf(all.paths, data.dir, list.of.files)
 
 # Read the GDS to check if the LRR/BAF nodes were added
-cnv.gds <- file.path(all.paths[1], 'CNV.gds')    
+cnv.gds <- file.path(all.paths["Inputs"], 'CNV.gds')    
 genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork=TRUE, readonly=FALSE)
 SNPRelate::snpgdsClose(genofile)
 

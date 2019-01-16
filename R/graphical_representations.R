@@ -16,7 +16,7 @@
 #' and (ii) 'size': length of the chromosomes in bp (integer). A \code{\linkS4class{GRanges}} containing one
 #' chromosome per range can be used instead (the chromosomes should be in the expected order).
 #' @param plot.pdf Logical plot a to pdf file
-#' @author Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
+#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @examples 
 #' 
 #' # Load phenotype-CNV information
