@@ -29,6 +29,9 @@ Otherwise, user-specific data dir will be used automatically.}
 
 \item{pops.names}{Indicate the name of the populations, if using more than one.}
 
+\item{ragged.object}{A \code{\linkS4class{RaggedExperiment}}. Both \sQuote{phen.loc}
+and \sQuote{cnv.out.loc} parameters will be ignored}
+
 \item{n.cor}{Number of cores}
 }
 \value{

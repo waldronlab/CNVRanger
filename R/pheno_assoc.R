@@ -201,7 +201,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 #' @param folder Choose manually the project folder (i.e. path as the root folder). 
 #' Otherwise, user-specific data dir will be used automatically.  
 #' @param pops.names Indicate the name of the populations, if using more than one.
-#' @param ragged.object Use a \code{\linkS4class{RaggedExperiment} object. Both \sQuote{phen.loc}
+#' @param ragged.object A \code{\linkS4class{RaggedExperiment}}. Both \sQuote{phen.loc}
 #' and \sQuote{cnv.out.loc} parameters will be ignored
 #' @param n.cor Number of cores
 #' @return List \sQuote{phen.info} with \sQuote{samplesPhen}, \sQuote{phenotypes}, 
@@ -471,21 +471,10 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
         genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
         n <- gdsfmt::add.gdsn(genofile, "CNVgenotype", CNVBiMa, replace = TRUE)
         
-        system.det <- rappdirs:::get_os()
-        
-        if (system.det == "unix" | system.det == "mac") {
-            multicoreParam <- BiocParallel::SnowParam(workers = 1, type = "SOCK")
-            BiocParallel::bplapply(seq_along(all.samples), .writeProbesCNV, BPPARAM = multicoreParam, 
+        param <- BiocParallel::SnowParam(workers = 1, type = "SOCK")
+        BiocParallel::bplapply(seq_along(all.samples), .writeProbesCNV, BPPARAM = param, 
                 all.samples = all.samples, genofile = genofile, CNVsGr = CNVsGr, 
                 probes.cnv.gr = probes.cnv.gr, n = n)
-        }
-        
-        if (system.det == "win") {
-            param <- BiocParallel::SnowParam(workers = 1, type = "SOCK")
-            BiocParallel::bplapply(seq_along(all.samples), .writeProbesCNV, BPPARAM = param, 
-                all.samples = all.samples, genofile = genofile, CNVsGr = CNVsGr, 
-                probes.cnv.gr = probes.cnv.gr, n = n)
-        }
         
         testit(7)  ## Wait to make sure that gds is writen in parallel
         SNPRelate::snpgdsClose(genofile)
@@ -506,25 +495,14 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
             chunk[length(chunk) + 1] <- length(probes.cnv.gr)
         }
         
-        system.det <- rappdirs:::get_os()
-        
-        if (system.det == "unix" | system.det == "mac") {
-            multicoreParam <- BiocParallel::MulticoreParam(workers = 1)
-            BiocParallel::bplapply(1:(length(chunk) - 1), .recodeCNVgenotype, BPPARAM = multicoreParam, 
+        os <- rappdirs:::get_os()
+        if (os %in% c("unix", "mac")) param <- BiocParallel::MulticoreParam(workers = 1)
+        else param <- BiocParallel::SnowParam(workers = 1, type = "SOCK")
+        BiocParallel::bplapply(seq_len(length(chunk) - 1), .recodeCNVgenotype, BPPARAM = param, 
                 genofile = genofile, all.samples = all.samples, n = n, chunk = chunk, 
                 coding.translate = coding.translate)
-        }
-        
-        if (system.det == "win") {
-            param <- BiocParallel::SnowParam(workers = 1, type = "SOCK")
-            BiocParallel::bplapply(1:(length(chunk) - 1), .recodeCNVgenotype, BPPARAM = param, 
-                genofile = genofile, all.samples = all.samples, n = n, chunk = chunk, 
-                coding.translate = coding.translate)
-        }
         testit(15)  ## Wait to make sure that gds is writen in parallel
         gdsfmt::closefn.gds(genofile)
-        
-        
     }
     
     # Include the phenotype 'lo' in the GDS
@@ -603,7 +581,6 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
 #' SNPRelate::snpgdsClose(genofile)
 #' 
 #' @export
-
 importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, verbose=TRUE){
     
     cnv.gds <- file.path(all.paths["Inputs"], "CNV.gds")
@@ -623,80 +600,63 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
     all.samples <- as.character(all.samples)
     
     if(!is.null(gds.file)){
-    lrr.baf.gds <- SNPRelate::snpgdsOpen(gds.file, allow.fork=TRUE, readonly=FALSE)
-    nodes.ava <- GDSArray::gdsnodes(lrr.baf.gds)
-    
-    stopifnot(all(c("snp.rs.id", "sample.id", "LRR", "BAF") %in% nodes.ava))
-    
-    snps.included.signals <- gdsfmt::index.gdsn(lrr.baf.gds, "snp.rs.id")
-    snps.included.signals <- gdsfmt::read.gdsn(snps.included.signals)
-    snps.included.signals <- as.character(snps.included.signals)
-    
-    stopifnot(length(snps.included.signals)==length(snps.included))
-    stopifnot(all(snps.included.signals==snps.included))
-    
-    all.samples.signals <- gdsfmt::index.gdsn(lrr.baf.gds, "sample.id")
-    all.samples.signals <- gdsfmt::read.gdsn(all.samples.signals)
-    all.samples.signals <- as.character(all.samples.signals)
-    
-    stopifnot(length(all.samples.signals)==length(all.samples))
-    stopifnot(all(all.samples.signals==all.samples))
-    
-    LRR.matrix <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(lrr.baf.gds, "LRR"))
-    BAF.matrix <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(lrr.baf.gds, "BAF"))
-    
-    gdsfmt::add.gdsn(lrr.baf.gds, "LRR", LRR.matrix, replace = TRUE)
-    gdsfmt::add.gdsn(lrr.baf.gds, "BAF", BAF.matrix, replace = TRUE)
-    
-    SNPRelate::snpgdsClose(lrr.baf.gds)
-    
-    }else{
-    
-    # Check if all files
-    list.filesLo.back <- list.filesLo
-    list.filesLo <- list.filesLo[list.filesLo$gds %in% all.samples, ]
-    if(verbose){
-    if (nrow(list.filesLo) != nrow(list.filesLo.back))
-        warning("list.of.files has different length of the list of samples from gds")
-    }
-    
-    LRR.matrix <- matrix(0, nrow = length(snps.included), ncol = length(all.samples))
-    
-    nLRR <- gdsfmt::add.gdsn(genofile, "LRR", LRR.matrix, replace = TRUE)
-    gdsfmt::read.gdsn(nLRR)
-    
-    
-    BAF.matrix <- matrix(0.5, nrow = length(snps.included), ncol = length(all.samples))
-    
-    nBAF <- gdsfmt::add.gdsn(genofile, "BAF", BAF.matrix, replace = TRUE)
-    gdsfmt::read.gdsn(nBAF)
-    
-    system.det <- rappdirs:::get_os()
-    
-    if (system.det == "unix" | system.det == "mac") {
-        param <- BiocParallel::SnowParam(workers = 1, type = "SOCK")
-        if (verbose)
-            message("Start parallel import of LRR/BAF values")
+        lrr.baf.gds <- SNPRelate::snpgdsOpen(gds.file, allow.fork=TRUE, readonly=FALSE)
+        nodes.ava <- GDSArray::gdsnodes(lrr.baf.gds)
         
-        BiocParallel::bplapply(seq_len(nrow(list.filesLo)), .freadImport, BPPARAM = param, 
-            list.filesLo = list.filesLo, genofile = genofile, all.samples = all.samples, 
-            nLRR = nLRR, nBAF = nBAF, snps.included = snps.included, verbose = verbose)
+        stopifnot(all(c("snp.rs.id", "sample.id", "LRR", "BAF") %in% nodes.ava))
         
+        snps.included.signals <- gdsfmt::index.gdsn(lrr.baf.gds, "snp.rs.id")
+        snps.included.signals <- gdsfmt::read.gdsn(snps.included.signals)
+        snps.included.signals <- as.character(snps.included.signals)
+        
+        stopifnot(length(snps.included.signals)==length(snps.included))
+        stopifnot(all(snps.included.signals==snps.included))
+        
+        all.samples.signals <- gdsfmt::index.gdsn(lrr.baf.gds, "sample.id")
+        all.samples.signals <- gdsfmt::read.gdsn(all.samples.signals)
+        all.samples.signals <- as.character(all.samples.signals)
+        
+        stopifnot(length(all.samples.signals)==length(all.samples))
+        stopifnot(all(all.samples.signals==all.samples))
+        
+        LRR.matrix <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(lrr.baf.gds, "LRR"))
+        BAF.matrix <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(lrr.baf.gds, "BAF"))
+        
+        gdsfmt::add.gdsn(lrr.baf.gds, "LRR", LRR.matrix, replace = TRUE)
+        gdsfmt::add.gdsn(lrr.baf.gds, "BAF", BAF.matrix, replace = TRUE)
+        
+        SNPRelate::snpgdsClose(lrr.baf.gds)
     }
-    
-    if (system.det == "win") {
-        if (verbose) 
-            message("Start parallel import of LRR/BAF values")
-       
+    else
+    {
+        # Check if all files
+        list.filesLo.back <- list.filesLo
+        list.filesLo <- list.filesLo[list.filesLo$gds %in% all.samples, ]
+        if(verbose)
+        {
+            if (nrow(list.filesLo) != nrow(list.filesLo.back))
+            warning("list.of.files has different length of the list of samples from gds")
+        }
+        
+        LRR.matrix <- matrix(0, nrow = length(snps.included), ncol = length(all.samples))
+        
+        nLRR <- gdsfmt::add.gdsn(genofile, "LRR", LRR.matrix, replace = TRUE)
+        gdsfmt::read.gdsn(nLRR)
+        
+        
+        BAF.matrix <- matrix(0.5, nrow = length(snps.included), ncol = length(all.samples))
+        
+        nBAF <- gdsfmt::add.gdsn(genofile, "BAF", BAF.matrix, replace = TRUE)
+        gdsfmt::read.gdsn(nBAF)
+        
+        if (verbose) message("Start parallel import of LRR/BAF values")
         param <- BiocParallel::SnowParam(workers = 1, type = "SOCK")
         BiocParallel::bplapply(seq_len(nrow(list.filesLo)), .freadImport, BPPARAM = param, 
             list.filesLo = list.filesLo, genofile = genofile, all.samples = all.samples, 
             nLRR = nLRR, nBAF = nBAF, snps.included = snps.included, verbose = verbose)
-    }
     }
     
     SNPRelate::snpgdsClose(genofile)
-    
 }
 
 # Extract the CNV genotypes from the GDS file @param genofile is the loaded gds
@@ -999,26 +959,18 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
         ### HELPER - associate probes-like regions with CNVs
         .probeToCNVs <- function(lo, cnv.seq.gr, probe.like.map.gr) {
             cnvx <- cnv.seq.gr[lo]
-            ov.pr <- IRanges::Overlaps(probe.like.map.gr, cnvx)
+            ov.pr <- IRanges::subsetByOverlaps(probe.like.map.gr, cnvx)
             num.snps <- length(ov.pr)
             start.probe <- ov.pr$Name[1]
             end.probe <- ov.pr$Name[length(ov.pr)]
             return(c(num.snps, start.probe, end.probe))
         }
         
-        system.det <- rappdirs:::get_os()
-        
-        if (system.det == "win") {
-            param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
-            cnvs.probes <- suppressMessages(BiocParallel::bplapply(seq_along(cnv.seq.gr), 
-                .probeToCNVs, BPPARAM = param, cnv.seq.gr = cnv.seq.gr, probe.like.map.gr = probe.like.map.gr))
-        }
-        if (system.det == "unix" | rappdirs:::get_os() == "mac") {
-            multicoreParam <- BiocParallel::MulticoreParam(workers = n.cor)
-            cnvs.probes <- suppressMessages(BiocParallel::bplapply(seq_along(cnv.seq.gr), 
-                .probeToCNVs, BPPARAM = multicoreParam, cnv.seq.gr = cnv.seq.gr, 
-                probe.like.map.gr = probe.like.map.gr))
-        }
+        os <- rappdirs:::get_os()
+        if (os == "win") param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
+        else param <- BiocParallel::MulticoreParam(workers = n.cor)
+        cnvs.probes <- suppressMessages(BiocParallel::bplapply(seq_along(cnv.seq.gr), 
+            .probeToCNVs, BPPARAM = param, cnv.seq.gr = cnv.seq.gr, probe.like.map.gr = probe.like.map.gr))
       
         cnv.p.df <- t(as.data.frame(cnvs.probes))
         cnv.seq.gr$num.snps <- as.integer(as.character(cnv.p.df[, 1]))
@@ -1395,44 +1347,16 @@ testit <- function(x) {
     fam.id <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "FamID"))
     
     ## Produce gvar file in parallel processing Identify the SO
-    if (run.lrr) {
-      
-      system.det <- rappdirs:::get_os()
-      
-        if (system.det == "unix" | system.det == "mac") {
-            multicoreParam <- BiocParallel::MulticoreParam(workers = n.cor)
-            Gens <- suppressMessages(BiocParallel::bplapply(1:length(sam.gen), .prodGvarLRR, 
-                BPPARAM = multicoreParam, genofile = genofile, sam.gen = sam.gen, 
+    os <- rappdirs:::get_os()
+    if(os %in% c("unix", "mac")) param <- BiocParallel::MulticoreParam(workers = n.cor)
+    else param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")    
+        
+    if(run.lrr) .fun <- .prodGvarLRR
+    else .fun <- .prodGvar
+
+    Gens <- suppressMessages(BiocParallel::bplapply(1:length(sam.gen), .fun, 
+                BPPARAM = param, genofile = genofile, sam.gen = sam.gen, 
                 snps = snps, fam.id = fam.id, snp.matrix = snp.matrix))
-        }
-        
-        if (system.det == "win") {
-            param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
-            Gens <- suppressMessages(BiocParallel::bplapply(1:length(sam.gen), .prodGvarLRR, 
-                BPPARAM = param, genofile = genofile, sam.gen = sam.gen, snps = snps, 
-                fam.id = fam.id, snp.matrix = snp.matrix))
-        }
-        
-    } else {
-      
-      system.det <- rappdirs:::get_os()
-      
-        if (system.det == "unix" | system.det == "mac") {
-            multicoreParam <- BiocParallel::MulticoreParam(workers = n.cor)
-            Gens <- suppressMessages(BiocParallel::bplapply(1:length(sam.gen), .prodGvar, 
-                BPPARAM = multicoreParam, genofile = genofile, sam.gen = sam.gen, 
-                snps = snps, fam.id = fam.id, snp.matrix = snp.matrix))
-        }
-        
-        if (system.det == "win") {
-            param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
-            Gens <- suppressMessages(BiocParallel::bplapply(1:length(sam.gen), .prodGvar, 
-                BPPARAM = param, genofile = genofile, sam.gen = sam.gen, snps = snps, 
-                fam.id = fam.id, snp.matrix = snp.matrix))
-        }
-        
-    }
-    
     gentype.all <- data.table::rbindlist(Gens)
     gentype.all1 <- as.data.frame(gentype.all)
     
@@ -1466,16 +1390,15 @@ testit <- function(x) {
 
 .runPLINK <- function(all.paths) {
   
-  system.det <- rappdirs:::get_os()
+  os <- rappdirs:::get_os()
   
-    if (system.det == "win" | rappdirs:::get_os() == "unix") {
+    if (os %in% c("win", "unix")) {
         plinkPath <- file.path(all.paths["PLINK"], "plink")
         plinkPath <- gsub("\\\\", "/", plinkPath)
         system(paste(plinkPath, "--gfile", file.path(all.paths["PLINK"], "mydata"), paste("--out", 
             file.path(all.paths["PLINK"], "plink")), "--noweb"), wait = TRUE, intern = TRUE)
     }
-    
-    if (system.det == "mac") {
+    else if (os == "mac") {
         plink.path <- file.path(all.paths["PLINK"], "plink")
         mydata <- file.path(all.paths["PLINK"], "mydata")
         mydata <- paste0("'", mydata, "'")

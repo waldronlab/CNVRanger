@@ -52,7 +52,7 @@ plotManhattan <- function(all.paths, regions, chr.size.order, plot.pdf = FALSE) 
     
     if(class(chr.size.order)[[1]]=="GRanges"){
       chr.size.order.int <- NULL
-      chr.size.order <- data.frame(chr=as.character(seqnames(probes.cnv.gr)), 
+      chr.size.order <- data.frame(chr=as.character(seqnames(regions)), 
                                    sizes=as.integer(end(chr.size.order)),
                                    stringsAsFactors=FALSE)
     }
