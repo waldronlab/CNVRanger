@@ -471,6 +471,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
         
         CNVBiMaCN <- matrix(2, nrow = length(probes.cnv.gr), ncol = length(all.samples))
         
+
         n <- gdsfmt::add.gdsn(genofile, "CNVgenotypeSNPlike", CNVBiMaCN, replace = TRUE)
         
         #Define the chunks of SNPs to import chunk
@@ -1026,53 +1027,26 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
 # genofile loaded gds file @param n is the object from \code{gdsfmt::add.gdsn}
 # @param ranges.gr is the CNVs of each sample
 
-.replaceSNPtoCNV <- function(lo, all.samples, genofile, CNVsGr, probes.cnv.gr, n) {
+.replaceSNPtoCNV <- function(lo, all.samples, genofile, CNVsGr, probes.cnv.gr, n) 
+{
     
     sampleX <- all.samples[[lo]]
     g <- as.numeric(SNPRelate::snpgdsGetGeno(genofile, sample.id = sampleX, verbose = FALSE))
+    g <- 1
     
-    # 2n
-    g[seq_along(g)] <- "1"
-    
-    # 0n
-    CNVsGr0n <- CNVsGr[CNVsGr$sample == sampleX]
-    CNVsGr0n <- CNVsGr0n[CNVsGr0n$type == "state1,cn=0"]
-    GenomeInfoDb::seqlevels(CNVsGr0n) <- GenomeInfoDb::seqlevels(probes.cnv.gr)
-    probes.cnv.gr.0n <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, 
-        CNVsGr0n))
-    
-    g[probes.cnv.gr.0n$tag.snp] <- "0"
-    
-    # 1n
-    CNVsGr1n <- CNVsGr[CNVsGr$sample == sampleX]
-    CNVsGr1n <- CNVsGr1n[CNVsGr1n$type == "state2,cn=1"]
-    GenomeInfoDb::seqlevels(CNVsGr1n) <- GenomeInfoDb::seqlevels(probes.cnv.gr)
-    probes.cnv.gr.1n <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, 
-        CNVsGr1n))
-    
-    g[probes.cnv.gr.1n$tag.snp] <- "0"
-    
-    # 3n
-    CNVsGr3n <- CNVsGr[CNVsGr$sample == sampleX]
-    CNVsGr3n <- CNVsGr3n[CNVsGr3n$type == "state5,cn=3"]
-    GenomeInfoDb::seqlevels(CNVsGr3n) <- GenomeInfoDb::seqlevels(probes.cnv.gr)
-    probes.cnv.gr.3n <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, 
-        CNVsGr3n))
-    
-    g[probes.cnv.gr.3n$tag.snp] <- "2"
-    
-    # 4n
-    CNVsGr4n <- CNVsGr[CNVsGr$sample == sampleX]
-    CNVsGr4n <- CNVsGr4n[CNVsGr4n$type == "state6,cn=4"]
-    GenomeInfoDb::seqlevels(CNVsGr4n) <- GenomeInfoDb::seqlevels(probes.cnv.gr)
-    probes.cnv.gr.4n <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, 
-        CNVsGr4n))
-    
-    g[probes.cnv.gr.4n$tag.snp] <- "2"
-    
-    # 2n
-    g <- as.integer(g)
-    
+    GenomeInfoDb::seqlevels(CNVsGr) <- GenomeInfoDb::seqlevels(probes.cnv.gr)
+    CNVsGr <- CNVsGr[CNVsGr$sample == sampleX]
+    states <- paste0("state", c(1,2,5,6), ",cn=", c(0,1,3,4))
+    code <- rep(c(0,2), each=2)
+    for(i in 1:4)
+    {
+        s <- states[i]
+        co <- code[i]        
+        cnvs <- CNVsGr[CNVsGr$type == s]
+        cnv.gr <- IRanges::subsetByOverlaps(probes.cnv.gr, cnvs)
+        g[cnv.gr$tag.snp] <- co
+    }    
+
     ### Replace the genotype in the gds file
     gdsfmt::write.gdsn(n, g, start = c(1, lo), count = c(length(g), 1))
     
@@ -1089,23 +1063,17 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
     
     count.end <- (chunk[lo + 1]) - chunk[lo]
     
-    if (length(chunk) - 1 != lo) {
-        CNVgenoX <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), 
-            start = c(chunk[lo], 1), count = c(count.end, length(all.samples))))
-    } else {
-        CNVgenoX <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), 
-            start = c(chunk[lo], 1), count = c(count.end + 1, length(all.samples))))
-    }
+    add <- ifelse(length(chunk) - 1 != lo, 0, 1)
+    CNVgenoX <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotypeSNPlike"), 
+            start = c(chunk[lo], 1), count = c(count.end + add, length(all.samples))))
     
     ### Put four copies as max
     CNVgenoX[CNVgenoX > 4] <- 4
     CNVgenoX <- as.data.frame(CNVgenoX)
     
-    CNVgenoX$zn <- 0
-    CNVgenoX$on <- 1
-    CNVgenoX$tn <- 2
-    CNVgenoX$thn <- 3
-    CNVgenoX$fn <- 4
+    states <- c("z", "o", "t", "th", "f")
+    states <- paste0(states, "n")
+    CNVgenoX[,states] <- rep(0:4, each=nrow(CNVgenoX))
     
     ### Count genotypes
     genos <- apply(CNVgenoX, 1, table)
@@ -1113,8 +1081,8 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
     genos <- t(genos)
     
     #### Recode genotypes
-    sum12 <- apply(genos[, 1:2], 1, sum)   
-    sum45 <- apply(genos[, 4:5], 1, sum)
+    sum12 <- rowSums(genos[, 1:2])   
+    sum45 <- rowSums(genos[, 4:5])
     indexLoss <- (sum12 > 0) & (sum45 == 0)
     indexGain <- (sum12 == 0) & (sum45 > 0)
     indexExclude <- (sum12 > 0) & (sum45 > 0)
@@ -1126,40 +1094,28 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
     CNVgenoX <- t(apply(CNVgenoX, 1, paste0, "n"))
     
     ### Replace Gain
-    CNVgenoX[indexGain, ] <- gsub("2n", "0", CNVgenoX[indexGain, ])
-    CNVgenoX[indexGain, ] <- gsub("3n", "1", CNVgenoX[indexGain, ])
-    CNVgenoX[indexGain, ] <- gsub("4n", "2", CNVgenoX[indexGain, ])
+    CNVgenoX[indexGain,] <- CNVgenoX[indexGain,] - 2
     
     ### Replace Loss
-    CNVgenoX[indexLoss, ] <- gsub("2n", "0", CNVgenoX[indexLoss, ])
-    CNVgenoX[indexLoss, ] <- gsub("1n", "1", CNVgenoX[indexLoss, ])
-    CNVgenoX[indexLoss, ] <- gsub("0n", "2", CNVgenoX[indexLoss, ])
-    
+    CNVgenoX[indexLoss, ] <- 2 - CNVgenoX[indexLoss, ]
     
     ## Non bi-allelic CNVs = no genotype
     if (is.null(coding.translate)) {
         coding.translate <- "biallelic"
     }
     if (coding.translate == "all") {
-        CNVgenoX[indexExclude, ] <- gsub("4n", "2", CNVgenoX[indexExclude, ])
-        CNVgenoX[indexExclude, ] <- gsub("3n", "2", CNVgenoX[indexExclude, ])
-        CNVgenoX[indexExclude, ] <- gsub("2n", "1", CNVgenoX[indexExclude, ])
-        CNVgenoX[indexExclude, ] <- gsub("1n", "0", CNVgenoX[indexExclude, ])
-        CNVgenoX[indexExclude, ] <- gsub("0n", "0", CNVgenoX[indexExclude, ])
+        gmap <- c(0, 0, 1, 2, 2)
+        # just for orientation: names(gmap) <- c("0n", "1n", "2n", "3n", "4n")
+        for(i in indexExclude) CNVgenoX[i,] <- gmap[CNVgenoX[i,] + 1] 
     } else {
         CNVgenoX[indexExclude, ] <- -1
     }
     
-    CNVgenoX <- apply(CNVgenoX, 2, as.integer)
-    
     ### Replace the genotype in the gds file
-    if (length(chunk) - 1 != lo) {
-        gdsfmt::write.gdsn(n, CNVgenoX, start = c(chunk[lo], 1), count = c(count.end, 
-            length(all.samples)))
-    } else {
-        gdsfmt::write.gdsn(n, CNVgenoX, start = c(chunk[lo], 1), count = c(count.end + 
-            1, length(all.samples)))
-    }
+    gdsfmt::write.gdsn(n, CNVgenoX, 
+                        start = c(chunk[lo], 1),
+                        count = c(count.end + add, 
+                        length(all.samples)))
 }
 
 # HELPER Wait x seconds # from

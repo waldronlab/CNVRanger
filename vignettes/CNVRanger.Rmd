@@ -465,6 +465,7 @@ phen.info <- setupCnvGWAS("example", phen.loc, cnv.calls, map.loc)
 phen.df <- read.delim(phen.loc)
 colDat <- DataFrame(phen.df)
 re <- RaggedExperiment(cnv.calls, colData=colDat)
+re
 phen.info <- setupCnvGWAS("example", cnv.out.loc=re, map.loc=map.loc)
 phen.info
 ```
