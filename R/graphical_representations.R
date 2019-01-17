@@ -49,16 +49,16 @@ plotManhattan <- function(all.paths, regions, chr.size.order, plot.pdf = FALSE) 
     
     ## Check inputs to avoid errors
     stopifnot(length(all.paths)==3)
-    stopifnot(class(regions)[[1]]=="GRanges")
+    stopifnot(file.exists(all.paths[3]))
+    stopifnot(is(regions, "GRanges"))
     
-    if(class(chr.size.order)[[1]]=="GRanges"){
-      chr.size.order.int <- NULL
-      chr.size.order <- data.frame(chr=as.character(seqnames(regions)), 
-                                   sizes=as.integer(end(chr.size.order)),
+    if(is(chr.size.order, "GRanges"))
+        chr.size.order <- data.frame(chr=as.character(seqnames(regions)), 
+                                   sizes=end(chr.size.order),
                                    stringsAsFactors=FALSE)
-    }
     
-    stopifnot(length(unique(chr.size.order$chr))==length(chr.size.order$chr))
+    
+    stopifnot(all(!duplicated(chr.size.order$chr)))
     
     ## Produce chromosome limits
     chr.size.order.start <- chr.size.order
@@ -76,16 +76,18 @@ plotManhattan <- function(all.paths, regions, chr.size.order, plot.pdf = FALSE) 
     phen.name <- unique(phen.name)
     
     
-    gwasResults <- data.frame(CHR = as.character(GenomicRanges::seqnames(regions)), 
-        BP = GenomicRanges::start(regions), SNP = regions$SegName, P = regions$MinPvalueAdjusted, 
+    gwasResults <- data.frame(
+        CHR = as.character(GenomicRanges::seqnames(regions)), 
+        BP = GenomicRanges::start(regions), 
+        SNP = regions$SegName, P = regions$MinPvalueAdjusted, 
         stringsAsFactors = FALSE)
     
     gwasResults <- rbind(gwasResults, chr.all)
     
     ### turn chr to numeric
-    for (cn in seq_len(nrow(chr.size.order))) {
-        gwasResults$CHR <- gsub(paste0("\\<", chr.size.order[cn, 1], "\\>"), chr.size.order[cn, 
-            3], gwasResults$CHR)
+    for (cn in chr.size.order$chr.numeric) {
+        chr.str <- paste0("\\<", chr.size.order[cn, 1], "\\>")
+        gwasResults$CHR <- gsub(chr.str, chr.size.order[cn,3], gwasResults$CHR)
     }
     
     gwasResults$CHR <- as.integer(gwasResults$CHR)
@@ -94,16 +96,11 @@ plotManhattan <- function(all.paths, regions, chr.size.order, plot.pdf = FALSE) 
     ind <- do.call(order, gwasResults[, c("CHR", "BP")])
     gwasResults <- gwasResults[ind, ]
     
-    if (plot.pdf) {
-        pdf(file.path(all.paths[3], paste0(phen.name, "-Manhattan.pdf")))
-        qqman::manhattan(gwasResults, chr = "CHR", bp = "BP", snp = "SNP", p = "P", 
-            chrlabs = chr.size.order$chr, suggestiveline = -log10(0.1), genomewideline = -log10(0.05))
-        dev.off()
-    } else {
-        qqman::manhattan(gwasResults, chr = "CHR", bp = "BP", snp = "SNP", p = "P", 
-            chrlabs = chr.size.order$chr, suggestiveline = -log10(0.1), genomewideline = -log10(0.05))
-        
-    }
+    if(plot.pdf) pdf(file.path(all.paths[3], paste0(phen.name, "-Manhattan.pdf")))
+    qqman::manhattan(gwasResults, chr = "CHR", bp = "BP", snp = "SNP", p = "P", 
+                        chrlabs = chr.size.order$chr, 
+                        suggestiveline = -log10(0.1), genomewideline = -log10(0.05))
+    if(plot.pdf) dev.off()
 }
 
 

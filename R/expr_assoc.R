@@ -302,12 +302,8 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts,
 
 .largest <- function(scores, ranges, qranges) 
 {
-    return.type <- class(scores[[1]])
-    default.value <- do.call(return.type, list(1))
     ind <- IRanges::which.max(GenomicRanges::width(ranges))
-    res <- vapply(seq_along(scores), 
-           function(i) scores[[i]][ind[i]], default.value)
-    return(res)
+    vapply(seq_along(scores), function(i) scores[[i]][ind[i]], scores[[1]])
 }
 
 

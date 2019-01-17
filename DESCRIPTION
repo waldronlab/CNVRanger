@@ -1,9 +1,12 @@
 Package: CNVRanger
-Version: 0.99.3
+Version: 0.99.4
 Title: Summarization and expression/phenotype association of CNV ranges
-Author: Ludwig Geistlinger [aut,cre], Vinicius Henrique da Silva [aut], 
-    Marcel Ramos [ctb], Levi Waldron [ctb]  
-Maintainer: Ludwig Geistlinger <Ludwig.Geistlinger@sph.cuny.edu>
+Authors@R: 
+    c(person("Ludwig", "Geistlinger", email = "ludwig.geistlinger@sph.cuny.edu",
+        role = c("aut", "cre")),
+    person("Vinicius Henrique", "da Silva", role = "aut"),
+    person("Marcel", "Ramos", role = "ctb"),
+    person("Levi", "Waldron", role = "ctb"))
 Depends: 
     GenomicRanges,
     RaggedExperiment
@@ -40,6 +43,7 @@ Description: The CNVRanger package implements a comprehensive tool suite for CNV
     assessing overlap with functional genomic regions, and association analysis 
     with gene expression and quantitative phenotypes.
 License: Artistic-2.0
+BugReports: https://github.com/waldronlab/CNVRanger/issues
 Encoding: UTF-8
 VignetteBuilder: knitr
 biocViews: 

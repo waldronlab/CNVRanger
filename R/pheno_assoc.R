@@ -83,9 +83,6 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     run.lrr = FALSE, assign.probe = "min.pvalue", correct.inflation = FALSE, both.up.down = FALSE, 
     verbose = FALSE) {
     
-    oldw <- getOption("warn")
-    options(warn = -1)
-  
     phenotypesSam <- phen.info$phenotypesSam
     phenotypesSamX <- phenotypesSam[, c(1, (lo.phe + 1))]
     phenotypesSamX <- stats::na.omit(phenotypesSamX)
@@ -169,8 +166,6 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     }
     
     segs.pvalue.gr <- segs.pvalue.gr[order(segs.pvalue.gr$MinPvalue)]
-    options(warn = oldw)
-    
     return(segs.pvalue.gr)
 }
 
@@ -193,7 +188,8 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 #' phenotypes include the string 'INEXISTENT' instead the path for a file.
 #' @param cnv.out.loc Path(s) to the CNV analysis output (i.e. PennCNV output, 
 #' SNP-chip general format or sequencing general format). It is also possible to
-#' use a GRangesList object if the run includes only one population.
+#' use a \code{\linkS4class{RaggedExperiment}} or a \code{\linkS4class{GRangesList}} 
+#' object instead if the run includes only one population.
 #' @param map.loc Path to the probe map (e.g. used in PennCNV analysis). Column 
 #' names containing probe name, chromosome and coordinate must be named as: Name, 
 #' Chr and Position. Tab delimited. If NULL, artificial probes will be generated 
@@ -201,8 +197,6 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 #' @param folder Choose manually the project folder (i.e. path as the root folder). 
 #' Otherwise, user-specific data dir will be used automatically.  
 #' @param pops.names Indicate the name of the populations, if using more than one.
-#' @param ragged.object A \code{\linkS4class{RaggedExperiment}}. Both \sQuote{phen.loc}
-#' and \sQuote{cnv.out.loc} parameters will be ignored
 #' @param n.cor Number of cores
 #' @return List \sQuote{phen.info} with \sQuote{samplesPhen}, \sQuote{phenotypes}, 
 #' \sQuote{phenotypesdf}, \sQuote{phenotypesSam}, \sQuote{FamID}, \sQuote{SexIds}, 
@@ -221,22 +215,19 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 #' 
 #' @export
 setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = NULL, 
-    pops.names = NULL, ragged.object=NULL, n.cor = 1) {
+    pops.names = NULL, n.cor = 1) {
   
     ## Create the folder structure for all subsequent analysis
     all.paths <- .createFolderTree(name, folder)  
   
-    ## Check if ragged object is present
-    if(!is.null(ragged.object)){
-      stopifnot(class(ragged.object)[[1]]=="RaggedExperiment")
-    
-      cnv.out.loc <- as(ragged.object, "GRangesList")
-      ragged.object.phen <- colData(ragged.object)
+    if(is(cnv.out.loc, "RaggedExperiment"))
+    {
+        phen.info <- colData(cnv.out.loc)
+        stopifnot(all(names(phen.info)[1:3] == c("sample.id", "fam", "sex")))
+        cnv.out.loc <- as(cnv.out.loc, "GRangesList")
       
-      stopifnot(all(names(ragged.object.phen)[1:3] == c("sample.id", "fam", "sex")))
-      
-      phen.loc <- file.path(all.paths["Inputs"], "PhenN.txt")
-      write.table(as.data.frame(ragged.object.phen), 
+        phen.loc <- file.path(all.paths["Inputs"], "PhenN.txt")
+        write.table(as.data.frame(phen.info), 
             file=phen.loc, sep="\t", row.names=FALSE, quote=FALSE)
     }
     
@@ -333,12 +324,10 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
     
     ## Delete temporary files
     cnv.out.loc <- file.path(all.paths["Inputs"], "CNVOutN.txt")
-    if(file.exists(cnv.out.loc)){
-    suppressWarnings(file.remove(cnv.out.loc, showWarnings=FALSE, recursive=TRUE))}
+    if(file.exists(cnv.out.loc)) file.remove(cnv.out.loc)
     
     phen.loc <- file.path(all.paths["Inputs"], "PhenN.txt")
-    if(file.exists(phen.loc)){
-    suppressWarnings(file.remove(phen.loc, showWarnings=FALSE, recursive=TRUE))}
+    if(file.exists(phen.loc)) file.remove(phen.loc)
     
     return(phen.info)
 }
@@ -1456,8 +1445,8 @@ testit <- function(x) {
         
         
         g1CN <- apply(g1xM, 1, function(x) sum(table(x)[names(table(x)) != 2]))
-        g1x <- as.data.frame(t(sapply(1:nrow(g1x), function(i) replace(g1x[i, ], 
-            g1x[i, ] == 2, paste0(i, "R")))))
+        g1x <- as.data.frame(t(sapply(seq_len(nrow(g1x)), 
+            function(i) replace(g1x[i, ], g1x[i, ] == 2, paste0(i, "R")))))
         
         g2x <- g2[snpindex, ]
         g2x <- apply(g2x, 2, rev)
@@ -1466,15 +1455,14 @@ testit <- function(x) {
             g2x <- rbind(g2x, rep(2, ncol(g2x)))  # If only two SNPs input a 2n row
         }
         
-        g2x <- as.data.frame(t(sapply(1:nrow(g2x), function(i) replace(g2x[i, ], 
+        g2x <- as.data.frame(t(sapply(seq_len(nrow(g2x)), function(i) replace(g2x[i, ], 
             g2x[i, ] == 2, paste0(i, "R")))))
         g1x <- g1x[-(nrow(g1x)), ]
         g2x <- g2x[-1, ]
         ftma <- g1x == g2x
-        SimiLar <- apply(ftma, 1, function(x) as.numeric(table(x)["TRUE"]))
-        SimiLar[is.na(SimiLar)] <- 0
+        SimiLar <- rowSums(ftma, na.rm=TRUE)
         
-        simX <- as.numeric(SimiLar)/g1CN
+        simX <- SimiLar / g1CN
         if (length(snpindex) == 2) {
             simX <- simX[-2]
         }
@@ -1503,7 +1491,7 @@ testit <- function(x) {
         
         
         g1CN <- apply(g1xM, 1, function(x) sum(table(x)[names(table(x)) != 2]))
-        g1x <- as.data.frame(t(sapply(1:nrow(g1x), function(i) replace(g1x[i, ], 
+        g1x <- as.data.frame(t(sapply(seq_len(nrow(g1x)), function(i) replace(g1x[i, ], 
             g1x[i, ] == 2, paste0(i, "R")))))
         
         g2x <- g2[snpindex, ]
@@ -1512,15 +1500,14 @@ testit <- function(x) {
             g2x <- rbind(g2x, rep(2, ncol(g2x)))  # If only two SNPs input a 2n row
         }
         
-        g2x <- as.data.frame(t(sapply(1:nrow(g2x), function(i) replace(g2x[i, ], 
+        g2x <- as.data.frame(t(sapply(seq_len(nrow(g2x)), function(i) replace(g2x[i, ], 
             g2x[i, ] == 2, paste0(i, "R")))))
         g1x <- g1x[-(nrow(g1x)), ]
         g2x <- g2x[-1, ]
         ftma <- g1x == g2x
-        SimiLar <- apply(ftma, 1, function(x) as.numeric(table(x)["TRUE"]))
-        SimiLar[is.na(SimiLar)] <- 0
+        SimiLar <- rowSums(ftma, na.rm=TRUE)
         
-        simX <- as.numeric(SimiLar)/g1CN
+        simX <- SimiLar / g1CN
         if (length(snpindex) == 2) {
             simX <- simX[-2]
         }
@@ -1611,7 +1598,7 @@ testit <- function(x) {
                 IRanges::IRanges(GenomicRanges::start(prx), GenomicRanges::start(seqPrbs[length(seqPrbs)])))
             all.segs.grX[[st]] <- seqx
         }
-        all.segs.gr[[chx]] <- suppressWarnings(unlist(all.segs.grX))
+        suppressWarnings(all.segs.gr[[chx]] <- unlist(all.segs.grX))
     }
     
     SNPRelate::snpgdsClose(genofile)

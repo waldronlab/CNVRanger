@@ -462,10 +462,10 @@ phen.info <- setupCnvGWAS("example", phen.loc, cnv.calls, map.loc)
 
 ```{r importPhenRagged}
 ## Phenotypes and CNVs can be also be imported as a RaggedExperiment object
-phen.df <- read.table(phen.loc, header=TRUE, sep="\t")
+phen.df <- read.delim(phen.loc)
 colDat <- DataFrame(phen.df)
-ragged.object <- RaggedExperiment(cnv.calls, colData=colDat)
-phen.info <- setupCnvGWAS("example", ragged.object=ragged.object, map.loc=map.loc)
+re <- RaggedExperiment(cnv.calls, colData=colDat)
+phen.info <- setupCnvGWAS("example", cnv.out.loc=re, map.loc=map.loc)
 phen.info
 ```
 

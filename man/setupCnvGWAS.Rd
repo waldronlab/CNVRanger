@@ -5,8 +5,7 @@
 \title{Setup the folders and files to run CNV-GWAS analysis}
 \usage{
 setupCnvGWAS(name, phen.loc, cnv.out.loc, map.loc = NULL,
-  folder = NULL, pops.names = NULL, ragged.object = NULL,
-  n.cor = 1)
+  folder = NULL, pops.names = NULL, n.cor = 1)
 }
 \arguments{
 \item{name}{String with a project code or name (e.g. 'Project1')}
@@ -17,7 +16,8 @@ phenotypes include the string 'INEXISTENT' instead the path for a file.}
 
 \item{cnv.out.loc}{Path(s) to the CNV analysis output (i.e. PennCNV output, 
 SNP-chip general format or sequencing general format). It is also possible to
-use a GRangesList object if the run includes only one population.}
+use a \code{\linkS4class{RaggedExperiment}} or a \code{\linkS4class{GRangesList}} 
+object instead if the run includes only one population.}
 
 \item{map.loc}{Path to the probe map (e.g. used in PennCNV analysis). Column 
 names containing probe name, chromosome and coordinate must be named as: Name, 
@@ -28,9 +28,6 @@ based on the CNV breakpoints.}
 Otherwise, user-specific data dir will be used automatically.}
 
 \item{pops.names}{Indicate the name of the populations, if using more than one.}
-
-\item{ragged.object}{A \code{\linkS4class{RaggedExperiment}}. Both \sQuote{phen.loc}
-and \sQuote{cnv.out.loc} parameters will be ignored}
 
 \item{n.cor}{Number of cores}
 }
