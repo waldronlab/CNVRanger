@@ -261,10 +261,10 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
     }
     
     ## Multiple populations
-    if (length(phen.loc) != length(cnv.out.loc)) 
+    else if (length(phen.loc) != length(cnv.out.loc)) 
         stop("phen.loc and cnv.out.loc should have the same length. Use the string INEXISTENT if phenotypes are missing")
       
-    if (length(phen.loc) > 1 && length(cnv.out.loc) > 1) {
+    else if (length(phen.loc) > 1 && length(cnv.out.loc) > 1) {
         
         pheno.file.all <- NULL
         cnv.file.all <- NULL
@@ -283,10 +283,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
             }
             file.copy(cnv.out.loc[npop], file.path(all.paths["Inputs"], cnv.file), overwrite = TRUE)
         }
-    }
-    
-    ## Write phenotype names and merge CNV file for multiple populations
-    if (length(phen.loc) > 1 && length(cnv.out.loc) > 1) {
+        ## Write phenotype names and merge CNV file for multiple populations
         pheno.file <- unlist(pheno.file.all)
         all.cnvs <- lapply(cnv.file.all, .loadToMergeCNV, cnv.path = all.paths["Inputs"])
         all.cnvs <- data.table::rbindlist(all.cnvs)
@@ -404,7 +401,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
     chr.names <- CNVs$chr
     chr.names <- gsub("chr", "", chr.names)
     
-    if (any(is.na(chr.names))) stop("Chromosome names should be integers")
+    stopifnot(all(!is.na(chr.names)))
     
     CNVsGr <- GenomicRanges::makeGRangesFromDataFrame(CNVs, keep.extra.columns = TRUE)
     # Subset CNVs in phenotyped samples
@@ -1532,36 +1529,15 @@ testit <- function(x) {
         }
         nextP <- NULL
         all.segsch <- NULL
-        for (se in seq_along(SimiLarX)) {
-            if (SimiLarX[[se]] >= min.sim) {
-                nextP[[se]] <- "TRUE"
-            }
-            if (SimiLarX[[se]] < min.sim) {
-                nextP[[se]] <- "FALSE"
-            }
+        for (se in seq_along(SimiLarX)) 
+        {
+            nextP[[se]] <- SimiLarX[[se]] >= min.sim
             
-            if (se == 1) {
-                all.segsch[[se]] <- "start"
-            }
-            
-            if (se > 1) {
-                if (nextP[[se - 1]] == "TRUE") {
-                  all.segsch[[se]] <- "cont"
-                }
-                if (nextP[[se - 1]] == "FALSE") {
-                  all.segsch[[se]] <- "start"
-                }
-            }
-            
-            if (se == length(SimiLarX)) {
-                if (SimiLarX[[se]] >= min.sim) {
-                  all.segsch[[se + 1]] <- "cont"
-                }
-                if (SimiLarX[[se]] < min.sim) {
-                  all.segsch[[se + 1]] <- "start"
-                }
-            }
-            
+            if (se == 1) all.segsch[[se]] <- "start"
+            else all.segsch[[se]] <- ifelse(nextP[[se - 1]], "cont", "start")
+                
+            if (se == length(SimiLarX)) 
+                all.segsch[[se + 1]] <- ifelse(nextP[[se]], "cont", "start")
         }
         all.segs[[ch]] <- all.segsch
     }
