@@ -132,7 +132,6 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     segs.pvalue.gr <- .assoPrCNV(all.paths, all.segs.gr, phenotypesSamX, method.m.test, 
         probes.cnv.gr, assign.probe, correct.inflation = correct.inflation)
     
-    
     # Plot the QQ-plot of the analysis
     if (verbose) 
         message("Plot the QQ-plot of the analysis")
@@ -145,7 +144,6 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
                         auto.key = list(corner = c(0.95, 0.05))))
     invisible(dev.off())
     
-    
     # Reconvert the chrs to original names if applicable
     if (!is.null(chr.code.name)) {
         cnv.gds <- file.path(all.paths["Inputs"], "CNV.gds")
@@ -155,12 +153,13 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
         
         segs.pvalue <- data.frame(segs.pvalue.gr)
         segs.pvalue <- segs.pvalue[, !(names(segs.pvalue) %in% "strand")]
-        
-        for (lopN in seq_len(nrow(chr.code.name))) 
-            segs.pvalue$seqnames <- gsub(chr.code.name[lopN, 1], 
-                                            chr.code.name[lopN, 2], 
-                                            segs.pvalue$seqnames)
-        
+
+        segs.pvalue$seqnames <- as.vector(segs.pvalue$seqnames)
+        cmap <- as.vector(chr.code.name[, 2])
+        names(cmap) <- as.vector(chr.code.name[, 1])
+        ind <- segs.pvalue$seqnames %in% names(cmap)
+        segs.pvalue$seqnames[ind] <- cmap[segs.pvalue$seqnames[ind]]       
+
         segs.pvalue.gr <- GenomicRanges::makeGRangesFromDataFrame(segs.pvalue, keep.extra.columns = TRUE)
         SNPRelate::snpgdsClose(genofile)
     }
@@ -214,9 +213,9 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 #' 
 #' 
 #' @export
-setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = NULL, 
-    pops.names = NULL, n.cor = 1) {
-  
+setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, 
+    map.loc = NULL, folder = NULL, pops.names = NULL, n.cor = 1) 
+{  
     ## Create the folder structure for all subsequent analysis
     all.paths <- .createFolderTree(name, folder)  
   
@@ -250,7 +249,8 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
     }   
     
     ## Only one population
-    if (length(phen.loc) == 1 && length(cnv.out.loc) == 1) {
+    if (length(phen.loc) == 1 && length(cnv.out.loc) == 1) 
+    {
         ## Import the phenotype and sample info from external folder
         file.copy(phen.loc, file.path(all.paths["Inputs"], "/PhenoPop1.txt"), overwrite = TRUE)
         ## Import the PennCNV output from external folder
@@ -264,28 +264,23 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
     else if (length(phen.loc) != length(cnv.out.loc)) 
         stop("phen.loc and cnv.out.loc should have the same length. Use the string INEXISTENT if phenotypes are missing")
       
-    else if (length(phen.loc) > 1 && length(cnv.out.loc) > 1) {
+    else if (length(phen.loc) > 1 && length(cnv.out.loc) > 1)
+    {
+        grid <- seq_along(phen.loc)
+        pheno.files <- paste0("/PhenoPop", grid, ".txt")
+        cnv.files <- paste0("/CNVOutPop", grid, ".txt")
         
-        pheno.file.all <- NULL
-        cnv.file.all <- NULL
-        
-        for (npop in seq_along(phen.loc)) {
-            pheno.file <- paste0("/PhenoPop", npop, ".txt")
-            pheno.file.all[[npop]] <- pheno.file
-            cnv.file <- paste0("/CNVOutPop", npop, ".txt")
-            cnv.file.all[[npop]] <- cnv.file
-            
-            if (phen.loc[npop] == "INEXISTENT") {
-                write.table(c("INEXISTENT"), file.path(all.paths["Inputs"], pheno.file), 
-                  quote = FALSE, col.names = FALSE, row.names = FALSE)
-            } else {
-                file.copy(phen.loc[npop], file.path(all.paths["Inputs"], pheno.file), overwrite = TRUE)
-            }
-            file.copy(cnv.out.loc[npop], file.path(all.paths["Inputs"], cnv.file), overwrite = TRUE)
+        abs.pheno.files <- file.path(all.paths["Inputs"], pheno.files)
+        for (npop in grid) 
+        {
+            if (phen.loc[npop] == "INEXISTENT") cat("INEXISTENT", file=abs.pheno.files[npop])
+            else file.copy(phen.loc[npop], abs.pheno.files[npop], overwrite = TRUE)
         }
+        file.copy(cnv.out.loc, file.path(all.paths["Inputs"], cnv.files), overwrite = TRUE)
+       
         ## Write phenotype names and merge CNV file for multiple populations
-        pheno.file <- unlist(pheno.file.all)
-        all.cnvs <- lapply(cnv.file.all, .loadToMergeCNV, cnv.path = all.paths["Inputs"])
+        pheno.file <- pheno.files
+        all.cnvs <- lapply(cnv.files, .loadToMergeCNV, cnv.path = all.paths["Inputs"])
         all.cnvs <- data.table::rbindlist(all.cnvs)
         all.cnvs <- as.data.frame(all.cnvs)
         write.table(all.cnvs, file.path(all.paths["Inputs"], "CNVOut.txt"), sep = "\t", 
@@ -296,7 +291,6 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
         ## Import the probe map from external folder
         cnvs <- read.table(file.path(all.paths["Inputs"], "CNVOut.txt"), sep = "", header = FALSE)  ### CNV table 
         CNVs <- .checkConvertCNVs(cnvs, all.paths, n.cor)
-        
         CGr <- GenomicRanges::makeGRangesFromDataFrame(CNVs)
         
     } else {
@@ -635,8 +629,8 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
 # \sQuote{CNVgenotype} or \sQuote{CNVgenotypeSNPlike}. Default is
 # \sQuote{CNVgenotype} @return CNV genotypes in a specific probe @author
 # Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
-.snpgdsGetGenoCNV <- function(genofile, snp.id, node.to.extract = "CNVgenotype") {
-    
+.snpgdsGetGenoCNV <- function(genofile, snp.id, node.to.extract = "CNVgenotype") 
+{
     map <- data.frame(
         snp.id = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.id")), 
         chr = gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome")), 
@@ -658,8 +652,8 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
 # folder). If NULL, a standard program folder will be chosen.  @return List with
 # paths placed to store the files produced by subsequent analysis @examples
 # all.paths <- createFolderTree('Project_name')
-.createFolderTree <- function(name, folder = NULL) {
-    
+.createFolderTree <- function(name, folder = NULL) 
+{
     # data dir
     if (is.null(folder)) 
         folder <- rappdirs::user_data_dir("CNVRanger")
@@ -684,17 +678,15 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
 # \code{CreateFolderTree} function with the working folder tree @param version
 # PLINK version. Only 1.07 implemented @return boolean. Success (TRUE) or fail
 # (FALSE) in running PLINK
-.getPLINK <- function(plink.path, version = "1.07") {
-    
+.getPLINK <- function(plink.path, version = "1.07") 
+{
     plink.url <- "http://zzz.bwh.harvard.edu/plink/dist/plink-"
     plink.url <- paste0(plink.url, version, "-")
-    
     plink.file <- file.path(plink.path, "PLINK.zip")
     
     # get os-specific binary
     os <- rappdirs:::get_os()
     os <- switch(os, unix = "x86_64", mac = "mac-intel", win = "dos", os)
-    
     plink.url <- paste0(plink.url, os, ".zip")
     
     # download & unzip
@@ -725,8 +717,8 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
 # \sQuote{phenotypesSam}, \sQuote{FamID} and \sQuote{SexIds} and
 # \sQuote{pops.names} (if more than one population) @examples phen.info <-
 # loadPhen('/home/.../Phen.txt') sapply(phen.info, class)
-.loadPhen <- function(file.nam, all.paths, pops.names = NULL, n.cor = 1) {
-    
+.loadPhen <- function(file.nam, all.paths, pops.names = NULL, n.cor = 1) 
+{
     pheno.path <- all.paths["Inputs"]
     samplesPhen.all <- NULL
     phenotypes.all <- NULL
@@ -812,30 +804,13 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
 # HELPER - Check and convert CNV input @param cnvs Data-frame with the CNVs to be
 # analyzed. From (i) PennCNV, (ii) SNP-chip general format or (iii) sequencing
 # general format
-.checkConvertCNVs <- function(cnvs, all.paths, n.cor = 1) {
-    
-    the.names <- as.character(as.matrix(cnvs[1, ]))
-    stand.names <- c("chr", "start", "end", "sample.id", "state")
-    stand.names.ext <- c(stand.names, "num.snps", "start.probe", "end.probe")
-    ## If PennCNV file
-    if (unique(sub("^([[:alpha:]]*).*", "\\1", cnvs$V2))[[1]] == "numsnp") {
-        cnvs <- as.data.frame(cnvs)
-        df1 <- reshape2::colsplit(cnvs$V1, ":", c("chr", "loc"))
-        df2 <- reshape2::colsplit(df1$loc, "-", c("start", "end"))
-        df1 <- cbind(df1[, -2, drop = FALSE], df2)
-        
-        cnvs <- cbind(df1, cnvs)
-        cnvs$V1 <- gsub("chr", "", cnvs$V1)
-        colnames(cnvs)[1:3] <- c("chr", "start", "end")
-        
-        ## If general format
-    } else if (suppressWarnings(all(the.names == stand.names.ext))) {
-        cnvs <- cnvs[-1, ]
-        colnames(cnvs) <- the.names
+.checkConvertCNVs <- function(cnvs, all.paths, n.cor = 1) 
+{
+    .convertPenn <- function(cnvs)
+    { 
         cnvs <- as.data.frame(cnvs)
         cnvs$start <- as.integer(cnvs$start)
         cnvs$end <- as.integer(cnvs$end)
-        ## Convert to PennCNV format
         cnvs$V1 <- paste0(cnvs$chr, ":", cnvs$start, "-", cnvs$end)
         cnvs$length <- (cnvs$end - cnvs$start) + 1
         cnvs$length <- paste0("length=", cnvs$length)
@@ -845,12 +820,36 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
         
         cnvs <- cnvs[, c(stand.names[1:3], "V1", "num.snps", "length", "state", "sample.id", 
             "start.probe", "end.probe")]
-        colnames(cnvs)[5:10] <- c("V2", "V3", "V4", "V5", "V6", "V7")
-        
-        ## If sequencing info
-    } else if (all(the.names == stand.names)) {
+        colnames(cnvs)[5:10] <- paste0("V", 2:7)
+        return(cnvs)
+    }
+
+    the.names <- as.character(as.matrix(cnvs[1, ]))
+    stand.names <- c("chr", "start", "end", "sample.id", "state")
+    stand.names.ext <- c(stand.names, "num.snps", "start.probe", "end.probe")
+    ## If PennCNV file
+    if (unique(sub("^([[:alpha:]]*).*", "\\1", cnvs$V2))[[1]] == "numsnp") 
+    {
         cnvs <- as.data.frame(cnvs)
+        df1 <- reshape2::colsplit(cnvs$V1, ":", c("chr", "loc"))
+        df2 <- reshape2::colsplit(df1$loc, "-", c("start", "end"))
+        df1 <- cbind(df1[, -2, drop = FALSE], df2)
         
+        cnvs <- cbind(df1, cnvs)
+        cnvs$V1 <- gsub("chr", "", cnvs$V1)
+        colnames(cnvs)[1:3] <- c("chr", "start", "end")
+    } 
+    ## If general format
+    else if (suppressWarnings(all(the.names == stand.names.ext))) 
+    {
+        cnvs <- cnvs[-1, ]
+        colnames(cnvs) <- the.names
+        cnvs <- .convertPenn(cnvs)  
+    } 
+    ## If sequencing info
+    else if (all(the.names == stand.names)) 
+    {
+        cnvs <- as.data.frame(cnvs)
         ### Include artificial probe tags
         cnvs.seq <- cnvs
         cnvs.seq <- cnvs.seq[-1, ]
@@ -911,21 +910,9 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
         colnames(cnv.seq)[1] <- "chr"
         
         cnvs <- cnv.seq
-        cnvs$start <- as.integer(cnvs$start)
-        cnvs$end <- as.integer(cnvs$end)
-        
-        ## Convert to PennCNV format
-        cnvs$V1 <- paste0(cnvs$chr, ":", cnvs$start, "-", cnvs$end)
-        cnvs$length <- (cnvs$end - cnvs$start) + 1
-        cnvs$length <- paste0("length=", cnvs$length)
-        cnvs$num.snps <- paste0("numsnp=", cnvs$num.snps)
-        cnvs$start.probe <- paste0("startSNP=", cnvs$start.probe)
-        cnvs$end.probe <- paste0("endSNP=", cnvs$end.probe)
-        
-        cnvs <- cnvs[, c(stand.names[1:3], "V1", "num.snps", "length", "state", "sample.id", 
-            "start.probe", "end.probe")]
-        colnames(cnvs)[5:10] <- paste0("V", 2:7) 
-    } else stop("Unexpected CNV input format - is it tab delimited?")
+        cnvs <- .convertPenn(cnvs)
+    } 
+    else stop("Unexpected CNV input format - is it tab delimited?")
     
     return(cnvs)
 }
@@ -1040,7 +1027,6 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
         for(i in indexExclude) CNVgenoX[i,] <- gmap[CNVgenoX[i,] + 1] 
     } 
     else CNVgenoX[indexExclude, ] <- -1
-    
     
     ### Replace the genotype in the gds file
     gdsfmt::write.gdsn(n, CNVgenoX, 
