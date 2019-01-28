@@ -466,8 +466,7 @@ Intersect samples of CNV assay and RNA-seq assay
 ```{r gbmIntersect}
 gbm <- intersectColumns(gbm)
 sampleTables(gbm)
-gbm <- suppressMessages(splitAssays(gbm))
-gbm <- gbm[,,1:2]
+gbm <- suppressMessages(splitAssays(gbm, sampleCodes="01"))
 ```
 
 ```{r gbmIntersect2}
