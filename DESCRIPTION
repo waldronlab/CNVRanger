@@ -1,12 +1,9 @@
 Package: CNVRanger
-Version: 0.99.17
+Version: 0.99.18
 Title: Summarization and expression/phenotype association of CNV ranges
-Authors@R: 
-    c(person("Ludwig", "Geistlinger", email = "ludwig.geistlinger@sph.cuny.edu",
-        role = c("aut", "cre")),
-    person("Vinicius Henrique", "da Silva", role = "aut"),
-    person("Marcel", "Ramos", role = "ctb"),
-    person("Levi", "Waldron", role = "ctb"))
+Author: Ludwig Geistlinger [aut, cre], Vinicius Henrique da Silva [aut],
+    Marcel Ramos [ctb], Levi Waldron [ctb]
+Maintainer: Ludwig Geistlinger <ludwig.geistlinger@sph.cuny.edu>
 Depends: 
     GenomicRanges,
     RaggedExperiment

@@ -292,7 +292,7 @@ seqlevels(bt.genes) <- paste0("chr", seqlevels(bt.genes))
 bt.genes
 ```
 
-To speed up the example, we restrict analysis to chromosomes 21 and 22. 
+To speed up the example, we restrict analysis to chromosomes 1 and 2. 
 
 ```{r formatBtGenes}
 sel.genes <- bt.genes[seqnames(bt.genes) %in% c("chr1", "chr2")]
