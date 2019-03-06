@@ -4,31 +4,36 @@
 \alias{cnvExprAssoc}
 \title{CNV-expression association analysis}
 \usage{
-cnvExprAssoc(cnvrs, calls, rcounts, window = "1Mbp",
+cnvExprAssoc(cnvrs, calls, rcounts, data, window = "1Mbp",
   multi.calls = "largest", min.samples = 10, min.cpm = 2,
   de.method = c("edgeR", "limma"), padj.method = "BH",
   verbose = FALSE)
 }
 \arguments{
-\item{cnvrs}{A \code{\linkS4class{GRanges}} object containing the summarized
-CNV regions as e.g. obtained with \code{\link{populationRanges}}.}
+\item{cnvrs}{A \code{\linkS4class{GRanges}} or character object containing
+the summarized CNV regions as obtained with \code{\link{populationRanges}}
+or the assay name when the 'data' argument is provided.}
 
-\item{calls}{A \code{\linkS4class{GRangesList}} or a 
-\code{\linkS4class{RaggedExperiment}} storing the individual CNV calls for 
-each sample.}
+\item{calls}{Either a \code{\linkS4class{GRangesList}} or
+\code{\linkS4class{RaggedExperiment}} storing the individual CNV calls for
+each sample or the assay name in 'data' when character.}
 
-\item{rcounts}{A \code{\linkS4class{RangedSummarizedExperiment}} storing the 
-raw RNA-seq read counts in a rectangular fashion (genes x samples).}
+\item{rcounts}{A \code{\linkS4class{RangedSummarizedExperiment}} or
+character name storing either the raw RNA-seq read counts in a rectangular
+fashion (genes x samples) or the assay name in the provided 'data' argument.}
 
-\item{window}{Numeric or Character. Size of the genomic window in base pairs 
-by which each CNV region is extended up- and downstream. This determines which 
-genes are tested for each CNV region. Character notation is supported for 
-convenience such as "100kbp" (same as 100000) or "1Mbp" (same as 1000000). 
+\item{data}{(optional) A \code{MultiAssayExperiment} object with `cnvrs`,
+`calls`, and `rcounts` arguments corresponding to assay names.}
+
+\item{window}{Numeric or Character. Size of the genomic window in base pairs
+by which each CNV region is extended up- and downstream. This determines which
+genes are tested for each CNV region. Character notation is supported for
+convenience such as "100kbp" (same as 100000) or "1Mbp" (same as 1000000).
 Defaults to \code{"1Mbp"}.}
 
-\item{multi.calls}{Character or a function. Determines how to summarize the 
-CN state in a CNV region when there are multiple (potentially conflicting) 
-calls for one sample in that region. Defaults to \code{"largest"}, which 
+\item{multi.calls}{Character or a function. Determines how to summarize the
+CN state in a CNV region when there are multiple (potentially conflicting)
+calls for one sample in that region. Defaults to \code{"largest"}, which
 assigns the CN state of the call that covers the largest part of the CNV
 region tested. A user-defined function that is passed on to 
 \code{\link{qreduceAssay}} can also be provided for customized behavior.}
