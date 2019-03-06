@@ -148,11 +148,12 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts, data,
         calls <- as(calls, "RaggedExperiment")
 
     if (!missing(data)) {
-        cnvrs <- data[[cnvrs]]
+        ranges <- granges(rowRanges(data[[cnvrs]]))
         data <- data[, , names(data) != cnvrs]
         data <- as(data, "MatchedAssayExperiment")
         calls <- data[[calls]]
         rcounts <- data[[rcounts]]
+        cnvrs <- ranges
     } else {
         # consider samples in cnv AND expression data
         sampleIds <- sort(intersect(colnames(calls), colnames(rcounts)))
@@ -291,15 +292,10 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts, data,
     return(w)
 }
 
-.getStates <- function(cnvrs, calls, multi.calls="largest", min.samples=10, verbose=FALSE)
+.getStates <- function(cnvrs, calls, multi.calls=.largest, min.samples=10, verbose=FALSE)
 {
     #TODO: additional pre-defined options for multi.calls
-    stopifnot(is.character(multi.calls) || is.function(multi.calls))
-    if(is.character(multi.calls))
-    {
-        stopifnot(multi.calls == "largest")
-        multi.calls <- .largest
-    }
+    stopifnot(is.function(multi.calls))
 
     cnv.states <- RaggedExperiment::qreduceAssay(calls, query=cnvrs,
                     simplifyReduce=multi.calls, background=2)
@@ -310,17 +306,15 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts, data,
     {
         cond1 <- length(states) > 1
         cond2 <- any(states[names(states) != "2"] >= min.samples)
-        res <- cond1 && cond2
-        return(res)
+        cond1 && cond2
     }
     ind <- vapply(tab, .isTestable, logical(1))
     nr.excl <- sum(!ind)
-    if(nr.excl && verbose)
+    if (nr.excl && verbose)
         message(paste("Excluding", nr.excl,
-                                "cnvrs not satisfying min.samples threshold"))
+            "cnvrs not satisfying min.samples threshold"))
     stopifnot(length(cnvrs) > nr.excl)
-    cnv.states <- cnv.states[ind,]
-    return(cnv.states)
+    cnv.states[ind, ]
 }
 
 .largest <- function(scores, ranges, qranges)
