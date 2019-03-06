@@ -42,21 +42,25 @@
 #' significance level such as 0.01 is typically recommended (due to power 
 #' considerations and to avoid detection of spurious effects).
 #'
-#' @param cnvrs A \code{\linkS4class{GRanges}} object containing the summarized
-#' CNV regions as e.g. obtained with \code{\link{populationRanges}}.
-#' @param calls A \code{\linkS4class{GRangesList}} or a 
-#' \code{\linkS4class{RaggedExperiment}} storing the individual CNV calls for 
-#' each sample.
-#' @param rcounts A \code{\linkS4class{RangedSummarizedExperiment}} storing the 
-#' raw RNA-seq read counts in a rectangular fashion (genes x samples).
-#' @param window Numeric or Character. Size of the genomic window in base pairs 
-#' by which each CNV region is extended up- and downstream. This determines which 
-#' genes are tested for each CNV region. Character notation is supported for 
-#' convenience such as "100kbp" (same as 100000) or "1Mbp" (same as 1000000). 
+#' @param cnvrs A \code{\linkS4class{GRanges}} or character object containing
+#' the summarized CNV regions as obtained with \code{\link{populationRanges}}
+#' or the assay name when the 'data' argument is provided.
+#' @param calls Either a \code{\linkS4class{GRangesList}} or
+#' \code{\linkS4class{RaggedExperiment}} storing the individual CNV calls for
+#' each sample or the assay name in 'data' when character.
+#' @param rcounts A \code{\linkS4class{RangedSummarizedExperiment}} or
+#' character name storing either the raw RNA-seq read counts in a rectangular
+#' fashion (genes x samples) or the assay name in the provided 'data' argument.
+#' @param data (optional) A \code{MultiAssayExperiment} object with `cnvrs`,
+#' `calls`, and `rcounts` arguments corresponding to assay names.
+#' @param window Numeric or Character. Size of the genomic window in base pairs
+#' by which each CNV region is extended up- and downstream. This determines which
+#' genes are tested for each CNV region. Character notation is supported for
+#' convenience such as "100kbp" (same as 100000) or "1Mbp" (same as 1000000).
 #' Defaults to \code{"1Mbp"}.
-#' @param multi.calls Character or a function. Determines how to summarize the 
-#' CN state in a CNV region when there are multiple (potentially conflicting) 
-#' calls for one sample in that region. Defaults to \code{"largest"}, which 
+#' @param multi.calls Character or a function. Determines how to summarize the
+#' CN state in a CNV region when there are multiple (potentially conflicting)
+#' calls for one sample in that region. Defaults to \code{"largest"}, which
 #' assigns the CN state of the call that covers the largest part of the CNV
 #' region tested. A user-defined function that is passed on to 
 #' \code{\link{qreduceAssay}} can also be provided for customized behavior. 
@@ -118,27 +122,46 @@
 #' res <- cnvExprAssoc(cnvrs, calls, rse, min.samples=1) 
 #'
 #' @export
-cnvExprAssoc <- function(cnvrs, calls, rcounts, 
-    window="1Mbp", multi.calls="largest", 
+cnvExprAssoc <- function(cnvrs, calls, rcounts, data,
+    window="1Mbp", multi.calls="largest",
     min.samples=10, min.cpm=2, de.method=c("edgeR", "limma"),
     padj.method="BH", verbose=FALSE)
 {
+    if (!missing(data)) {
+        stopifnot(is(data, "MultiAssayExperiment"))
+        if (!requireNamespace("MultiAssayExperiment"))
+            stop(
+                paste0("Please install the 'MultiAssayExperiment'",
+                " package to use 'cnvExprAssoc'")
+            )
+
+    }
     # sanity checks
-    stopifnot(is(cnvrs, "GRanges"), 
-                is(calls, "GRangesList") || is(calls, "RaggedExperiment"),
-                is(rcounts, "RangedSummarizedExperiment"))
+    stopifnot(
+        is(cnvrs, "GRanges") || is.character(cnvrs),
+        is(calls, "GRangesList") ||
+            is(calls, "RaggedExperiment") || is.character(calls),
+        is(rcounts, "RangedSummarizedExperiment") || is.character(rcounts)
+    )
 
-    if(is(calls, "GRangesList")) 
-        calls <- RaggedExperiment::RaggedExperiment(calls)
+    if (!is.character(calls))
+        calls <- as(calls, "RaggedExperiment")
 
-    # consider samples in cnv AND expression data
-    sampleIds <- sort(intersect(colnames(calls), colnames(rcounts)))
-    if(verbose) message(paste("Restricting analysis to", 
-                    length(sampleIds), "intersecting samples"))
-    stopifnot(length(sampleIds) > 0)
-    calls <- calls[,sampleIds]
-    rcounts <- rcounts[,sampleIds]         
-   
+    if (!missing(data)) {
+        cnvrs <- data[[cnvrs]]
+        data <- data[, , names(data) != cnvrs]
+        data <- as(data, "MatchedAssayExperiment")
+        calls <- data[[calls]]
+        rcounts <- data[[rcounts]]
+    } else {
+        # consider samples in cnv AND expression data
+        sampleIds <- sort(intersect(colnames(calls), colnames(rcounts)))
+        if(verbose) message(paste("Restricting analysis to",
+                        length(sampleIds), "intersecting samples"))
+        stopifnot(length(sampleIds) > 0)
+        calls <- calls[,sampleIds]
+        rcounts <- rcounts[,sampleIds]
+    }
     # filter and norm RNA-seq data
     if(verbose) message("Preprocessing RNA-seq data ...")
     y <- .preprocRnaSeq(SummarizedExperiment::assay(rcounts))
