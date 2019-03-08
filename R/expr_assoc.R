@@ -170,9 +170,10 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts, data,
 
     # determine states
     if(verbose) message("Summarizing per-sample CN state in each CNV region")
-    cnv.states <- .getStates(cnvrs, calls, multi.calls, min.samples)
+    cnv.states <- .getStates(cnvrs, calls, 
+        multi.calls, min.samples, verbose=verbose)
     cnvrs <- IRanges::subsetByOverlaps(cnvrs,
-                GenomicRanges::GRanges(rownames(cnv.states)))
+                GenomicRanges::GRanges(rownames(cnv.states)), type="equal")
 
     # determine genes to test for each CNV region
     ecnvrs <- .extendRegions(cnvrs, window=window)
@@ -210,11 +211,11 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts, data,
     state.freq <- table(states)
     nr.states <- length(state.freq)
     too.less.samples <- state.freq < min.state.freq
-    if(sum(too.less.samples))
+    if(any(too.less.samples))
     {
         too.less.states <- names(state.freq)[too.less.samples]
         too.less.states <- as.integer(too.less.states)
-        ind <- states != too.less.states
+        ind <- !(states %in% too.less.states)
         nr.states <- length(state.freq) - length(too.less.states)
         stopifnot(nr.states > 1)
         states <- states[ind]
