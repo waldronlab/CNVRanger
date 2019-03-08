@@ -11,19 +11,19 @@ cnvExprAssoc(cnvrs, calls, rcounts, data, window = "1Mbp",
 }
 \arguments{
 \item{cnvrs}{A \code{\linkS4class{GRanges}} or character object containing
-the summarized CNV regions as obtained with \code{\link{populationRanges}}
-or the assay name when the 'data' argument is provided.}
+the summarized CNV regions as e.g. obtained with \code{\link{populationRanges}}.
+Alternatively, the assay name when the 'data' argument is provided.}
 
 \item{calls}{Either a \code{\linkS4class{GRangesList}} or
 \code{\linkS4class{RaggedExperiment}} storing the individual CNV calls for
-each sample or the assay name in 'data' when character.}
+each sample. Alternatively, the assay name if 'data' is provided.}
 
 \item{rcounts}{A \code{\linkS4class{RangedSummarizedExperiment}} or
 character name storing either the raw RNA-seq read counts in a rectangular
-fashion (genes x samples) or the assay name in the provided 'data' argument.}
+fashion (genes x samples). Alternatively, the assay name if 'data' is provided.}
 
-\item{data}{(optional) A \code{MultiAssayExperiment} object with `cnvrs`,
-`calls`, and `rcounts` arguments corresponding to assay names.}
+\item{data}{(optional) A \code{\linkS4class{MultiAssayExperiment}} object 
+with `cnvrs`, `calls`, and `rcounts` arguments corresponding to assay names.}
 
 \item{window}{Numeric or Character. Size of the genomic window in base pairs
 by which each CNV region is extended up- and downstream. This determines which
