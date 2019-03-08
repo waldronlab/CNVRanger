@@ -5,7 +5,7 @@
 \title{CNV-expression association analysis}
 \usage{
 cnvExprAssoc(cnvrs, calls, rcounts, data, window = "1Mbp",
-  multi.calls = "largest", min.samples = 10, min.cpm = 2,
+  multi.calls = .largest, min.samples = 10, min.cpm = 2,
   de.method = c("edgeR", "limma"), padj.method = "BH",
   verbose = FALSE)
 }
@@ -31,33 +31,33 @@ genes are tested for each CNV region. Character notation is supported for
 convenience such as "100kbp" (same as 100000) or "1Mbp" (same as 1000000).
 Defaults to \code{"1Mbp"}.}
 
-\item{multi.calls}{Character or a function. Determines how to summarize the
+\item{multi.calls}{A function. Determines how to summarize the
 CN state in a CNV region when there are multiple (potentially conflicting)
-calls for one sample in that region. Defaults to \code{"largest"}, which
+calls for one sample in that region. Defaults to \code{.largest}, which
 assigns the CN state of the call that covers the largest part of the CNV
-region tested. A user-defined function that is passed on to 
+region tested. A user-defined function that is passed on to
 \code{\link{qreduceAssay}} can also be provided for customized behavior.}
 
 \item{min.samples}{Integer. Minimum number of samples with at least one call
 overlapping the CNV region tested. Defaults to 10. See details.}
 
-\item{min.cpm}{Integer. Should genes not satisfying a minimum counts-per-million 
-(cpm) threshold be excluded from the analysis? This is typically recommended. 
-See the edgeR vignette for details. The default filter is to exclude genes 
+\item{min.cpm}{Integer. Should genes not satisfying a minimum counts-per-million
+(cpm) threshold be excluded from the analysis? This is typically recommended.
+See the edgeR vignette for details. The default filter is to exclude genes
 with cpm < 2 in more than half of the samples.}
 
-\item{de.method}{Character. Differential expression method. 
+\item{de.method}{Character. Differential expression method.
 Defaults to \code{"edgeR"}.}
 
 \item{padj.method}{Character. Method for adjusting p-values to multiple testing.
-For available methods see the man page of the function \code{\link{p.adjust}}. 
+For available methods see the man page of the function \code{\link{p.adjust}}.
 Defaults to \code{"BH"}.}
 
 \item{verbose}{Logical. Display progress messages? Defaults to \code{FALSE}.}
 }
 \value{
 A result list with an entry for each CNV region tested. Each entry is
-a \code{\link{data.frame}} containing measures of association for each gene tested 
+a \code{\link{data.frame}} containing measures of association for each gene tested
 in the genomic window around the CNV region.
 }
 \description{
@@ -65,33 +65,33 @@ Testing CNV regions for effects on the expression level of genes in defined
 genomic windows.
 }
 \details{
-Association testing between CNV regions and RNA-seq read counts is carried 
-out using edgeR, which applies generalized linear models (GLMs) based on the 
-negative-binomial distribution while incorporating normalization factors for 
-different library sizes. 
+Association testing between CNV regions and RNA-seq read counts is carried
+out using edgeR, which applies generalized linear models (GLMs) based on the
+negative-binomial distribution while incorporating normalization factors for
+different library sizes.
 
-In the case of only one CN state deviating from 2n for a CNV region under 
-investigation, this reduces to the classical 2-group comparison. 
-For more than two states (e.g. 0n, 1n, 2n), edgeR’s ANOVA-like test is applied 
-to test all deviating groups for significant expression differences relative 
-to 2n. 
+In the case of only one CN state deviating from 2n for a CNV region under
+investigation, this reduces to the classical 2-group comparison.
+For more than two states (e.g. 0n, 1n, 2n), edgeR’s ANOVA-like test is applied
+to test all deviating groups for significant expression differences relative
+to 2n.
 
-To avoid artificial effects due to low expression of a gene or insufficient 
-sample size in deviating groups, it is typically recommended to exclude from 
-the analysis (i) genes with fewer than r reads per million reads mapped 
-(cpm, counts per million) in the maximally expressed sample group, 
+To avoid artificial effects due to low expression of a gene or insufficient
+sample size in deviating groups, it is typically recommended to exclude from
+the analysis (i) genes with fewer than r reads per million reads mapped
+(cpm, counts per million) in the maximally expressed sample group,
 and (ii) CNV regions with fewer than s samples in a group deviating from 2n.
-Use the \code{min.cpm} and \code{min.samples} arguments, respectively. 
+Use the \code{min.cpm} and \code{min.samples} arguments, respectively.
 
-When testing local effects (adjacent or coinciding genes of a CNV region), 
-suitable thresholds for candidate discovery are r = 3, s = 4, and a nominal 
-significance level of 0.05; as such effects have a clear biological indication 
+When testing local effects (adjacent or coinciding genes of a CNV region),
+suitable thresholds for candidate discovery are r = 3, s = 4, and a nominal
+significance level of 0.05; as such effects have a clear biological indication
 and the number of genes tested is typically small.
- 
+
 For distal effects (i.e. when testing genes far away from a CNV region)
-more stringent thresholds such as r = 20 and s = 10 for distal effects in 
-conjunction with multiple testing correction using a conservative adjusted 
-significance level such as 0.01 is typically recommended (due to power 
+more stringent thresholds such as r = 20 and s = 10 for distal effects in
+conjunction with multiple testing correction using a conservative adjusted
+significance level such as 0.01 is typically recommended (due to power
 considerations and to avoid detection of spurious effects).
 }
 \examples{
@@ -105,7 +105,7 @@ calls <- GRangesList(
      sample4 = GRanges( c("chr1:1-12", "chr2:18-35" ), state=states[10:11] ),
      sample5 = GRanges( c("chr1:1-12", "chr2:11-17" , "chr2:26-34"), state=states[12:14] ) ,
      sample6 = GRanges( c("chr1:1-12", "chr2:12-18" , "chr2:25-35"), state=states[15:17] )
-) 
+)
 
 # (2) summarized CNV regions
 cnvrs <- populationRanges(calls, density=0.1)
@@ -117,11 +117,11 @@ y <- matrix(rnbinom(42,size=1,mu=10),7,6)
 names(genes) <- rownames(y) <- paste0("gene", 1:7)
 colnames(y) <- paste0("sample", 1:6)
 
-library(SummarizedExperiment) 
+library(SummarizedExperiment)
 rse <- SummarizedExperiment(assays=list(counts=y), rowRanges=granges(genes))
 
 # (4) perform the association analysis
-res <- cnvExprAssoc(cnvrs, calls, rse, min.samples=1) 
+res <- cnvExprAssoc(cnvrs, calls, rse, min.samples=1)
 
 }
 \references{
@@ -129,13 +129,13 @@ Geistlinger et al. (2018) Widespread modulation of gene expression
 by copy number variation in skeletal muscle. Sci Rep, 8(1):1399.
 }
 \seealso{
-\code{\link{findOverlaps}} to find overlaps between sets of genomic 
-regions, 
+\code{\link{findOverlaps}} to find overlaps between sets of genomic
+regions,
 
-\code{\link{qreduceAssay}} to summarize ragged genomic location data 
+\code{\link{qreduceAssay}} to summarize ragged genomic location data
 in defined genomic regions,
 
-\code{\link{glmQLFit}} and \code{\link{glmQLFTest}} to conduct negative 
+\code{\link{glmQLFit}} and \code{\link{glmQLFTest}} to conduct negative
 binomial generalized linear models for RNA-seq read count data.
 }
 \author{

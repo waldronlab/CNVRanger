@@ -58,9 +58,9 @@
 #' genes are tested for each CNV region. Character notation is supported for
 #' convenience such as "100kbp" (same as 100000) or "1Mbp" (same as 1000000).
 #' Defaults to \code{"1Mbp"}.
-#' @param multi.calls Character or a function. Determines how to summarize the
+#' @param multi.calls A function. Determines how to summarize the
 #' CN state in a CNV region when there are multiple (potentially conflicting)
-#' calls for one sample in that region. Defaults to \code{"largest"}, which
+#' calls for one sample in that region. Defaults to \code{.largest}, which
 #' assigns the CN state of the call that covers the largest part of the CNV
 #' region tested. A user-defined function that is passed on to
 #' \code{\link{qreduceAssay}} can also be provided for customized behavior.
@@ -123,7 +123,7 @@
 #'
 #' @export
 cnvExprAssoc <- function(cnvrs, calls, rcounts, data,
-    window="1Mbp", multi.calls="largest",
+    window="1Mbp", multi.calls=.largest,
     min.samples=10, min.cpm=2, de.method=c("edgeR", "limma"),
     padj.method="BH", verbose=FALSE)
 {
