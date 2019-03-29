@@ -410,8 +410,8 @@ analysis (i) genes with fewer than `min.cpm` reads per million reads mapped
 (cpm, counts per million), and (ii) CNV 
 regions with fewer than `min.samples` samples in a group deviating from 2n.
 
-```{r cnvExprAssoc}
-res <- cnvExprAssoc(cnvrs, grl, rse, window="1Mbp", verbose=TRUE)
+```{r cnvEQTL}
+res <- cnvEQTL(cnvrs, grl, rse, window="1Mbp", verbose=TRUE)
 head(res)
 ```
 
@@ -535,7 +535,7 @@ The data is now ready for CNV-expression association analysis, where we find
 only two CNV regions with sufficient sample size for testing using the default
 value of 10 for the `minSamples` argument.
 ```{r gbmEQTL}
-res <- cnvExprAssoc(peaks, gbm.calls, gbm.rse, window="1Mbp", verbose=TRUE)
+res <- cnvEQTL(peaks, gbm.calls, gbm.rse, window="1Mbp", verbose=TRUE)
 res
 ```
 
@@ -710,7 +710,7 @@ will be overwritten.
 Use `produce.gds=FALSE` to avoid overwriting in the GWAS run. 
 
 For convenience, a GDS file can be produced before the GWAS analysis with the 
-`prodGdsCnv` function.
+`generateGDS` function.
 This additionally returns a `GRanges` object containing the genomic 
 position, name and, frequency of each probe used to construct the CNV segments
 for the GWAS analysis. 
@@ -722,7 +722,7 @@ chromosome names.
 
 ```{r prodGDS}
 ## Create a GDS file in disk and export the SNP probe positions
-probes.cnv.gr <- prodGdsCnv(phen.info, chr.code.name=chr.code.name)
+probes.cnv.gr <- generateGDS(phen.info, chr.code.name=chr.code.name)
 probes.cnv.gr
 
 ## Run GWAS with existent GDS file

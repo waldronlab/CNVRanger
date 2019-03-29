@@ -92,7 +92,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     if (produce.gds) {
         if (verbose) 
             message("Produce the GDS for a given phenotype")
-        probes.cnv.gr <- prodGdsCnv(phen.info = phen.info, freq.cn = freq.cn, snp.matrix = snp.matrix, 
+        probes.cnv.gr <- generateGDS(phen.info = phen.info, freq.cn = freq.cn, snp.matrix = snp.matrix, 
             lo.phe = lo.phe, chr.code.name = chr.code.name, genotype.nodes = genotype.nodes, 
             coding.translate = coding.translate)
     } else {
@@ -178,7 +178,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 #' The user can import several phenotypes at once. All information will be 
 #' stored in the list returned by this function. 
 #' The user should be aware although several phenotypes can be imported, the 
-#' \code{\link{cnvGWAS}} or \code{\link{prodGdsCnv}} functions will handle only 
+#' \code{\link{cnvGWAS}} or \code{\link{generateGDS}} functions will handle only 
 #' one phenotype per run. 
 #' 
 #' @param name String with a project code or name (e.g. 'Project1')
@@ -371,11 +371,11 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc,
 #' 31 LGE22'
 #' 
 #' chr.code.name <- read.table(text=df, header=FALSE)
-#' probes.cnv.gr <- prodGdsCnv(phen.info, chr.code.name=chr.code.name)
+#' probes.cnv.gr <- generateGDS(phen.info, chr.code.name=chr.code.name)
 #' 
 #'@export
 
-prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1,
+generateGDS <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1,
     chr.code.name = NULL, genotype.nodes = c("CNVGenotype", "CNVgenotypeSNPlike"), 
     coding.translate = NULL, n.cor = 1) 
 {

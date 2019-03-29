@@ -119,10 +119,10 @@
 #' rse <- SummarizedExperiment(assays=list(counts=y), rowRanges=granges(genes))
 #'
 #' # (4) perform the association analysis
-#' res <- cnvExprAssoc(cnvrs, calls, rse, min.samples=1)
+#' res <- cnvEQTL(cnvrs, calls, rse, min.samples=1)
 #'
 #' @export
-cnvExprAssoc <- function(cnvrs, calls, rcounts, data,
+cnvEQTL <- function(cnvrs, calls, rcounts, data,
     window="1Mbp", multi.calls=.largest,
     min.samples=10, min.cpm=2, de.method=c("edgeR", "limma"),
     padj.method="BH", verbose=FALSE)
@@ -132,7 +132,7 @@ cnvExprAssoc <- function(cnvrs, calls, rcounts, data,
         if (!requireNamespace("MultiAssayExperiment"))
             stop(
                 paste0("Please install the 'MultiAssayExperiment'",
-                " package to use 'cnvExprAssoc'")
+                " package to use 'cnvEQTL'")
             )
 
     }

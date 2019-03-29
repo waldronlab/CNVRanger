@@ -45,7 +45,7 @@ files (i.e. phenotypes, probe map and CNV list) from other locations in disk.
 The user can import several phenotypes at once. All information will be 
 stored in the list returned by this function. 
 The user should be aware although several phenotypes can be imported, the 
-\code{\link{cnvGWAS}} or \code{\link{prodGdsCnv}} functions will handle only 
+\code{\link{cnvGWAS}} or \code{\link{generateGDS}} functions will handle only 
 one phenotype per run.
 }
 \examples{
