@@ -314,7 +314,8 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
     if (nr.excl && verbose)
         message(paste("Excluding", nr.excl,
             "cnvrs not satisfying min.samples threshold"))
-    stopifnot(length(cnvrs) > nr.excl)
+    if(length(cnvrs) == nr.excl)
+        stop("No CNV region satisfying min.samples threshold")
     cnv.states[ind, ]
 }
 
