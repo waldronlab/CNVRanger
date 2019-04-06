@@ -412,13 +412,12 @@ regions with fewer than `min.samples` samples in a group deviating from 2n.
 
 ```{r cnvEQTL}
 res <- cnvEQTL(cnvrs, grl, rse, window="1Mbp", verbose=TRUE)
-head(res)
+res
 ```
 
-The resulting `list` contains an entry for each CNV region tested. 
-Each entry contains the genes tested in the genomic window around the CNV region,
-and reports (i) log2 fold change with respect to the 2n group, (ii) edgeR's DE 
-_p_-value, and (iii) the (per default) Benjamini-Hochberg adjusted _p_-value. 
+The resulting `DataFrame` contains in the first column the CNV regions tested. 
+The second column contains the genes tested in the genomic window around each CNV 
+region, and the other columns report (i) log2 fold change with respect to the 2n group, (ii) edgeR's DE _p_-value, and (iii) the (per default) Benjamini-Hochberg adjusted _p_-value. 
 
 ## Dealing with TCGA data stored in a `MultiAssayExperiment`
 

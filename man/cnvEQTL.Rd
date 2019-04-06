@@ -5,9 +5,8 @@
 \title{CNV-expression association analysis}
 \usage{
 cnvEQTL(cnvrs, calls, rcounts, data, window = "1Mbp",
-  multi.calls = .largest, min.samples = 10, min.cpm = 2,
-  de.method = c("edgeR", "limma"), padj.method = "BH",
-  verbose = FALSE)
+  multi.calls = .largest, min.samples = 10, de.method = c("edgeR",
+  "limma"), padj.method = "BH", verbose = FALSE)
 }
 \arguments{
 \item{cnvrs}{A \code{\linkS4class{GRanges}} or character object containing
@@ -41,11 +40,6 @@ region tested. A user-defined function that is passed on to
 \item{min.samples}{Integer. Minimum number of samples with at least one call
 overlapping the CNV region tested. Defaults to 10. See details.}
 
-\item{min.cpm}{Integer. Should genes not satisfying a minimum counts-per-million
-(cpm) threshold be excluded from the analysis? This is typically recommended.
-See the edgeR vignette for details. The default filter is to exclude genes
-with cpm < 2 in more than half of the samples.}
-
 \item{de.method}{Character. Differential expression method.
 Defaults to \code{"edgeR"}.}
 
@@ -56,9 +50,8 @@ Defaults to \code{"BH"}.}
 \item{verbose}{Logical. Display progress messages? Defaults to \code{FALSE}.}
 }
 \value{
-A result list with an entry for each CNV region tested. Each entry is
-a \code{\link{data.frame}} containing measures of association for each gene tested
-in the genomic window around the CNV region.
+A \code{\linkS4class{DataFrame}} containing measures of association for 
+each CNV region and each gene tested in the genomic window around the CNV region.
 }
 \description{
 Testing CNV regions for effects on the expression level of genes in defined

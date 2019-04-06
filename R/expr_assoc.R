@@ -66,19 +66,14 @@
 #' \code{\link{qreduceAssay}} can also be provided for customized behavior.
 #' @param min.samples Integer. Minimum number of samples with at least one call
 #' overlapping the CNV region tested. Defaults to 10. See details.
-#' @param min.cpm Integer. Should genes not satisfying a minimum counts-per-million
-#' (cpm) threshold be excluded from the analysis? This is typically recommended.
-#' See the edgeR vignette for details. The default filter is to exclude genes
-#' with cpm < 2 in more than half of the samples.
 #' @param de.method Character. Differential expression method.
 #' Defaults to \code{"edgeR"}.
 #' @param padj.method Character. Method for adjusting p-values to multiple testing.
 #' For available methods see the man page of the function \code{\link{p.adjust}}.
 #' Defaults to \code{"BH"}.
 #' @param verbose Logical. Display progress messages? Defaults to \code{FALSE}.
-#' @return A result list with an entry for each CNV region tested. Each entry is
-#' a \code{\link{data.frame}} containing measures of association for each gene tested
-#' in the genomic window around the CNV region.
+#' @return A \code{\linkS4class{DataFrame}} containing measures of association for 
+#' each CNV region and each gene tested in the genomic window around the CNV region.
 #' @author Ludwig Geistlinger <Ludwig.Geistlinger@@sph.cuny.edu>
 #' @seealso \code{\link{findOverlaps}} to find overlaps between sets of genomic
 #' regions,
@@ -124,7 +119,7 @@
 #' @export
 cnvEQTL <- function(cnvrs, calls, rcounts, data,
     window="1Mbp", multi.calls=.largest,
-    min.samples=10, min.cpm=2, de.method=c("edgeR", "limma"),
+    min.samples=10, de.method=c("edgeR", "limma"),
     padj.method="BH", verbose=FALSE)
 {
     if (!missing(data)) {
@@ -195,17 +190,25 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
             if(verbose) message(paste(i, "of", nr.cnvrs))
             r <- .testCnvExpr(y, cgenes[[i]], cnv.states[i,],
                                 min.state.freq=min.samples,
-                                de.method=de.method,
-                                padj.method=padj.method)
+                                de.method=de.method)
             return(r)
         })
     names(res) <- rownames(cnv.states)
+
+    # multiple testing
+    cnvr.col <- rep(names(res), times=lengths(cgenes))
+    res <- do.call(rbind, res)
+    padj <- stats::p.adjust(res[,"PValue"], method=padj.method)
+    res <- cbind(cnvr.col, res, padj, stringsAsFactors=FALSE)
+    colnames(res)[c(1,ncol(res))] <- c("CNVR", "AdjPValue")
+    res <- S4Vectors::DataFrame(res)
+    rownames(res) <- NULL
     return(res)
 }
 
 # test a single cnv region
 .testCnvExpr <- function(y, cgenes, states, min.state.freq=10,
-    de.method=c("limma", "edgeR"), padj.method="BH")
+    de.method=c("limma", "edgeR"))
 {
     # form groups according to CNV states
     state.freq <- table(states)
@@ -258,11 +261,9 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
     rel.cols <- c(fc.cols, "PValue")
     ind <- order(res[,"PValue"])
     de.tbl <- res[ind, rel.cols]
-
-    # multiple testing
-    padj <- stats::p.adjust(de.tbl[,"PValue"], method=padj.method)
-    de.tbl <- cbind(de.tbl, padj)
-    colnames(de.tbl)[ncol(de.tbl)] <- "AdjPValue"
+    de.tbl <- cbind(rownames(de.tbl), de.tbl, stringsAsFactors=FALSE)
+    rownames(de.tbl) <- NULL
+    colnames(de.tbl)[1] <- "Gene"
     return(de.tbl)
 }
 
@@ -333,10 +334,9 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
 }
 
 # filter low exprs
-.preprocRnaSeq <- function(rcounts, min.cpm=2)
+.preprocRnaSeq <- function(rcounts)
 {
-    rs <- rowSums(edgeR::cpm(rcounts) > min.cpm)
-    keep <- rs >= ncol(rcounts) / 2
+    keep <- edgeR::filterByExpr(rcounts)
     rcounts <- rcounts[keep,]
     y <- edgeR::DGEList(counts=rcounts)
     y <- edgeR::calcNormFactors(y)
