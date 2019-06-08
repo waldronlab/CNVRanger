@@ -1,4 +1,4 @@
-#' @import GenomicRanges RaggedExperiment
+#' @import S4Vectors IRanges GenomeInfoDb GenomicRanges RaggedExperiment
 #' @importFrom grDevices dev.off pdf
 #' @importFrom methods as is
 #' @importFrom stats ecdf median pchisq qbeta qchisq

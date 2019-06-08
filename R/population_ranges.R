@@ -280,7 +280,7 @@ populationRanges <- function(grl, mode=c("density", "RO"),
     }
    
     # compile hit clusters 
-    hit.clusters <- unname(IRanges::splitAsList(hits, cid))
+    hit.clusters <- unname(S4Vectors::splitAsList(hits, cid))
 
     # extract call clusters
     call.clusters <- lapply(hit.clusters, 
