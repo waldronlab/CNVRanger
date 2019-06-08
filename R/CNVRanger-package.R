@@ -1,4 +1,5 @@
-#' @import S4Vectors IRanges GenomeInfoDb GenomicRanges RaggedExperiment
+#' @import S4Vectors GenomeInfoDb GenomicRanges RaggedExperiment
+#' @importFrom IRanges extractList subsetByOverlaps
 #' @importFrom grDevices dev.off pdf
 #' @importFrom methods as is
 #' @importFrom stats ecdf median pchisq qbeta qchisq
