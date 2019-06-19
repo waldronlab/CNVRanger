@@ -45,9 +45,10 @@ CNVs can be experimentally detected based on comparative genomic hybridization,
 and computationally inferred from SNP-arrays or next-generation sequencing data.
 These technologies for CNV detection have in common that they report, for each
 sample under study, genomic regions that are duplicated or deleted with respect 
-to a reference. 
-Such regions are denoted as _CNV calls_ in the following and will be considered 
-the starting point for analysis with the `r Biocpkg("CNVRanger")` package.  
+to a reference. Such regions are denoted as _CNV calls_ in the following and will be considered 
+the starting point for analysis with the `r Biocpkg("CNVRanger")` package. However,
+as the coordinates of _CNV calls_ as well as their respective copy number are requested,
+any external software used to detect CNVs needs to be able to provide such an information.
 
 The key parts of the functionality implemented in CNVRanger were developed,
 described, and applied in several previous studies:
@@ -83,7 +84,13 @@ by interfacing with the `r Biocpkg("edgeR")` package with convenient options
 for common analyses including restriction by genomic regions and cis-eQTLs.
 Similarly, `r Biocpkg("CNVRanger")` also interfaces with 
 [PLINK](http://zzz.bwh.harvard.edu/plink), thereby enabling traditional genome-wide 
-association studies (GWAS) between CNVs and quantitative phenotypes.
+association studies (GWAS) between CNVs and quantitative phenotypes. It is important to note that 
+the `r Biocpkg("CNVRanger")` package assumes its input dataset to contain CNV calls previously filtered by quality within 
+the external software that was used for CNV calling, or by a custom implementation chosen by the user. 
+`r Biocpkg("CNVRanger")` intends to provide downstream summarization and association analysis for CNV calls, but it currently 
+do not implements any function to deal with CNV calling or filtering by quality. Therefore, the user needs to 
+consider the false negative-positive rate present in a CNV dataset in order to correctly interpret the results.
+Moreover, in the current version, CNVRanger is not able to generate proper results for polyploid species.
 
 # Reading and accessing CNV data
 
@@ -141,6 +148,12 @@ according to their genomic coordinates.
 grl <- sort(grl)
 grl
 ```
+
+The input file containg CNV calls should necessarily have at least five columns, 
+which will indicate for each call its (i) chromosome, (ii) downstream breakpoint start, (iii) upstream
+breakpoint, (iv) sample name and the (v) copy number state. Independently of the format of
+CNV calls (i.e. tab or space delimited), the R object containing these calls should be converted to a 
+`GRangesList`, as described above, in order to be used as input in `r Biocpkg("CNVRanger")` functions.
 
 ## Representation as a `RaggedExperiment`
 
@@ -520,7 +533,10 @@ and quantitative phenotypes as previously described
 
 This treats common CN polymorphisms (CNPs, allele frequency >1%) as SNPs of 
 equal frequency and carries out a GWAS as implemented in 
-[PLINK](http://zzz.bwh.harvard.edu/plink/gvar.shtml).
+[PLINK](http://zzz.bwh.harvard.edu/plink/gvar.shtml). The current version of 
+`cnvGWAS` fucntion runs the CNV-phenotype in the background with 
+[PLINK](http://zzz.bwh.harvard.edu/plink/gvar.shtml), import the results and 
+assign SNP probe _p_-values to their respective CNV segments.
 
 For demonstration, we use CNV data of a wild population of songbirds 
 ([da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)).
@@ -637,17 +653,52 @@ chr.size.order <- data.frame(chr=order.chrs, sizes=chr.sizes, stringsAsFactors=F
 plotManhattan(all.paths, segs.pvalue.gr, chr.size.order, plot.pdf=FALSE)
 ```
 
+## Producing a GDS file in advance
+
+To support an efficient memory management in genotype analysis, 
+the genomic data structure (GDS) file format for array-oriented data
+was previously implemented in the `r Biocpkg("gdsfmt")` package.
+Thus, to make use of this efficiency, CNV genotypes constructed and 
+associated with the `cnvGWAS` function are stored in a `CNV.gds` file, 
+which is automatically produced and placed in the `Inputs` folder (i.e. `all.paths[1]`). 
+
+Therefore, running a GWAS implies that any GDS file produced by previous analysis 
+will be overwritten. Use `produce.gds=FALSE` to avoid overwriting in the GWAS run. 
+
+For convenience, a GDS file can be produced before the GWAS analysis with the 
+`generateGDS` function.
+This additionally returns a `GRanges` object containing the genomic 
+position, name and, frequency of each probe used to construct the CNV segments
+for the GWAS analysis. 
+
+Note that `probes.cnv.gr` object contains the integer chromosome names 
+(as the GDS file on disk). 
+Only the `segs.pvalue.gr`, which stores the GWAS results, has the character 
+chromosome names.  
+
+```{r prodGDS}
+## Create a GDS file in disk and export the SNP probe positions
+probes.cnv.gr <- generateGDS(phen.info, chr.code.name=chr.code.name)
+probes.cnv.gr
+
+## Run GWAS with existent GDS file
+segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, produce.gds=FALSE)
+```
+
 ## Using relative signal intensities 
 
 CNV detection using SNP-chip intensities and allele frequencies can produce 
 biased CNV frequencies 
 ([da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)). 
-
 Therefore, we also provide the option to carry out the GWAS based on the 
-relative signal intensity (log R ratio, LRR).
+SNP-wise relative signal intensities (log R ratios, LRRs), which reflect at certain extend
+the number of copies on the SNP region and are used as input for several CNV callers
+such as [PennCNV](http://penncnv.openbioinformatics.org) and [Birdsuit](https://www.broadinstitute.org/birdsuite/birdsuite).
 Directly using LRR values for the GWAS thereby facilitates the identification of
 CNV segments associated with the phenotype, disregarding putatively biased 
-frequency estimates from the CNV calling procedure. 
+frequency estimates from a strict CNV calling procedure. Although sometimes interesting as an auxiliar analysis,
+using LRR values directly can generate false positive results as higher noise is expected in comparison
+with a CNV dataset detected and properly filtered by an external CNV caller software.
 
 To perform the GWAS using LRR values, import the LRR/BAF values and set `run.lrr=TRUE` 
 in the `cnvGWAS` function:
@@ -669,36 +720,6 @@ gdsfmt::closefn.gds(genofile)
 
 # Run the CNV-GWAS with existent GDS
 segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, produce.gds=FALSE, run.lrr=TRUE)
-```
-
-## Producing a GDS file in advance
-
-It is important to note that the `cnvGWAS` function uses the `CNV.gds` file 
-which is stored in the `Inputs` folder (i.e. `all.paths[1]`). 
-This GDS file is automatically generated during a GWAS run. 
-
-Therefore, running a GWAS implies that any GDS file produced by previous analysis 
-will be overwritten. 
-Use `produce.gds=FALSE` to avoid overwriting in the GWAS run. 
-
-For convenience, a GDS file can be produced before the GWAS analysis with the 
-`generateGDS` function.
-This additionally returns a `GRanges` object containing the genomic 
-position, name and, frequency of each probe used to construct the CNV segments
-for the GWAS analysis. 
-
-Note that `probes.cnv.gr` object contains the integer chromosome names 
-(as the GDS file on disk). 
-Only the `segs.pvalue.gr`, which stores the GWAS results, has the character 
-chromosome names.  
-
-```{r prodGDS}
-## Create a GDS file in disk and export the SNP probe positions
-probes.cnv.gr <- generateGDS(phen.info, chr.code.name=chr.code.name)
-probes.cnv.gr
-
-## Run GWAS with existent GDS file
-segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, produce.gds=FALSE)
 ```
 
 # Session info
