@@ -613,7 +613,12 @@ segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, method.m.test=
 segs.pvalue.gr
 ```
 
-The CNV-GWAS uses the concept of CNV segments to define CNV loci. 
+The CNV-GWAS uses the concept of CNV segments to define CNV loci.
+
+```{r pressure, echo=FALSE, fig.cap="Definition of CNV segments", out.width = '100%'}
+knitr::include_graphics(file.path(data.dir, "CNV-segments.png"))
+```
+
 This procedure was originally proposed in our previous work in Nelore cattle 
 ([da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)) and 
 defines CNV segments based on CNV genotype similarity of subsequent SNP probes. 
