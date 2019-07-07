@@ -12,7 +12,7 @@ Imports:
     GDSArray,
     GenomeInfoDb,
     IRanges,
-    S4Vectors,
+    S4Vectors (>= 0.23.10),
     SNPRelate,
     SummarizedExperiment, 
     data.table, 
