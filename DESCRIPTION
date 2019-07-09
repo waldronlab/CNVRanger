@@ -1,5 +1,5 @@
 Package: CNVRanger
-Version: 1.1.3
+Version: 1.1.4
 Title: Summarization and expression/phenotype association of CNV ranges
 Author: Ludwig Geistlinger [aut, cre], Vinicius Henrique da Silva [aut],
     Marcel Ramos [ctb], Levi Waldron [ctb]
@@ -12,7 +12,7 @@ Imports:
     GDSArray,
     GenomeInfoDb,
     IRanges,
-    S4Vectors (>= 0.23.10),
+    S4Vectors,
     SNPRelate,
     SummarizedExperiment, 
     data.table, 

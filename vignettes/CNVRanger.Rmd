@@ -51,7 +51,7 @@ the starting point for analysis with the `r Biocpkg("CNVRanger")` package.
 
 The following figure provides an overview of the analysis capabilities of `CNVRanger`. 
 
-```{r, echo=FALSE, fig.wide=TRUE}
+```{r oview, echo=FALSE, fig.wide=TRUE}
 vign.dir <- system.file("vignettes", package = "CNVRanger")
 knitr::include_graphics(file.path(vign.dir, "CNVRanger.png"))
 ```
@@ -92,12 +92,12 @@ described, and applied in several previous studies:
 - CNVs are associated with genomic architecture in a songbird 
     [da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)
 
-It is important to note that the `r Biocpkg("CNVRanger")` package assumes its input dataset to contain CNV calls previously filtered by quality within 
-the external software that was used for CNV calling, or by a custom implementation chosen by the user. 
-`r Biocpkg("CNVRanger")` intends to provide downstream summarization and association analysis for CNV calls, but it currently 
-do not implements any function to deal with CNV calling or filtering by quality. Therefore, the user needs to 
-consider the false negative-positive rate present in a CNV dataset in order to correctly interpret the results.
-Moreover, in the current version, CNVRanger is not able to generate proper results for polyploid species.
+Note: `r Biocpkg("CNVRanger")` assumes CNV calls provided as input to be already
+filtered by quality, using the software that was used for CNV calling, or specific
+tools for that purpose. 
+`r Biocpkg("CNVRanger")` provides downstream summarization and association analysis 
+for CNV calls, it does not implement functions for CNV calling or quality control.
+`r Biocpkg("CNVRanger")` is applicable for diploid species only.
 
 # Key functions
 
@@ -109,6 +109,9 @@ Analysis step           | Function
 (D) Expression analysis | `cnvEQTL`                              
 (E) Phenotype analysis  | `cnvGWAS`                                    
 
+Note: we use the `package::function` notation for functions from other packages.
+For functions from this package and base R functions, we use the function name
+without preceding package name.
 
 # Reading and accessing CNV data
 
@@ -318,7 +321,7 @@ and retrieve gene coordinates in the UMD3.1 assembly (Ensembl 92).
 
 ```{r getBtGenes2}
 ahEdb <- ahDb[["AH60948"]]
-bt.genes <- GenomicFeatures::genes(ahEdb)
+bt.genes <- ensembldb::genes(ahEdb)
 GenomeInfoDb::seqlevelsStyle(bt.genes) <- "UCSC"
 bt.genes
 ```
