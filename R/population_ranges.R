@@ -140,6 +140,79 @@ populationRanges <- function(grl, mode=c("density", "RO"),
     return(pranges)
 }
 
+#' Plot recurrent CNV regions
+#'
+#' Illustrates summarized CNV regions along a chromosome.
+#'
+#' @param regs A \code{\linkS4class{GRanges}}. Typically the result of 
+#' \code{\link{populationRanges}} with \code{est.recur=TRUE}.
+#' @param genome Character. A valid UCSC genome assembly ID such as 'hg19' or 'bosTau6'.
+#' @param chr Character. A UCSC-style chromosome name such as 'chr1'. 
+#' @param pthresh Numeric. Significance threshold for recurrence. Defaults to 0.05.
+#' @return None. Plots to a graphics device.
+#'
+#' @author Ludwig Geistlinger
+#' @seealso \code{\link{plotTracks}}
+#' 
+#' @examples
+#'
+#' # read in example CNV calls
+#' data.dir <- system.file("extdata", package="CNVRanger")
+#' call.file <- file.path(data.dir, "Silva16_PONE_CNV_calls.csv")
+#' calls <- read.csv(call.file, as.is=TRUE)
+#'
+#' # store in a GRangesList
+#' grl <- GenomicRanges::makeGRangesListFromDataFrame(calls, 
+#'    split.field="NE_id", keep.extra.columns=TRUE)
+#'
+#' # summarize CNV regions
+#' cnvrs <- populationRanges(grl, density=0.1, est.recur=TRUE)
+#'
+#' # plot
+#' plotRecurrentRegions(cnvrs, genome="bosTau6", chr="chr1")
+#'
+#' @export
+plotRecurrentRegions <- function(regs, genome, chr, pthresh=0.05)
+{
+    colM <- "gray24"
+    colB <- "gray94"
+    tlevels <- c("gain", "loss", "both")
+
+    chr.regs <- subset(regs, seqnames == chr)
+    sig.regs <- subset(chr.regs, pvalue < pthresh)
+    
+    itrack <- Gviz::IdeogramTrack(genome=genome, chr=chr, fontsize=15)
+    gtrack <- Gviz::GenomeAxisTrack(littleTicks=TRUE, fontsize=15)
+
+    gain.regs <- subset(chr.regs, type=="gain")
+    gain.track <- Gviz::DataTrack(gain.regs, data=gain.regs$freq, 
+                                type="h", groups=factor("gain", levels=tlevels), 
+                                name="#samples", cex.title=1, cex.axis=1,
+                                font.axis=2, col.title=colM, col.axis=colM, 
+                                background.title=colB, legend=TRUE)
+    loss.regs <- subset(chr.regs, type=="loss")
+    loss.track <- Gviz::DataTrack(loss.regs, data=loss.regs$freq, 
+                                type="h", groups=factor("loss", levels=tlevels), 
+                                name="#samples", cex.title=1, cex.axis=1,
+                                font.axis=2, col.title=colM, col.axis=colM, 
+                                background.title=colB, legend=TRUE)
+    both.regs <- subset(chr.regs, type=="both")
+    both.track <- Gviz::DataTrack(both.regs, data=both.regs$freq, 
+                                type="h", groups=factor("both", levels=tlevels), 
+                                name="#samples", cex.title=1, cex.axis=1,
+                                font.axis=2, col.title=colM, col.axis=colM, 
+                                background.title=colB, legend=TRUE)
+    otrack <- Gviz::OverlayTrack(trackList=list(gain.track, loss.track, both.track),
+                                    background.title=colB)
+    ylim <- extendrange(range(c(values(gain.track), 
+                                    values(loss.track), values(both.track))))
+
+    atrack <- Gviz::AnnotationTrack(sig.regs, name="recurrent", cex.title=1, 
+                                    cex.axis=1, font.axis=2, col.title=colM,
+                                    col.axis=colM, background.title=colB)
+    Gviz::plotTracks(list(itrack, gtrack, otrack, atrack), ylim=ylim)
+}
+
 ## (1) Density approach
 .densityPopRanges <- function(grl, density)
 {
