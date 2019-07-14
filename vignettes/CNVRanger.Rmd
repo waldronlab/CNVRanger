@@ -101,7 +101,7 @@ developed and extensively tested for SNP-based CNV calls as obtained with
 We also tested `CNVRanger` for sequencing-based CNV calls as obtained with
 [CNVnator](https://doi.org/10.1101/gr.114876.110) (a read-depth approach) or
 [LUMPY](https://doi.org/10.1186/gb-2014-15-6-r84) (an approach that combines 
-evidence from split-reads and disconcordant read-pairs).
+evidence from split-reads and discordant read-pairs).
 
 In general, `r Biocpkg("CNVRanger")` can be applied to CNV calls associated with
 integer copy number states, where we assume the states to be encoded as:
@@ -115,7 +115,8 @@ integer copy number states, where we assume the states to be encoded as:
 Note that for CNV calling software that uses a different encoding or that 
 does not provide integer copy number states, it is often possible to (at least
 approximately) transform the output to a format that is compatible with the 
-input format of `r Biocpkg("CNVRanger")`. See Section 4.1 _Input data format_ 
+input format of `r Biocpkg("CNVRanger")`. See Section 4.1
+[Input data format](#input-data-format) 
 for details.
 
 `r Biocpkg("CNVRanger")` is designed to work with CNV calls from one tool at a 
@@ -154,7 +155,7 @@ knitr::include_graphics(file.path(vign.dir, "Input.png"))
 
 The `r Biocpkg("CNVRanger")` package uses Bioconductor core data structures 
 implemented in the `r Biocpkg("GenomicRanges")` and `r Biocpkg("RaggedExperiment")` 
-packages to represent, access, and manipulate CNV data.
+packages to efficiently represent, access, and manipulate CNV data.
 
 We start by loading the package.
 
@@ -164,31 +165,9 @@ library(CNVRanger)
 
 ## Input data format
 
-In a diploid genome, a single-copy gain in a perfectly pure, homogeneous sample 
-has a copy ratio of 3/2. In log2 scale, this is log2(3/2) = 0.585, and a 
-single-copy loss is log2(1/2) = -1.0.
-
-<!--
-If you want to roughly calculate the absolute copy number at that position, 
-you can convert out of log2 and round to the nearest integer:
-
-So for one of your values:
-
-log2 cn: 0.4194
-
-This is the ratio between tumor and normal (or between your cell line and a panel of "normal" cells)
-
-To convert to absolute copy number, we do
-
-(2^0.4194)*2 = 2.674742
-
-The mulitplication by two is because we assume a diploid genome in the normal.
-
-Rounding, you'd probably say this gene was duplicated and there are three copies.
-
-This is not the ideal way to calculate absolute copy number, but given the 
-information you have, I think it'll be about as good as you can get.
--->
+`r Biocpkg("CNVRanger")` reads CNV calls from a simple file format, providing at 
+least chromosome, start position, end position, sample ID, and integer copy number 
+for each call.
 
 For demonstration, we consider CNV calls as obtained with 
 [PennCNV](http://penncnv.openbioinformatics.org) from SNP-chip data in a 
@@ -197,6 +176,9 @@ Brazilian cattle breed
 
 Here, we use a data subset and only consider CNV calls on chromosome 1 and 2,
 for which there are roughly 3000 CNV calls as obtained for 711 samples. 
+We use `read.csv` to read comma-separated values, but we could use a different
+function if the data were provided with a different delimiter 
+(for example, `read.delim` for tab-separated values). 
 
 ```{r readCalls}
 data.dir <- system.file("extdata", package="CNVRanger")
@@ -210,12 +192,48 @@ head(calls)
 length(unique(calls[,"NE_id"]))
 ```
 
+We observe that this example dataset satisfies the basic five-column input format 
+required by `r Biocpkg("CNVRanger")`. 
+
+The last column contains the integer copy 
+number state for each call, encoded as
+
+- `0`: homozygous deletion (2-copy loss)
+- `1`: heterozygous deletion (1-copy loss)
+- `2`: normal diploid state
+- `3`: 1-copy gain
+- `4`: amplification (>= 2-copy gain)  
+
+For CNV detection software that uses a different encoding, it is necessary to 
+convert to the above encoding.
+For example, GISTIC uses 
+
+- `-2`: homozygous deletion (2-copy loss)
+- `-1`: heterozygous deletion (1-copy loss)
+- `0`: normal diploid state
+- `1`: 1-copy gain
+- `2`: amplification (>= 2-copy gain)  
+
+which can be converted by simply adding 2.
+
+In Section 7.2
+[Application to TCGA data](#application-to-tcga-data-stored-in-a-multiassayexperiment) 
+we also describe how to transform segmented log2 copy ratios to integer copy number states.
+
+The basic five-column input format can be augmented with additional columns,
+providing additional characteristics and metadata for each CNV call.
+In Section 8 
+[CNV-phenotype association analysis](#cnv-phenotype-association-analysis), we 
+demonstrate how to make use of such an extended input format. 
+
+
 ## Representation as a `GRangesList`
 
-We group the calls by sample ID, resulting in a `GRangesList`.
+Once read into an R `data.frame`, we group the calls by sample ID and convert
+them to a `GRangesList`.
 Each element of the list corresponds to a sample, and contains the genomic 
 coordinates of the CNV calls for this sample (along with the copy number state 
-in the `State` metadata column).  
+in the `state` metadata column).  
 
 ```{r cnvCalls}
 grl <- GenomicRanges::makeGRangesListFromDataFrame(calls, 
@@ -232,12 +250,6 @@ according to their genomic coordinates.
 grl <- GenomicRanges::sort(grl)
 grl
 ```
-
-The input file containg CNV calls should necessarily have at least five columns, 
-which will indicate for each call its (i) chromosome, (ii) downstream breakpoint start, (iii) upstream
-breakpoint, (iv) sample name and the (v) copy number state. Independently of the format of
-CNV calls (i.e. tab or space delimited), the R object containing these calls should be converted to a 
-`GRangesList`, as described above, in order to be used as input in `r Biocpkg("CNVRanger")` functions.
 
 ## Representation as a `RaggedExperiment`
 
@@ -370,17 +382,20 @@ subset(cnvrs, pvalue < 0.05)
 
 We can illustrate the landscape of recurrent CNV regions using the function 
 `plotRecurrentRegions`.
-Provided the summarized CNV regions, a valid [UCSC](https://genome.ucsc.edu/cgi-bin/hgGateway)
-genome assembly, and a chromosome of interest, the function plots (from top to bottom):
-(i) an ideogram of the chromosome (note that staining bands are not available for `bosTau6`), 
-(ii) a genome axis indicating the chromosomal position, (iii) a bar plot showing
-for each CNV region the number of samples with a CNV call in that region, and 
-(iv) an annotation track that indicates whether this is a _recurrent_ region 
-according to a significance threshold (an argument to the function, default: 0.05).  
+We therefore provide the summarized CNV regions, a valid 
+[UCSC](https://genome.ucsc.edu/cgi-bin/hgGateway) genome assembly, and a 
+chromosome of interest.   
 
 ```{r recurrViz}
 plotRecurrentRegions(cnvrs, genome="bosTau6", chr="chr1")
 ```
+
+The function plots (from top to bottom):
+(i) an ideogram of the chromosome (note that staining bands are not available for `bosTau6`), 
+(ii) a genome axis indicating the chromosomal position, (iii) a bar plot showing
+for each CNV region the number of samples with a CNV call in that region, and 
+(iv) an annotation track that indicates whether this is a _recurrent_ region 
+according to a significance threshold (an argument to the function, default: 0.05).
 
 # Overlap analysis of CNVs with functional genomic regions
 
@@ -503,7 +518,7 @@ comparison.  For more than two states (e.g. 0n, 1n, 2n), edgeR’s
 ANOVA-like test is applied to test all deviating groups for
 significant expression differences relative to 2n.
 
-## Dealing with individual CNV and RNA-seq assays
+## Application to individual CNV and RNA-seq assays
 
 We demonstrate the functionality by loading RNA-seq read count data from 
 skeletal muscle samples for 183 Nelore cattle steers, which we analyzed for 
@@ -564,7 +579,7 @@ region, and (i) log2 fold change with respect to the 2n group,
 (ii) edgeR's DE _p_-value, and 
 (iii) the (per default) Benjamini-Hochberg adjusted _p_-value. 
 
-## Dealing with TCGA data stored in a `MultiAssayExperiment`
+## Application to TCGA data stored in a `MultiAssayExperiment`
 
 In the previous section, we individually prepared the CNV and RNA-seq data for 
 CNV-expression association analysis.
@@ -626,16 +641,37 @@ gbm <- TCGAutils::splitAssays(gbm, sampleCodes="01")
 gbm
 ```
 
-We transform CN estimates into CN states where states are encoded as:
+The SNP-based CNV calls from TCGA are provided as segmented log2 copy number ratios. 
 
-- `0`: homozygous deletion (2-copy loss)
-- `1`: heterozygous deletion (1-copy loss)
-- `2`: normal diploid state
-- `3`: 1-copy gain
-- `4`: amplification (>= 2-copy gain)  
+```{r segmean}
+ind <- grep("CNVSNP", names(gbm))
+head( mcols(gbm[[ind]]) )
+summary( mcols(gbm[[ind]])$Segment_Mean )
+```
+
+It is thus necessary to convert them to integer copy number states for further 
+analysis with `r Biocpkg("CNVRanger")`.
+
+In a diploid genome, a single-copy gain in a perfectly pure, homogeneous sample 
+has a copy ratio of 3/2. On log2 scale, this is log2(3/2) = 0.585, and a 
+single-copy loss is log2(1/2) = -1.0.
+
+We can roughly convert a log ratio `lr` to an integer copy number by
+
+```{r lr2int, eval=FALSE}
+round( (2^lr) * 2)
+```
+
+Note that this is not the ideal way to calculate absolute integer copy numbers.
+Especially in cancer, differences in tumor purity, tumor ploidy, and subclonality
+can substantially interfere with the assumption of a pure homogeneous sample.
+See [ABSOLUTE](https://doi.org/10.1038/nbt.2203) and the `r Biocpkg("PureCN")` 
+package for accurately taking such tumor characteristics into account.
+
+However, without additional information we transform the log ratios into
+integer copy number states using the rough approximation outlined above.
 
 ```{r transformToStates}
-ind <- grep("CNVSNP", names(gbm))
 smean <- mcols(gbm[[ind]])$Segment_Mean
 state <- round(2^smean * 2)
 state[state > 4] <- 4
@@ -664,6 +700,17 @@ res[2]
 (r <- GRanges(names(res)[2]))
 plotEQTL(cnvr=r, genes=res[[2]], genome="hg19", cn="CN1")
 ```
+
+The plot shows consistent decreased expression (negative log2 fold change) 
+of genes in the neighborhood of the CNV region, when comparing samples with a one 
+copy loss (1$n$) in that region to the 2$n$ reference group.
+
+Note that a significant expression change is not only observed for genes locating
+within the CNV region (dosage effect, here: PARK7), but also genes locating in 
+close proximity of the CNV region (neighborhood effect, here: CAMTA1 and RERE).
+This is consistent with previous observations in mouse 
+[Cahan et al., 2009](https://doi.org/10.1038/ng.350) and our observations in cattle 
+[Geistlinger et al., 2018](https://doi.org/10.1038/s41598-018-19782-4).
 
 # CNV-phenotype association analysis
 

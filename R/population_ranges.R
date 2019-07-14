@@ -207,7 +207,7 @@ plotRecurrentRegions <- function(regs, genome, chr, pthresh=0.05)
     ylim <- extendrange(range(c(values(gain.track), 
                                     values(loss.track), values(both.track))))
 
-    atrack <- Gviz::AnnotationTrack(sig.regs, name="recurrent", cex.title=1, 
+    atrack <- Gviz::AnnotationTrack(sig.regs, name="recur", cex.title=1, 
                                     cex.axis=1, font.axis=2, col.title=colM,
                                     col.axis=colM, background.title=colB)
     Gviz::plotTracks(list(itrack, gtrack, otrack, atrack), ylim=ylim)
