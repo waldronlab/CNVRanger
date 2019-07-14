@@ -71,6 +71,11 @@
 #' @param padj.method Character. Method for adjusting p-values to multiple testing.
 #' For available methods see the man page of the function \code{\link{p.adjust}}.
 #' Defaults to \code{"BH"}.
+#' @param filter.by.expr Logical. Include only genes with
+#' sufficiently large counts in the DE analysis? If TRUE, excludes genes not 
+#' satisfying a minimum number of read counts across samples using the 
+#' \code{\link{filterByExpr}} function from the edgeR package.
+#' Defaults to TRUE.
 #' @param verbose Logical. Display progress messages? Defaults to \code{FALSE}.
 #' @return A \code{\linkS4class{DataFrame}} containing measures of association for 
 #' each CNV region and each gene tested in the genomic window around the CNV region.
@@ -114,13 +119,13 @@
 #' rse <- SummarizedExperiment(assays=list(counts=y), rowRanges=granges(genes))
 #'
 #' # (4) perform the association analysis
-#' res <- cnvEQTL(cnvrs, calls, rse, min.samples=1)
+#' res <- cnvEQTL(cnvrs, calls, rse, min.samples=1, filter.by.expr=FALSE)
 #'
 #' @export
 cnvEQTL <- function(cnvrs, calls, rcounts, data,
     window="1Mbp", multi.calls=.largest,
     min.samples=10, de.method=c("edgeR", "limma"),
-    padj.method="BH", verbose=FALSE)
+    padj.method="BH", filter.by.expr=TRUE, verbose=FALSE)
 {
     if (!missing(data)) {
         stopifnot(is(data, "MultiAssayExperiment"))
@@ -160,7 +165,7 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
     }
     # filter and norm RNA-seq data
     if(verbose) message("Preprocessing RNA-seq data ...")
-    y <- .preprocRnaSeq(SummarizedExperiment::assay(rcounts))
+    y <- .preprocRnaSeq(SummarizedExperiment::assay(rcounts), filter.by.expr)
     rcounts <- rcounts[rownames(y),]
 
     # determine states
@@ -184,7 +189,8 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
 
     #TODO: BiocParallel
     de.method <- match.arg(de.method)
-    res <- lapply(seq_len(nr.cnvrs),
+    cnvr.grid <- seq_len(nr.cnvrs)
+    res <- lapply(cnvr.grid,
         function(i)
         {
             if(verbose) message(paste(i, "of", nr.cnvrs))
@@ -193,17 +199,88 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
                                 de.method=de.method)
             return(r)
         })
-    names(res) <- rownames(cnv.states)
-
-    # multiple testing
-    cnvr.col <- rep(names(res), times=lengths(cgenes))
-    res <- do.call(rbind, res)
+    lens <- rep(cnvr.grid, lengths(cgenes))
+    res <- do.call(plyr::rbind.fill, res)
     padj <- stats::p.adjust(res[,"PValue"], method=padj.method)
-    res <- cbind(cnvr.col, res, padj, stringsAsFactors=FALSE)
-    colnames(res)[c(1,ncol(res))] <- c("CNVR", "AdjPValue")
-    res <- S4Vectors::DataFrame(res)
-    rownames(res) <- NULL
+    res <- data.frame(res, AdjPValue = padj)
+    res <- .formatResult(res, rcounts, lens)
+    names(res) <- rownames(cnv.states)
     return(res)
+}
+
+#' Plot EQTL region
+#'
+#' Illustrates differential expression of genes in the neighborhood of a CNV.
+#'
+#' @param cnvr A \code{\linkS4class{GRanges}} of length 1, containing the genomic
+#' coordinates of the CNV region of interest.
+#' @param genes \code{\linkS4class{GRanges}} containing genes in the neighborhood
+#' of the CNV region of interest.
+#' @param genome Character. A valid UCSC genome assembly ID such as 'hg19' or 'bosTau6'.
+#' @param cn Character. Copy number state of interest.
+#' @return None. Plots to a graphics device.
+#'
+#' @author Ludwig Geistlinger
+#' @seealso \code{\link{plotTracks}}
+#' 
+#' @examples
+#'
+#' # CNV region of interest
+#' cnvr <- GRanges("chr1:7908902-8336254")
+#'
+#' # Two genes in the neighborhood
+#' genes <- c("chr1:8021714-8045342:+", "chr1:8412464-8877699:-")
+#' names(genes) <- c("PARK7", "RERE")
+#' genes <- GRanges(genes)
+#' 
+#' # Annotate differential expression for 1-copy loss
+#' genes$logFC.CN1 <- c(-0.635, -0.728)
+#' genes$AdjPValue <- c(8.29e-09, 1.76e-08) 
+#'
+#' # plot
+#' plotEQTL(cnvr, genes, genome="hg19", cn="CN1")
+#'
+#' @export
+plotEQTL <- function(cnvr, genes, genome, cn="CN1")
+{
+    colM <- "gray24"
+    colB <- "gray94"
+    chr <- as.character(seqnames(cnvr))
+
+    itrack <- Gviz::IdeogramTrack(genome=genome, chr=chr, fontsize=15)
+    gtrack <- Gviz::GenomeAxisTrack(littleTicks=TRUE, fontsize=15)    
+
+    cnvrTrack <- Gviz::AnnotationTrack(cnvr, name="CNVR", group=" ", fill="red",
+        col.title=colM, col.axis=colM, background.title=colB, cex.title=0.8)
+
+    pgenes <- subset(genes, strand=="+")
+    plusTrack <- Gviz::AnnotationTrack(pgenes, name="", 
+            #group=names(genes), just.group="right", 
+            cex=0.8, rotation.item=45,
+            id=names(pgenes), featureAnnotation="id", fontcolor.feature="darkblue",
+            col.title=colM, col.axis=colM, background.title=colB)
+    
+    mgenes <- subset(genes, strand == "-")
+    minusTrack <- Gviz::AnnotationTrack(mgenes, name="", 
+            #group=names(genes), just.group="right", 
+            cex=0.8, rotation.item=45,
+            id=names(mgenes), featureAnnotation="id", fontcolor.feature="darkblue",
+            col.title=colM, col.axis=colM, background.title=colB)
+
+    GenomicRanges::strand(genes) <- "*"
+    fctrack <- Gviz::DataTrack(genes, data=genes$logFC.CN1, type="h",  
+                                name="log2FC", cex.title=1, cex.axis=1,
+                                font.axis=2, col.title=colM, col.axis=colM, 
+                                background.title=colB)           
+    
+    ps <- -log10(genes$AdjPValue) 
+    ptrack <- Gviz::DataTrack(genes, data=ps, type="h",  
+                                name="-log10 adjP", cex.title=1, cex.axis=1,
+                                font.axis=2, col.title=colM, col.axis=colM, 
+                                background.title=colB)           
+       
+    Gviz::plotTracks(c(itrack, gtrack, cnvrTrack, 
+                        plusTrack, minusTrack, fctrack, ptrack))
 }
 
 # test a single cnv region
@@ -257,6 +334,8 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
         res <- edgeR::glmQLFTest(fit, coef=2:nr.states)
         res <- res$table
     }
+
+    # create result table
     fc.cols <- grep("^logFC", colnames(res), value=TRUE)
     rel.cols <- c(fc.cols, "PValue")
     ind <- order(res[,"PValue"])
@@ -264,6 +343,13 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
     de.tbl <- cbind(rownames(de.tbl), de.tbl, stringsAsFactors=FALSE)
     rownames(de.tbl) <- NULL
     colnames(de.tbl)[1] <- "Gene"
+
+    # remap fc cols
+    fc.cols <- grep("^logFC", colnames(de.tbl))
+    sn <- levels(group)[fc.cols]
+    smap <- c("CN0", "CN1", "CN3", "CN4")
+    names(smap) <- c("s-2", "s-1", "s+1", "s+2")
+    colnames(de.tbl)[fc.cols] <- paste("logFC", smap[sn], sep=".") 
     return(de.tbl)
 }
 
@@ -334,12 +420,31 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
 }
 
 # filter low exprs
-.preprocRnaSeq <- function(rcounts)
+.preprocRnaSeq <- function(rcounts, filter.by.expr=TRUE)
 {
-    keep <- edgeR::filterByExpr(rcounts)
-    rcounts <- rcounts[keep,]
+    if(filter.by.expr)
+    {
+        keep <- edgeR::filterByExpr(rcounts)
+        rcounts <- rcounts[keep,]
+    }
     y <- edgeR::DGEList(counts=rcounts)
     y <- edgeR::calcNormFactors(y)
     return(y)
 }
+ 
+# format output as GRangesList
+.formatResult <- function(res, rcounts, lens)
+{
+    colnames(res) <- sub("logFC.NA", "logFC.CN3", colnames(res))
+    fc.ind <- grep("^logFC", colnames(res), value=TRUE)
+    fc.ind <- sort(fc.ind)
+    res <- res[,c("Gene", fc.ind, "PValue", "AdjPValue")] 
 
+    g <- res[,"Gene"]
+    g <- SummarizedExperiment::rowRanges(rcounts)[g]
+    GenomicRanges::mcols(g) <- res[,2:ncol(res)]
+    
+    grl <- split(g, lens)
+    grl <- GenomicRanges::GRangesList(grl)
+    return(grl)
+}

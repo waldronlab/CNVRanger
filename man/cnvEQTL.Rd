@@ -6,7 +6,8 @@
 \usage{
 cnvEQTL(cnvrs, calls, rcounts, data, window = "1Mbp",
   multi.calls = .largest, min.samples = 10, de.method = c("edgeR",
-  "limma"), padj.method = "BH", verbose = FALSE)
+  "limma"), padj.method = "BH", filter.by.expr = TRUE,
+  verbose = FALSE)
 }
 \arguments{
 \item{cnvrs}{A \code{\linkS4class{GRanges}} or character object containing
@@ -46,6 +47,12 @@ Defaults to \code{"edgeR"}.}
 \item{padj.method}{Character. Method for adjusting p-values to multiple testing.
 For available methods see the man page of the function \code{\link{p.adjust}}.
 Defaults to \code{"BH"}.}
+
+\item{filter.by.expr}{Logical. Include only genes with
+sufficiently large counts in the DE analysis? If TRUE, excludes genes not 
+satisfying a minimum number of read counts across samples using the 
+\code{\link{filterByExpr}} function from the edgeR package.
+Defaults to TRUE.}
 
 \item{verbose}{Logical. Display progress messages? Defaults to \code{FALSE}.}
 }
@@ -114,7 +121,7 @@ library(SummarizedExperiment)
 rse <- SummarizedExperiment(assays=list(counts=y), rowRanges=granges(genes))
 
 # (4) perform the association analysis
-res <- cnvEQTL(cnvrs, calls, rse, min.samples=1)
+res <- cnvEQTL(cnvrs, calls, rse, min.samples=1, filter.by.expr=FALSE)
 
 }
 \references{
