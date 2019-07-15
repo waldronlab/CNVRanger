@@ -353,7 +353,7 @@ plotRecurrentRegions <- function(regs, genome, chr, pthresh=0.05)
     }
    
     # compile hit clusters 
-    hit.clusters <- unname(S4Vectors::splitAsList(hits, cid))
+    hit.clusters <- unname(S4Vectors::split(hits, cid))
 
     # extract call clusters
     call.clusters <- lapply(hit.clusters, 
