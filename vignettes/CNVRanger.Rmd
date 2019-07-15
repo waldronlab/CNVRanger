@@ -750,6 +750,9 @@ in copy number is associated with change in the genetic potential for breeding t
 ## Setting up a CNV-GWAS
 
 The function `setupCnvGWAS` imports CNV calls, phenotype information, and the probe map (if available).
+The CNV calls can be in a `GRangesList`, `r Biocpkg("RaggedExperiment")` data class as described above,
+PennCNV output or even a general tab delimited file containing CNV calls as previously described in this vignette. Phenotype information is a tab delimited file that should contain the following columns (i) sample.id	(ii) fam (iii) sex and (iv) a column with the phenotype name without spaces, e.g. "BT" that in the example is referring to breeding timing. If a map file with probe names and positions is available, it should be a tab delimited file containing three columns with the following names (i) Name (ii) Chr and (iii) Position.
+
 The information required for analysis is then stored in the resulting `phen.info` list:
 
 ```{r importPhen}
@@ -807,7 +810,7 @@ segs.pvalue.gr
 
 The CNV-GWAS uses the concept of CNV segments to define CNV loci.
 
-```{r, echo=FALSE, fig.cap="Definition of CNV segments", out.width = '100%'}
+```{r, echo=FALSE, fig.cap="Definition of CNV segments. The percentages represent the concordance between up- and downstream probes (if sequencing data, fake probe positions are automatically created based on CNV call breakpoints). These percentages are based only on CNV-samples. There is a possibility to use up- and downstream metrics, but the default considers only the percentage of concordance between the up- and downstream probes. The figure shows the default configuration. The first percentage is 100% because the single sample that was 3n is still 3n in the second probe. At some point we get 75% of concordance because 75% of 3n samples in the up- probe and also 3n in the downstream probe. Lastly, from 3 samples with 3n, only one was concordant between the up and the down probe (i.e. 33.333%). The dashed line in red shows the CNV calls used to construct the CNV segment (i.e. all 3n calls) and the grey dashed line shows a CNV call that was not used in the same region (i.e. 1n call in green).", out.width = '100%'}
 knitr::include_graphics(file.path(vign.dir, "CNVsegments.png"))
 ```
 
