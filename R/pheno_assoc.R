@@ -549,6 +549,7 @@ generateGDS <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 
 #' SNPRelate::snpgdsClose(genofile)
 #' 
 #' @export
+
 importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, verbose=TRUE){
     
     cnv.gds <- file.path(all.paths["Inputs"], "CNV.gds")
