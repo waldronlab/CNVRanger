@@ -718,57 +718,104 @@ This is consistent with previous observations in mouse
 vign.dir <- system.file("vignettes", package = "CNVRanger")
 knitr::include_graphics(file.path(vign.dir, "Phenotype.png"))
 ```
-For CNV calls inferred from SNP-chip or sequencing data, we additionally provide functionality
-to carry out a probe-level genome-wide association study (GWAS) between CNVs 
-and quantitative phenotypes as previously described 
-([da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)).
+Specifically developed for CNV calls inferred from SNP-chip data, 
+`r Biocpkg("CNVRanger")` allows to carry out a probe-level genome-wide association 
+study (GWAS) with quantitative phenotypes.
+CNV calls from other sources such as sequencing data are also supported by using 
+the start and end position of each call as the corresponding probes.
 
-This treats common CN polymorphisms (CNPs, allele frequency >1%) as SNPs of 
-equal frequency and carries out a GWAS as implemented in 
-[PLINK](http://zzz.bwh.harvard.edu/plink/gvar.shtml). The current version of 
-`cnvGWAS` fucntion runs the CNV-phenotype in the background with 
-[PLINK](http://zzz.bwh.harvard.edu/plink/gvar.shtml), import the results and 
-assign SNP probe _p_-values to their respective CNV segments.
+As previously described [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711),
+we construct CNV segments from probes representing common CN polymorphisms
+(allele frequency >1\%), and carry out a GWAS as implemented in 
+[PLINK](http://zzz.bwh.harvard.edu/plink/gvar.shtml)
+using a standard linear regression of phenotype on allele dosage.
+
+For CNV segments composed of multiple probes, the segment _p_-value is chosen 
+from the probe _p_-values, using either the probe with minimum _p_-value or the 
+probe with maximum CNV frequency.
 
 For demonstration, we use CNV data of a wild population of songbirds 
 ([da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)).
 
-As before we read in the CNV calls and store them in a `GRangesList`.
-
-```{r readCalls2}
+```{r readCallsGWAS}
 cnv.loc <- file.path(data.dir, "CNVOut.txt") 
 cnv.calls <- read.delim(cnv.loc, as.is=TRUE) 
-cnv.calls <- GenomicRanges::makeGRangesListFromDataFrame(cnv.calls, 
-    split.field="sample.id", keep.extra.columns=TRUE)
-cnv.calls
+head(cnv.calls)
 ```
 
-Here, we use genomic estimated breeding values (GEBVs) for breeding time (BT) as the 
-quantitative phenotype, and accordingly analyze for each CNV region whether change 
-in copy number is associated with change in the genetic potential for breeding time. 
+Here, we use the extensibility of the basic five-column input format described
+in [Section 4.1](#input-data-format). 
+In addition to the required five columns (providing chromosome, start position, 
+end position, sample ID, and integer copy number state), we provided three 
+optional columns storing the number of probes supporting the call, and the 
+Affymetrix ID of the first and last probe contained in the call.
+
+As these columns are optional, it is not ultimately necessary to provide them 
+in order to run a CNV GWAS. 
+However, we recommend to provide this information when available as it 
+allows for a more fine-grained probe-by-probe GWAS.
+
+As described in [Section 4.2](#representation-as-a-grangeslist), we store the CNV calls 
+in a `GRangesList` for further analysis.
+
+```{r calls2grl}
+cnv.calls <- GenomicRanges::makeGRangesListFromDataFrame(cnv.calls, 
+    split.field="sample.id", keep.extra.columns=TRUE)
+sort(cnv.calls)
+```
+
+In the following, we use genomic estimated breeding values (GEBVs) for breeding 
+time (BT) as the quantitative phenotype, and accordingly analyze for each CNV 
+region whether change in copy number is associated with change in the genetic 
+potential for breeding time. 
 
 ## Setting up a CNV-GWAS
 
-The function `setupCnvGWAS` imports CNV calls, phenotype information, and the probe map (if available). CNV calls can be into a (i) `GRangesList`,(ii) `r Biocpkg("RaggedExperiment")` data class as described above, (iii) PennCNV output or (iv) a general tab delimited file with five columns (chromosome, start, end, sample and copy number state). Phenotype information is a tab delimited file, such as described in [PLINK](http://zzz.bwh.harvard.edu/plink/gvar.shtml), which should contain the following columns (i) sample.id	(ii) fam (iii) sex and (iv) the last with the phenotype name (without spaces), e.g. "BT" in the vignette example that refers to breeding timing. Although family and sex are listed as columns, this info is not considered in the current implementation (i.e. can be just NA). If a map file with probe names and positions is available, it should be a tab delimited file containing three columns with the following names (i) Name (ii) Chr and (iii) Position.
+For compatibility with [PLINK](http://zzz.bwh.harvard.edu/plink/gvar.shtml)'s 
+[fam file format](http://www.cog-genomics.org/plink/1.9/formats#fam),
+we read phenotype information from a tab-delimited file, containing exactly four 
+columns: sample ID, family ID, sex, and the quantitative phenotype (here: breeding time, BT). 
 
-The information required for analysis is then stored in the resulting `phen.info` list:
-
-```{r importPhen}
-## GEBV values
+```{r phenoData}
 phen.loc <- file.path(data.dir, "Pheno.txt")
-
-## Genomic positions of the probes used in the CNV call
-map.loc <- file.path(data.dir, "MapPenn.txt")
-
-phen.info <- setupCnvGWAS("example", phen.loc, cnv.calls, map.loc)
+phen.df <- read.delim(phen.loc, as.is=TRUE)
+head(phen.df)
 ```
 
-```{r importPhenRagged}
-## Phenotypes and CNVs can be also be imported as a RaggedExperiment object
-phen.df <- read.delim(phen.loc)
-colDat <- S4Vectors::DataFrame(phen.df)
-re <- RaggedExperiment::RaggedExperiment(cnv.calls, colData=colDat)
+Although family ID and sex are listed as columns, this info is not considered in 
+the current implementation and can be set to `NA`. 
+
+As described in [Section 4.3](#representation-as-a-raggedexperiment), we 
+combine the CNV calls with the phenotype information in a `RaggedExperiment` for
+coordinated representation and analysis.
+
+
+```{r importPhen}
+re <- RaggedExperiment::RaggedExperiment(cnv.calls, colData=phen.df)
 re
+```
+
+If probe information is available and has been annotated to the CNV calls, as we
+did above, the probe IDs and corresponding genomic positions should be provided 
+in a separate file.  
+For compatibility with [PLINK](http://zzz.bwh.harvard.edu/plink/gvar.shtml)'s 
+[map file format](http://www.cog-genomics.org/plink/1.9/formats#map), this is 
+expected to be a tab-delimited file containing exactly three columns: probe ID,
+chromosome, and the position in bp.
+
+```{r map}
+map.loc <- file.path(data.dir, "MapPenn.txt")
+map.df <- read.delim(map.loc, as.is=TRUE)
+head(map.df)
+```
+
+Given a `RaggedExperiment` storing CNV calls together with phenotype information, 
+and optionally a map file for probe-level coordinates, the `setupCnvGWAS` function 
+sets up all files needed for the GWAS analysis.
+
+The information required for analysis is stored in the resulting `phen.info` list:
+
+```{r importPhenRagged}
 phen.info <- setupCnvGWAS("example", cnv.out.loc=re, map.loc=map.loc)
 phen.info
 ```
@@ -806,9 +853,10 @@ segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, method.m.test=
 segs.pvalue.gr
 ```
 
-The CNV-GWAS uses the concept of CNV segments to define CNV loci.
+The CNV-GWAS uses the concept of CNV segments to define more fine-grained CNV loci
+within CNV regions.
 
-```{r, echo=FALSE, fig.cap="Definition of CNV segments. The percentages represent the concordance between up- and downstream probes (if sequencing data, fake probe positions are automatically created based on CNV call breakpoints). These percentages are based only on CNV-samples. There is a possibility to use up- and downstream metrics, but the default considers only the percentage of concordance between the up- and downstream probes. The figure shows the default configuration. The first percentage is 100% because the single sample that was 3n is still 3n in the second probe. At some point we get 75% of concordance because 75% of 3n samples in the up- probe and also 3n in the downstream probe. Lastly, from 3 samples with 3n, only one was concordant between the up and the down probe (i.e. 33.333%). The dashed line in red shows the CNV calls used to construct the CNV segment (i.e. all 3n calls)", out.width = '100%'}
+```{r, echo=FALSE, fig.cap="Definition of CNV segments. The figure shows construction of a CNV segment from 4 individual CNV calls in a CNV region based on pairwise copy number concordance between adjacent probes.", out.width = '100%'}
 knitr::include_graphics(file.path(vign.dir, "CNVsegments.png"))
 ```
 
@@ -853,12 +901,12 @@ plotManhattan(all.paths, segs.pvalue.gr, chr.size.order, plot.pdf=FALSE)
 
 ## Producing a GDS file in advance
 
-To support an efficient memory management in genotype analysis, 
-the genomic data structure (GDS) file format for array-oriented data
-was previously implemented in the `r Biocpkg("gdsfmt")` package.
-Thus, to make use of this efficiency, CNV genotypes constructed and 
-associated with the `cnvGWAS` function are stored in a `CNV.gds` file, 
-which is automatically produced and placed in the `Inputs` folder (i.e. `all.paths[1]`). 
+The genomic data structure (GDS) file format supports efficient memory management
+for genotype analysis.
+To make use of this efficient data representation, CNV genotypes analyzed with 
+the `cnvGWAS` function 
+are stored in a `CNV.gds` file, which is automatically produced and placed in 
+the `Inputs` folder (i.e. `all.paths[1]`). 
 
 Therefore, running a GWAS implies that any GDS file produced by previous analysis 
 will be overwritten. Use `produce.gds=FALSE` to avoid overwriting in the GWAS run. 
@@ -885,18 +933,13 @@ segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, produce.gds=FA
 
 ## Using relative signal intensities 
 
-CNV detection using SNP-chip intensities and allele frequencies can produce 
-biased CNV frequencies 
+SNP-based CNV callers such as [PennCNV](http://penncnv.openbioinformatics.org) 
+and [Birdsuit](https://www.broadinstitute.org/birdsuite/birdsuite)
+infer CNVs from SNP-chip intensities (log R ratios, LRRs) and allele frequencies 
+(B allelel frequencies, BAFs).
+As an auxiliary analysis, it can be interesting to carry out the GWAS based on the 
+LRR relative signal intensities itself 
 ([da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)). 
-Therefore, we also provide the option to carry out the GWAS based on the 
-SNP-wise relative signal intensities (log R ratios, LRRs), which reflect at certain extend
-the number of copies on the SNP region and are used as input for several CNV callers
-such as [PennCNV](http://penncnv.openbioinformatics.org) and [Birdsuit](https://www.broadinstitute.org/birdsuite/birdsuite).
-Directly using LRR values for the GWAS thereby facilitates the identification of
-CNV segments associated with the phenotype, disregarding putatively biased 
-frequency estimates from a strict CNV calling procedure. Although sometimes interesting as an auxiliar analysis,
-using LRR values directly can generate false positive results as higher noise is expected in comparison
-with a CNV dataset detected and properly filtered by an external CNV caller software.
 
 To perform the GWAS using LRR values, import the LRR/BAF values and set `run.lrr=TRUE` 
 in the `cnvGWAS` function:
