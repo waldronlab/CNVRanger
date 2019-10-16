@@ -1,4 +1,12 @@
-CHANGES IN VERSION 1.0.0
+CHANGES IN VERSION 1.2.0
 ------------------------
 
-    o Initial release of the 'CNVRanger' package
+    o New function `plotRecurrentRegions` to visualize the landscape of 
+      recurrent CNV regions
+    o New function `plotEQTL` to explore differential expression of genes in the
+      neighborhood of a CNV region
+    o Reworked vignette
+      - dedicated section on applicability and scope,
+      - overview of key functions,
+      - extended input data format description, 
+      - visualizations and dedicated Gviz plots to illustrate key concepts
