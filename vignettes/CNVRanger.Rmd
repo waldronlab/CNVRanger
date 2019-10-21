@@ -675,9 +675,10 @@ integer copy number states using the rough approximation outlined above.
 smean <- mcols(gbm[[ind]])$Segment_Mean
 state <- round(2^smean * 2)
 state[state > 4] <- 4
-mcols(gbm[[ind]])$State <- state
+mcols(gbm[[ind]])$state <- state
+gbm[[ind]] <- gbm[[ind]][state != 2,]
 mcols(gbm[[ind]]) <- mcols(gbm[[ind]])[,3:1]
-table(mcols(gbm[[ind]])$State)
+table(mcols(gbm[[ind]])$state)
 ```
 
 The data is now ready for CNV-expression association analysis, where we find 

@@ -152,7 +152,7 @@ populationRanges <- function(grl, mode=c("density", "RO"),
 #' @return None. Plots to a graphics device.
 #'
 #' @author Ludwig Geistlinger
-#' @seealso \code{\link{plotTracks}}
+#' @seealso \code{Gviz::plotTracks}
 #' 
 #' @examples
 #'
@@ -174,6 +174,10 @@ populationRanges <- function(grl, mode=c("density", "RO"),
 #' @export
 plotRecurrentRegions <- function(regs, genome, chr, pthresh=0.05)
 {
+    if (!requireNamespace("Gviz", quietly = TRUE))
+        stop(paste("Required package \'Gviz\' not found.", 
+                    "Use \'BiocManager::install(\"Gviz\") to install it."))
+
     colM <- "gray24"
     colB <- "gray94"
     tlevels <- c("gain", "loss", "both")
@@ -231,6 +235,9 @@ plotRecurrentRegions <- function(regs, genome, chr, pthresh=0.05)
 
 .classifyRegs <- function(regs, calls, type.thresh=0.1)
 {
+    if(!("state" %in% colnames(mcols(calls))))
+        stop("Required column \'state\' storing integer copy number state not found")
+
     olaps <- GenomicRanges::findOverlaps(regs, calls)
     qh <- S4Vectors::queryHits(olaps)
     sh <- S4Vectors::subjectHits(olaps)
@@ -569,7 +576,9 @@ plotRecurrentRegions <- function(regs, genome, chr, pthresh=0.05)
     cs <- cumsum(S4Vectors::runLength(x))
 
     len <- length(cs)
-    grid <- seq_len(len-1)
+    if(len == 1) return(0)
+ 
+    grid <- seq_len(len - 1)
     starts <-  cs[grid] + 1 
     ends <- cs[grid + 1]
     cov <- S4Vectors::runValue(x)[grid + 1]

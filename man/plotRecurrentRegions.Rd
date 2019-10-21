@@ -41,7 +41,7 @@ plotRecurrentRegions(cnvrs, genome="bosTau6", chr="chr1")
 
 }
 \seealso{
-\code{\link{plotTracks}}
+\code{Gviz::plotTracks}
 }
 \author{
 Ludwig Geistlinger

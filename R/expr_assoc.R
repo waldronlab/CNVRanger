@@ -221,7 +221,7 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
 #' @return None. Plots to a graphics device.
 #'
 #' @author Ludwig Geistlinger
-#' @seealso \code{\link{plotTracks}}
+#' @seealso \code{Gviz::plotTracks}
 #' 
 #' @examples
 #'
@@ -243,6 +243,10 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
 #' @export
 plotEQTL <- function(cnvr, genes, genome, cn="CN1")
 {
+    if (!requireNamespace("Gviz", quietly = TRUE))
+        stop(paste("Required package \'Gviz\' not found.", 
+                    "Use \'BiocManager::install(\"Gviz\") to install it."))
+
     colM <- "gray24"
     colB <- "gray94"
     chr <- as.character(seqnames(cnvr))

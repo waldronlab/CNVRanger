@@ -42,7 +42,7 @@ plotEQTL(cnvr, genes, genome="hg19", cn="CN1")
 
 }
 \seealso{
-\code{\link{plotTracks}}
+\code{Gviz::plotTracks}
 }
 \author{
 Ludwig Geistlinger
