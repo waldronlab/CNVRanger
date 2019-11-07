@@ -183,38 +183,62 @@ plotRecurrentRegions <- function(regs, genome, chr, pthresh=0.05)
     tlevels <- c("gain", "loss", "both")
 
     chr.regs <- subset(regs, seqnames == chr)
-    sig.regs <- subset(chr.regs, pvalue < pthresh)
-    
+    if(!length(chr.regs)) "No CNV regions to plot on the specified chromosome"
+
     itrack <- Gviz::IdeogramTrack(genome=genome, chr=chr, fontsize=15)
     gtrack <- Gviz::GenomeAxisTrack(littleTicks=TRUE, fontsize=15)
 
     gain.regs <- subset(chr.regs, type=="gain")
-    gain.track <- Gviz::DataTrack(gain.regs, data=gain.regs$freq, 
+    tlist <- list()
+    if(length(gain.regs))
+    {
+        gain.track <- Gviz::DataTrack(gain.regs, data=gain.regs$freq, 
                                 type="h", groups=factor("gain", levels=tlevels), 
                                 name="#samples", cex.title=1, cex.axis=1,
                                 font.axis=2, col.title=colM, col.axis=colM, 
                                 background.title=colB, legend=TRUE)
+        tlist <- c(tlist, gain.track)
+    }
+
     loss.regs <- subset(chr.regs, type=="loss")
-    loss.track <- Gviz::DataTrack(loss.regs, data=loss.regs$freq, 
+    if(length(loss.regs))
+    {
+        loss.track <- Gviz::DataTrack(loss.regs, data=loss.regs$freq, 
                                 type="h", groups=factor("loss", levels=tlevels), 
                                 name="#samples", cex.title=1, cex.axis=1,
                                 font.axis=2, col.title=colM, col.axis=colM, 
                                 background.title=colB, legend=TRUE)
+        tlist <- c(tlist, loss.track)
+    }
+
     both.regs <- subset(chr.regs, type=="both")
-    both.track <- Gviz::DataTrack(both.regs, data=both.regs$freq, 
+    if(length(both.regs))
+    {
+        both.track <- Gviz::DataTrack(both.regs, data=both.regs$freq, 
                                 type="h", groups=factor("both", levels=tlevels), 
                                 name="#samples", cex.title=1, cex.axis=1,
                                 font.axis=2, col.title=colM, col.axis=colM, 
                                 background.title=colB, legend=TRUE)
-    otrack <- Gviz::OverlayTrack(trackList=list(gain.track, loss.track, both.track),
-                                    background.title=colB)
-    ylim <- extendrange(range(c(values(gain.track), 
-                                    values(loss.track), values(both.track))))
+        tlist <- c(tlist, both.track)
+    }
 
-    atrack <- Gviz::AnnotationTrack(sig.regs, name="recur", cex.title=1, 
+    otrack <- Gviz::OverlayTrack(trackList = tlist, background.title=colB)
+    ylim <- vapply(tlist, function(tr) range(S4Vectors::values(tr)), numeric(2))
+    ylim <- extendrange(range(as.vector(ylim)))
+
+    tracklist <- list(itrack, gtrack, otrack)
+
+    # significant regions
+    sig.regs <- subset(chr.regs, pvalue < pthresh)
+    if(length(sig.regs))
+    {
+        atrack <- Gviz::AnnotationTrack(sig.regs, name="recur", cex.title=1, 
                                     cex.axis=1, font.axis=2, col.title=colM,
                                     col.axis=colM, background.title=colB)
-    Gviz::plotTracks(list(itrack, gtrack, otrack, atrack), ylim=ylim)
+        tracklist <- c(tracklist, atrack)
+    }
+
+    Gviz::plotTracks(tracklist, ylim=ylim)
 }
 
 ## (1) Density approach
