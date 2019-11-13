@@ -1,0 +1,22 @@
+citEntry(entry="article",
+         title = "CNVRanger: association analysis of CNVs with gene expression and quantitative phenotypes",
+         author = personList( as.person("Vinicius Henrique da Silva"),
+                              as.person("Marcel Ramos"),
+                              as.person("Martien Groenen"),
+                              as.person("Richard Crooijmans"),
+                              as.person("Anna Johansson"),
+                              as.person("Luciana Regitano"),
+                              as.person("Luiz Coutinho"),
+                              as.person("Ralf Zimmer"),
+                              as.person("Levi Waldron"),
+                              as.person("Ludwig Geistlinger")),
+
+         year = 2019,
+         journal = "Bioinformatics",
+         doi = "10.1093/bioinformatics/btz632",
+         textVersion = 
+         paste("Vinicius da Silva, Marcel Ramos, Martien Groenen, Richard Crooijmans,", 
+                "Anna Johansson, Luciana Regitano, Luiz Coutinho, Ralf Zimmer,",
+                "Levi Waldron, Ludwig Geistlinger (2019)", 
+                "CNVRanger: association analysis of CNVs with gene expression and quantitative phenotypes.",
+                "Bioinformatics, doi: 10.1093/bioinformatics/btz632." ) )
