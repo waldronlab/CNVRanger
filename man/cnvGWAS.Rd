@@ -4,12 +4,26 @@
 \alias{cnvGWAS}
 \title{Run the CNV-GWAS}
 \usage{
-cnvGWAS(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01,
-  snp.matrix = FALSE, method.m.test = "fdr", lo.phe = 1,
-  chr.code.name = NULL, genotype.nodes = "CNVGenotype",
-  coding.translate = "all", path.files = NULL, list.of.files = NULL,
-  produce.gds = TRUE, run.lrr = FALSE, assign.probe = "min.pvalue",
-  correct.inflation = FALSE, both.up.down = FALSE, verbose = FALSE)
+cnvGWAS(
+  phen.info,
+  n.cor = 1,
+  min.sim = 0.95,
+  freq.cn = 0.01,
+  snp.matrix = FALSE,
+  method.m.test = "fdr",
+  lo.phe = 1,
+  chr.code.name = NULL,
+  genotype.nodes = "CNVGenotype",
+  coding.translate = "all",
+  path.files = NULL,
+  list.of.files = NULL,
+  produce.gds = TRUE,
+  run.lrr = FALSE,
+  assign.probe = "min.pvalue",
+  correct.inflation = FALSE,
+  both.up.down = FALSE,
+  verbose = FALSE
+)
 }
 \arguments{
 \item{phen.info}{Returned by \code{\link{setupCnvGWAS}}}

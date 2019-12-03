@@ -406,24 +406,6 @@ knitr::include_graphics(file.path(vign.dir, "Overlap.png"))
 Once individual CNV calls have been summarized across the population, it is 
 typically of interest whether the resulting CNV regions overlap with functional 
 genomic regions such as genes, promoters, or enhancers. 
-As a certain amount of overlap can be expected just by chance, an assessment of 
-statistical significance is needed to decide whether the observed overlap is 
-greater (enrichment) or less (depletion) than expected by chance. 
-
-The `r Biocpkg("regioneR")` package implements a general framework for testing 
-overlaps of genomic regions based on permutation sampling.
-This allows to repeatedly sample random regions from the genome, matching size 
-and chromosomal distribution of the region set under study (here: the CNV regions).
-By recomputing the overlap with the functional features in each permutation, 
-statistical significance of the observed overlap can be assessed.
-
-We demonstrate in the following how this strategy can be used to assess the 
-overlap between the detected CNV regions and protein-coding regions in the 
-cattle genome. 
-We expect to find a depletion as protein-coding regions are highly conserved and
-rarely subject to long-range structural variation such as CNV. 
-Hence, is the overlap between CNVs and protein-coding genes less than expected by
-chance?
 
 To obtain the location of protein-coding genes, we query available 
 _Bos taurus_ annotation from Ensembl 
@@ -452,7 +434,61 @@ sel.genes <- subset(sel.genes, gene_biotype == "protein_coding")
 sel.cnvrs <- subset(cnvrs, seqnames %in% paste0("chr", 1:2))
 ```
 
-Now, we are applying an overlap permutation test with 100 permutations
+## Finding and illustrating overlaps
+
+The `findOverlaps` function from the `r Biocpkg("GenomicRanges")` package is a 
+general function for finding overlaps between two sets of genomic regions.
+Here, we use the function to find protein-coding genes (our `query` region set) 
+overlapping the summarized CNV regions (our `subject` region set). 
+
+Resulting overlaps are represented as a `Hits` object, from which overlapping 
+query and subject regions can be obtained with dedicated accessor functions 
+(named `queryHits` and `subjectHits`, respectively).
+Here, we use these functions to also annotate the CNV type (gain/loss) for genes
+overlapping with CNVs.
+
+```{r findOlaps}
+olaps <- GenomicRanges::findOverlaps(sel.genes, sel.cnvrs, ignore.strand=TRUE)
+qh <- S4Vectors::queryHits(olaps)
+sh <- S4Vectors::subjectHits(olaps)
+cgenes <- sel.genes[qh]
+cgenes$type <- sel.cnvrs$type[sh]
+subset(cgenes, select = "type")
+```
+
+It might also be of interest to illustrate the original CNV calls on overlapping
+genomic features (here: protein-coding genes). 
+For this purpose, an `oncoPrint` plot provides a useful summary in a rectangular
+fashion (genes in the rows, samples in the columns).
+Stacked barplots on the top and the right of the plot display the number of 
+altered genes per sample and the number of altered samples per gene, respectively.  
+
+```{r vizOlaps}
+cnvOncoPrint(grl, cgenes)
+```
+
+## Overlap permutation test
+
+As a certain amount of overlap can be expected just by chance, an assessment of 
+statistical significance is needed to decide whether the observed overlap is 
+greater (enrichment) or less (depletion) than expected by chance. 
+
+The `r Biocpkg("regioneR")` package implements a general framework for testing 
+overlaps of genomic regions based on permutation sampling.
+This allows to repeatedly sample random regions from the genome, matching size 
+and chromosomal distribution of the region set under study (here: the CNV regions).
+By recomputing the overlap with the functional features in each permutation, 
+statistical significance of the observed overlap can be assessed.
+
+We demonstrate in the following how this strategy can be used to assess the 
+overlap between the detected CNV regions and protein-coding regions in the 
+cattle genome. 
+We expect to find a depletion as protein-coding regions are highly conserved and
+rarely subject to long-range structural variation such as CNV. 
+Hence, is the overlap between CNVs and protein-coding genes less than expected by
+chance?
+
+To answer this question, we apply an overlap permutation test with 100 permutations
 (`ntimes=100`), while maintaining chromosomal distribution of the CNV
 region set (`per.chromosome=TRUE`). 
 Furthermore, we use the option `count.once=TRUE` to count an overlapping CNV 

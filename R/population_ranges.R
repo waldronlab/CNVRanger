@@ -241,6 +241,145 @@ plotRecurrentRegions <- function(regs, genome, chr, pthresh=0.05)
     Gviz::plotTracks(tracklist, ylim=ylim)
 }
 
+#' OncoPrint plot for CNV regions
+#'
+#' Illustrates overlaps between CNV calls and genomic features across a 
+#' sample population.
+#'
+#' @param calls Either a \code{\linkS4class{GRangesList}} or
+#' \code{\linkS4class{RaggedExperiment}} storing the individual CNV calls for
+#' each sample.
+#' @param features A \code{\linkS4class{GRanges}} object containing
+#' the genomic features of interest, typically genes. Feature names
+#' are either expected as a meta-column \code{symbol} or as the \code{names}
+#' of the object. 
+#' @param multi.calls A function. Determines how to summarize the
+#' CN state in a CNV region when there are multiple (potentially conflicting)
+#' calls for one sample in that region. Defaults to \code{.largest}, which
+#' assigns the CN state of the call that covers the largest part of the CNV
+#' region tested. A user-defined function that is passed on to
+#' \code{\link{qreduceAssay}} can also be provided for customized behavior.
+#' @param top.features integer. Restricts the number of features for plotting to
+#' features experiencing highest alteration frequency. Defaults to 25. 
+#' Use \code{-1} to display all features.
+#' @param top.samples integer. Restricts the number of samples for plotting to
+#' samples experiencing highest alteration frequency. Defaults to 100.
+#' Use \code{-1} to display all samples.
+#' @param ... Additional arguments passed on to \code{ComplexHeatmap::oncoPrint}
+#' @return None. Plots to a graphics device.
+#'
+#' @author Ludwig Geistlinger
+#' @seealso \code{ComplexHeatmap::oncoPrint}
+#' 
+#' @examples
+#'
+#' # read in example CNV calls
+#' data.dir <- system.file("extdata", package="CNVRanger")
+#' call.file <- file.path(data.dir, "Silva16_PONE_CNV_calls.csv")
+#' calls <- read.csv(call.file, as.is=TRUE)
+#'
+#' # store in a GRangesList
+#' calls <- makeGRangesListFromDataFrame(calls, 
+#'    split.field="NE_id", keep.extra.columns=TRUE)
+#'
+#' # three example genes
+#' genes <- c(  "chr1:140368053-140522639:-", 
+#'              "chr2:97843887-97988140:+",
+#'              "chr2:135418586-135422028:-")
+#' names(genes) <- c("ATP2C1", "MAP2", "ACTL8")
+#' genes <- GRanges(genes)
+#' 
+#' # plot
+#' cnvOncoPrint(calls, genes, top.samples = 25)
+#'
+#' @export
+cnvOncoPrint <- function(calls, features, multi.calls=.largest,
+                            top.features = 25, top.samples = 100, ...)
+{
+    if (!requireNamespace("ComplexHeatmap", quietly = TRUE))
+        stop(paste("Required package \'ComplexHeatmap\' not found.", 
+                    "Use \'BiocManager::install(\"ComplexHeatmap\") to install it."))
+
+    # summarize CNV calls in feature regions
+    calls <- as(calls, "RaggedExperiment")
+    qassay <- RaggedExperiment::qreduceAssay(calls, features, 
+                                    simplifyReduce=multi.calls, background=2)
+
+    if("symbol" %in% colnames(mcols(features))) rownames(qassay) <- features$symbol
+    else rownames(qassay) <- names(features)
+
+    qassay <- qassay[rownames(qassay) != "",]
+    qassay <- qassay[!duplicated(rownames(qassay)),]
+    
+    # select most frequently altered features
+    indr <- order(rowSums(qassay != 2), decreasing=TRUE)
+    has.top.features <- top.features > 0 && top.features < nrow(qassay)
+    if(has.top.features) indr <- indr[seq_len(top.features)]
+
+    # select most frequently altered samples
+    indc <- order(colSums(qassay != 2), decreasing=TRUE)
+    has.top.samples <- top.samples > 0 && top.samples < ncol(qassay)
+    if(has.top.samples) indc <- indc[seq_len(top.samples)]
+    
+    qassay <- qassay[indr, indc] 
+
+    # recode genotypes
+    qassay[qassay == 2] <- " "
+    qassay[qassay == "0"] <- "HOMDEL"
+    qassay[qassay == "1"] <- "HETDEL"
+    qassay[qassay == "3"] <- "GAIN1"
+    qassay[qassay == "4"] <- "GAIN2+"
+
+
+    # assign colors to genotypes
+    cb.red <- "#D55E00"
+    cb.blue <- "#0072B2"
+    cb.lightblue <- "#56B4E9"
+    cb.orange <- "#E69F00"
+
+    colors = c( "HOMDEL" = cb.blue, 
+                "HETDEL" = cb.lightblue, 
+                "GAIN1" = cb.orange, 
+                "GAIN2+" = cb.red)
+
+    # map functions to CNV types
+    .mf <- function(couleur) 
+    { 
+        args <- alist(x =, y =, w =, h =)
+        args <- as.pairlist(args)
+        body <- substitute({
+            grid::grid.rect(x, y, 
+                            w - grid::unit(0.5, "mm"), 
+                            h - grid::unit(0.5, "mm"), 
+                            gp = grid::gpar(fill = z, col = NA))
+        }, list(z = couleur))
+        eval(call("function", args, body))
+    }
+    mutfuns <- lapply(colors, .mf)
+
+    background <- function(x, y, w, h) 
+        grid::grid.rect(x, y, 
+                        w - grid::unit(0.5, "mm"), 
+                        h - grid::unit(0.5, "mm"),
+            gp = grid::gpar(fill = "#FFFFFF", col = "#FFFFFF"))
+    mutfuns2 <- c(background = background, mutfuns)
+   
+    # plot
+    heatmap_legend_param <- list(title = "CNV type", 
+        at = c("HOMDEL", "HETDEL", "GAIN1", "GAIN2"), 
+        labels = c("2-copy loss", 
+                    "1-copy loss", 
+                    "1-copy gain",
+                    ">= 2-copy gain"))
+
+    suppressMessages(
+        ComplexHeatmap::oncoPrint(
+            qassay, alter_fun = mutfuns2, col = colors, show_pct = FALSE,
+            heatmap_legend_param = heatmap_legend_param, ...) 
+    )
+}
+
+
 ## (1) Density approach
 .densityPopRanges <- function(grl, density)
 {

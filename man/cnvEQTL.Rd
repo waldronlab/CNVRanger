@@ -4,10 +4,19 @@
 \alias{cnvEQTL}
 \title{CNV-expression association analysis}
 \usage{
-cnvEQTL(cnvrs, calls, rcounts, data, window = "1Mbp",
-  multi.calls = .largest, min.samples = 10, de.method = c("edgeR",
-  "limma"), padj.method = "BH", filter.by.expr = TRUE,
-  verbose = FALSE)
+cnvEQTL(
+  cnvrs,
+  calls,
+  rcounts,
+  data,
+  window = "1Mbp",
+  multi.calls = .largest,
+  min.samples = 10,
+  de.method = c("edgeR", "limma"),
+  padj.method = "BH",
+  filter.by.expr = TRUE,
+  verbose = FALSE
+)
 }
 \arguments{
 \item{cnvrs}{A \code{\linkS4class{GRanges}} or character object containing

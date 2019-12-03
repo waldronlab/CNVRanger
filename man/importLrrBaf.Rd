@@ -4,8 +4,13 @@
 \alias{importLrrBaf}
 \title{Import LRR and BAF from text files used in the CNV analysis}
 \usage{
-importLrrBaf(all.paths, path.files, list.of.files, gds.file = NULL,
-  verbose = TRUE)
+importLrrBaf(
+  all.paths,
+  path.files,
+  list.of.files,
+  gds.file = NULL,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{all.paths}{Object returned from \code{CreateFolderTree} function with 

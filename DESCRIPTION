@@ -1,5 +1,5 @@
 Package: CNVRanger
-Version: 1.3.2
+Version: 1.3.3
 Title: Summarization and expression/phenotype association of CNV ranges
 Author: Ludwig Geistlinger [aut, cre], Vinicius Henrique da Silva [aut],
     Marcel Ramos [ctb], Levi Waldron [ctb]
@@ -32,11 +32,13 @@ Suggests:
     AnnotationHub,
     BSgenome.Btaurus.UCSC.bosTau6.masked, 
     BiocStyle,
+    ComplexHeatmap,
     Gviz,
     MultiAssayExperiment,
     TCGAutils,
     curatedTCGAData,
     ensembldb,
+    grid,
     knitr,
     regioneR,
     rmarkdown 
@@ -57,4 +59,4 @@ biocViews:
     Microarray, 
     RNASeq,
     SNP 
-RoxygenNote: 6.1.1
+RoxygenNote: 7.0.0

@@ -2,6 +2,7 @@
 
 export(cnvEQTL)
 export(cnvGWAS)
+export(cnvOncoPrint)
 export(generateGDS)
 export(importLrrBaf)
 export(plotEQTL)

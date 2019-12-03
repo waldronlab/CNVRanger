@@ -4,10 +4,18 @@
 \alias{populationRanges}
 \title{Summarizing CNV ranges across a population}
 \usage{
-populationRanges(grl, mode = c("density", "RO"), density = 0.1,
-  ro.thresh = 0.5, multi.assign = FALSE, verbose = FALSE,
-  min.size = 2, classify.ranges = TRUE, type.thresh = 0.1,
-  est.recur = FALSE)
+populationRanges(
+  grl,
+  mode = c("density", "RO"),
+  density = 0.1,
+  ro.thresh = 0.5,
+  multi.assign = FALSE,
+  verbose = FALSE,
+  min.size = 2,
+  classify.ranges = TRUE,
+  type.thresh = 0.1,
+  est.recur = FALSE
+)
 }
 \arguments{
 \item{grl}{A \code{\linkS4class{GRangesList}}.}
