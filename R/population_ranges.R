@@ -131,6 +131,9 @@ populationRanges <- function(grl, mode=c("density", "RO"),
     min.size=2, classify.ranges=TRUE, type.thresh=0.1, est.recur=FALSE)
 {
     mode <- match.arg(mode)
+
+    if(classify.ranges) grl <- .excludeNeutralRanges(grl)
+
     if(mode == "density") pranges <- .densityPopRanges(grl, density)
     else pranges <- .roPopRanges(grl, ro.thresh, multi.assign, verbose)
 
@@ -138,6 +141,28 @@ populationRanges <- function(grl, mode=c("density", "RO"),
     if(classify.ranges) pranges <- .classifyRegs(pranges, unlist(grl), type.thresh)
     if(est.recur) pranges <- .estimateRecurrence(pranges, grl)
     return(pranges)
+}
+
+.excludeNeutralRanges <- function(grl)
+{
+    # exclude neutral regions (CN = 2, diploid)    
+    calls <- stack(grl, "sample") 
+    if(!("state" %in% colnames(mcols(calls))))
+        stop("Required column \'state\' storing integer copy number state not found")
+
+    is.neutral <- calls$state == "2"
+    sum.neutral <- sum(is.neutral) 
+    if(sum.neutral)
+    {
+        message(paste("Excluding", sum.neutral, "copy-number neutral regions",
+                        "(CN state = 2, diploid)"))
+        calls <- calls[!is.neutral]
+        sample <- calls$sample
+        ind <- colnames(mcols(calls)) != "sample"
+        mcols(calls) <- mcols(calls)[,ind, drop = FALSE]
+        grl <- split(calls, sample)
+    }
+    grl
 }
 
 #' Plot recurrent CNV regions
@@ -315,13 +340,13 @@ cnvOncoPrint <- function(calls, features, multi.calls=.largest,
     indr <- order(rowSums(qassay != 2), decreasing=TRUE)
     has.top.features <- top.features > 0 && top.features < nrow(qassay)
     if(has.top.features) indr <- indr[seq_len(top.features)]
-
+    qassay <- qassay[indr,] 
+    
     # select most frequently altered samples
     indc <- order(colSums(qassay != 2), decreasing=TRUE)
     has.top.samples <- top.samples > 0 && top.samples < ncol(qassay)
     if(has.top.samples) indc <- indc[seq_len(top.samples)]
-    
-    qassay <- qassay[indr, indc] 
+    qassay <- qassay[,indc] 
 
     # recode genotypes
     qassay[qassay == 2] <- " "
@@ -398,9 +423,6 @@ cnvOncoPrint <- function(calls, features, multi.calls=.largest,
 
 .classifyRegs <- function(regs, calls, type.thresh=0.1)
 {
-    if(!("state" %in% colnames(mcols(calls))))
-        stop("Required column \'state\' storing integer copy number state not found")
-
     olaps <- GenomicRanges::findOverlaps(regs, calls)
     qh <- S4Vectors::queryHits(olaps)
     sh <- S4Vectors::subjectHits(olaps)

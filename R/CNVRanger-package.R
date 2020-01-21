@@ -3,5 +3,5 @@
 #' @importFrom grDevices dev.off pdf extendrange
 #' @importFrom methods as is
 #' @importFrom stats ecdf median pchisq qbeta qchisq
-#' @importFrom utils download.file read.table unzip write.table
+#' @importFrom utils download.file read.table stack unzip write.table
 NULL
