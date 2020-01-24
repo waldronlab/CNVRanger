@@ -146,7 +146,7 @@ populationRanges <- function(grl, mode=c("density", "RO"),
 .excludeNeutralRanges <- function(grl)
 {
     # exclude neutral regions (CN = 2, diploid)    
-    calls <- stack(grl, "sample") 
+    calls <- IRanges::stack(grl, index.var = "sample") 
     if(!("state" %in% colnames(mcols(calls))))
         stop("Required column \'state\' storing integer copy number state not found")
 
