@@ -11,12 +11,14 @@ citEntry(entry="article",
                               as.person("Levi Waldron"),
                               as.person("Ludwig Geistlinger")),
 
-         year = 2019,
+         year = 2020,
          journal = "Bioinformatics",
+         volume = "36(3)",
+         pages = "972-73",
          doi = "10.1093/bioinformatics/btz632",
          textVersion = 
          paste("Vinicius da Silva, Marcel Ramos, Martien Groenen, Richard Crooijmans,", 
                 "Anna Johansson, Luciana Regitano, Luiz Coutinho, Ralf Zimmer,",
-                "Levi Waldron, Ludwig Geistlinger (2019)", 
+                "Levi Waldron, Ludwig Geistlinger (2020)", 
                 "CNVRanger: association analysis of CNVs with gene expression and quantitative phenotypes.",
-                "Bioinformatics, doi: 10.1093/bioinformatics/btz632." ) )
+                "Bioinformatics, 36(3):972-73. doi: 10.1093/bioinformatics/btz632." ) )
