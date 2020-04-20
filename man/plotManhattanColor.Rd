@@ -4,9 +4,14 @@
 \alias{plotManhattanColor}
 \title{Plot the Manhattan}
 \usage{
-plotManhattanColor(all.paths, regions, type.regions,
-  chr.size.order = NULL, grob = FALSE, highlight = NULL,
-  ylim.man = 2)
+plotManhattanColor(
+  all.paths,
+  regions,
+  type.regions,
+  chr.size.order = NULL,
+  highlight = NULL,
+  write.pdf = FALSE
+)
 }
 \arguments{
 \item{regions}{GRanges from CNV-GWAS run or Vst values to produce the manhattan plot}

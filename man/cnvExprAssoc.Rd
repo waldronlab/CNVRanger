@@ -4,10 +4,18 @@
 \alias{cnvExprAssoc}
 \title{CNV-expression association analysis}
 \usage{
-cnvExprAssoc(cnvrs, calls, rcounts, window = "1Mbp",
-  multi.calls = "largest", min.samples = 10, min.cpm = 2,
-  de.method = c("edgeR", "limma"), padj.method = "BH",
-  verbose = FALSE)
+cnvExprAssoc(
+  cnvrs,
+  calls,
+  rcounts,
+  window = "1Mbp",
+  multi.calls = "largest",
+  min.samples = 10,
+  min.cpm = 2,
+  de.method = c("edgeR", "limma"),
+  padj.method = "BH",
+  verbose = FALSE
+)
 }
 \arguments{
 \item{cnvrs}{A \code{\linkS4class{GRanges}} object containing the summarized

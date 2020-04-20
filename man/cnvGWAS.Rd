@@ -4,17 +4,38 @@
 \alias{cnvGWAS}
 \title{Run the CNV-GWAS}
 \usage{
-cnvGWAS(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01,
-  snp.matrix = FALSE, method.m.test = "fdr", lo.phe = 1,
-  chr.code.name = NULL, genotype.nodes = c("CNVGenotype",
-  "CNVgenotypeSNPlike"), coding.translate = "all", path.files = NULL,
-  list.of.files = NULL, produce.gds = TRUE, run.lrr = FALSE,
-  assign.probe = "min.pvalue", correct.inflation = FALSE,
-  both.up.down = FALSE, model = NULL, method.to.run = "plink",
-  model.cnv.interactions = "CNVx", verbose = FALSE, snp.gds = NULL,
-  use.grm = NULL, use.pca = NULL, norm.lrr = TRUE, max.lrr = 0.9,
-  min.lrr = 0.1, lrr.to.use = "standard", simulation = NULL,
-  list.simulation = NULL)
+cnvGWAS(
+  phen.info,
+  n.cor = 1,
+  min.sim = 0.95,
+  freq.cn = 0.01,
+  snp.matrix = FALSE,
+  method.m.test = "fdr",
+  lo.phe = 1,
+  chr.code.name = NULL,
+  genotype.nodes = c("CNVGenotype", "CNVgenotypeSNPlike"),
+  coding.translate = "all",
+  path.files = NULL,
+  list.of.files = NULL,
+  produce.gds = TRUE,
+  run.lrr = FALSE,
+  assign.probe = "min.pvalue",
+  correct.inflation = FALSE,
+  both.up.down = FALSE,
+  model = NULL,
+  method.to.run = "plink",
+  model.cnv.interactions = "CNVx",
+  verbose = FALSE,
+  snp.gds = NULL,
+  use.grm = NULL,
+  use.pca = NULL,
+  norm.lrr = TRUE,
+  max.lrr = 0.9,
+  min.lrr = 0.1,
+  lrr.to.use = "standard",
+  simulation = NULL,
+  list.simulation = NULL
+)
 }
 \arguments{
 \item{phen.info}{Returned by \code{\link{setupCnvGWAS}}}

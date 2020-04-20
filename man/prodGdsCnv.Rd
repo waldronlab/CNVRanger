@@ -4,9 +4,16 @@
 \alias{prodGdsCnv}
 \title{Produce CNV-GDS for the phenotyped samples}
 \usage{
-prodGdsCnv(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1,
-  chr.code.name = NULL, genotype.nodes = c("CNVGenotype",
-  "CNVgenotypeSNPlike"), coding.translate = NULL, n.cor = 1)
+prodGdsCnv(
+  phen.info,
+  freq.cn = 0.01,
+  snp.matrix = FALSE,
+  lo.phe = 1,
+  chr.code.name = NULL,
+  genotype.nodes = c("CNVGenotype", "CNVgenotypeSNPlike"),
+  coding.translate = NULL,
+  n.cor = 1
+)
 }
 \arguments{
 \item{phen.info}{Returned by \code{setupCnvGWAS}}

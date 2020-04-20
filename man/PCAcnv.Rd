@@ -4,8 +4,15 @@
 \alias{PCAcnv}
 \title{PCA with CNVs}
 \usage{
-PCAcnv(all.paths, segs.pvalue.gr, n.cor = 1, pops.names = NULL,
-  method.ld = "dprime", attach.pca = TRUE, use.seg = TRUE)
+PCAcnv(
+  all.paths,
+  segs.pvalue.gr,
+  n.cor = 1,
+  pops.names = NULL,
+  method.ld = "dprime",
+  attach.pca = TRUE,
+  use.seg = TRUE
+)
 }
 \arguments{
 \item{all.paths}{Object returned from \code{CreateFolderTree} function with 

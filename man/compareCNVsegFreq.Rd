@@ -4,8 +4,13 @@
 \alias{compareCNVsegFreq}
 \title{HELPER - Admixture - TODO}
 \usage{
-compareCNVsegFreq(all.paths, segs.pvalue.gr, pops, p.value.min = 0.05,
-  n.cor = 1)
+compareCNVsegFreq(
+  all.paths,
+  segs.pvalue.gr,
+  pops,
+  p.value.min = 0.05,
+  n.cor = 1
+)
 }
 \arguments{
 \item{all.paths}{Object returned from \code{CreateFolderTree} function with the working folder tree}

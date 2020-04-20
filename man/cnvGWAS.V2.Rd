@@ -4,15 +4,33 @@
 \alias{cnvGWAS.V2}
 \title{Run the CNV-GWAS}
 \usage{
-cnvGWAS.V2(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01,
-  snp.matrix = FALSE, method.m.test = "fdr", lo.phe = 1,
-  chr.code.name = NULL, genotype.nodes = "CNVGenotype",
-  coding.translate = "all", path.files = NULL, list.of.files = NULL,
-  produce.gds = TRUE, run.lrr = FALSE, assign.probe = "min.pvalue",
-  select.population = NULL, epistasis.mode = FALSE,
-  correct.inflation = FALSE, both.up.down = FALSE,
-  cnvr.specific = FALSE, exclude.outliers = FALSE, minq = 0.01,
-  maxq = 0.99, log.pheno = FALSE, verbose = FALSE)
+cnvGWAS.V2(
+  phen.info,
+  n.cor = 1,
+  min.sim = 0.95,
+  freq.cn = 0.01,
+  snp.matrix = FALSE,
+  method.m.test = "fdr",
+  lo.phe = 1,
+  chr.code.name = NULL,
+  genotype.nodes = "CNVGenotype",
+  coding.translate = "all",
+  path.files = NULL,
+  list.of.files = NULL,
+  produce.gds = TRUE,
+  run.lrr = FALSE,
+  assign.probe = "min.pvalue",
+  select.population = NULL,
+  epistasis.mode = FALSE,
+  correct.inflation = FALSE,
+  both.up.down = FALSE,
+  cnvr.specific = FALSE,
+  exclude.outliers = FALSE,
+  minq = 0.01,
+  maxq = 0.99,
+  log.pheno = FALSE,
+  verbose = FALSE
+)
 }
 \arguments{
 \item{phen.info}{Returned by \code{\link{setupCnvGWAS}}}
@@ -61,15 +79,13 @@ downstream probes are considered}
 
 \item{exclude.outliers}{logical. Use quadrants to exclude samples with extreme phenotypes (i.e. outliers)}
 
-\item{minq}{Minimum quadrant to exclude. Only if \sQuote{exclude.outliers} is TRUE}
+\item{minq}{Maximum quadrant to exclude. Only if \sQuote{exclude.outliers} is TRUE}
 
 \item{log.pheno}{logical. log2 transform the phenotypes}
 
 \item{verbose}{Show progress in the analysis}
 
 \item{lrr}{logical. Import LRR/BAF values from external files}
-
-\item{minq}{Maximum quadrant to exclude. Only if \sQuote{exclude.outliers} is TRUE}
 }
 \value{
 The CNV segments and the representative probes with their respective assigned p-value

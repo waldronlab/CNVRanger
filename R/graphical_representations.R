@@ -196,7 +196,13 @@ plotManhattan <- function(all.paths, regions, chr.size.order = NULL, plot.pdf = 
 #' @export
 
 plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=NULL, 
-                               grob=FALSE, highlight=NULL, ylim.man=2){
+                              highlight=NULL, write.pdf=FALSE){
+  
+  grob <- !write.pdf
+  
+  min.qvalue <- min(regions$MinPvalueAdjusted)
+  minqvalue.log <- max(-log10(min.qvalue))
+  ylim.man = minqvalue.log*1.10
   
   ## Check if overlapped genes exist
   if(is.null(values(regions)$Overlapped.genes)){
@@ -204,12 +210,13 @@ plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=
   }
   
   ## Produce chromosome limits
-  chr.size.order.start <- chr.size.order
+  chr.size.order.start <- as.data.frame(chr.size.order$chrs)
   chr.size.order.start$sizes <- 1
+  colnames(chr.size.order.start) <- colnames(chr.size.order)
   chr.all <- rbind(chr.size.order, chr.size.order.start)
   chr.all$SNP <- paste0("lim", seq_len(nrow(chr.all)))
   colnames(chr.all)[1:2] <- c("CHR", "BP")
-  
+ 
   ## Produce numeric code for chrs
   chr.size.order$chr.numeric <- seq_len(nrow(chr.size.order))
   
@@ -217,15 +224,13 @@ plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=
   all.p.all <- list()
   for(chrx in seq_len(nrow(chr.size.order))){
     lseq <- function(from=1, to=400000, length.out=6) {
-      # logarithmic spaced sequence
-      # blatantly stolen from library("emdbook"), because need only this
       exp(seq(log10(from), log10(to), length.out = length.out))
     }
+    
     pointschrX.x <- seq(from=500000, to=chr.size.order$size[chrx], by=5000000) ## simulated positions
-    pointschrX.y <- lseq(from=0.0000003, to=1, 1000) ## simulated p-values
+    pointschrX.y <- lseq(from=0.000000000000000000001, to=1, 1000) ## simulated p-values
     all.p <- expand.grid(pointschrX.y, pointschrX.x)
     all.p$CHR <- chr.size.order$chr.numeric[chrx]
-    #all.p$Var2 <- all.p$Var2+seq_len(nrow(all.p))
     all.p.all[[chrx]] <- as.data.frame(all.p)
   }
   
