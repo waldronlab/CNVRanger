@@ -5,7 +5,8 @@
 \title{Setup the folders and files to run CNV-GWAS analysis}
 \usage{
 setupCnvGWAS(name, phen.loc, cnv.out.loc, map.loc = NULL,
-  folder = NULL, pops.names = NULL, pedigree.loc = NULL, n.cor = 1)
+  folder = NULL, pops.names = NULL, pedigree.loc = NULL,
+  snp.gds = NULL, n.cor = 1)
 }
 \arguments{
 \item{name}{String with a project code or name (e.g. 'Project1')}
@@ -29,6 +30,9 @@ Otherwise, user-specific data dir will be used automatically.}
 
 \item{pedigree.loc}{Path to the pedigree information (i.e. sample sire and dam). One merged file
 for multiple populations.}
+
+\item{snp.gds}{External GDS file with SNP genotypes and two additional nodes (optional): PCA and 
+genomic relationship matrix (GRM) nodes.}
 
 \item{n.cor}{Number of cores}
 }

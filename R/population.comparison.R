@@ -405,7 +405,7 @@ test.population <- function(x){
 
 #### HELPER - Overlap CNV segments with genes
 
-.assocGeneWithCNVSeg <- function(segs.pvalue.gr, gff.file){
+.assocGeneWithCNVSeg <- function(segs.pvalue.gr, gff.file, exclude.loc=TRUE){
   genes <- ape::read.gff(gff.file)
   genes <- genes[which(genes$type=="gene"),]
   genes$gene.name <- gsub(".*(gene=.*?);.*", "\\1", genes$attributes)
@@ -416,6 +416,11 @@ test.population <- function(x){
   
   genes.gr<- makeGRangesFromDataFrame(genes, seqnames.field = "Name", start.field = "start",
                                       end.field = "end", keep.extra.columns = TRUE)
+  
+  if(exclude.loc){
+  genes.gr <- genes.gr[!grepl("LOC", genes.gr$gene.name)]
+  }
+  
   for(seg in 1:length(segs.pvalue.gr)){
   values(segs.pvalue.gr)$Overlapped.genes[seg] <- paste0(values(subsetByOverlaps(genes.gr, 
                                             segs.pvalue.gr[seg]))$gene.name, collapse=",")

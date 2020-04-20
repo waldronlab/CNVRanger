@@ -59,6 +59,11 @@
 #' NULL to use pedigree instead (if available).
 #' @param lrr.to.use Use a median of LRR across de probes overlapping the CNV segment instead individual
 #' LRR probe values
+#' @param simulation Numeric or NULL. If numeric, simulated phenotypes will be used. The number
+#' will define the number of permutation (i.e. if simualtion = 1000, the analysis will be performed
+#' 1000 times with random phenotypes). The random phenotypes have the same standard deviation and mean
+#' of the real phenotype defined in the model. This option is only available if \sQuote{method.to.run}
+#' is 'lmm', otherwise NULL should be set.
 #' @param verbose Show progress in the analysis
 #' @return CNV segments, representative probes and their respective p-values
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
@@ -95,7 +100,12 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
                     run.lrr = FALSE, assign.probe = "min.pvalue", correct.inflation = FALSE, both.up.down = FALSE, 
                     model=NULL, method.to.run="plink", model.cnv.interactions="CNVx", verbose = FALSE,
                     snp.gds=NULL, use.grm=NULL, use.pca=NULL, norm.lrr=TRUE, max.lrr=0.9, min.lrr=0.1,
-                    lrr.to.use="standard") {
+                    lrr.to.use="standard", simulation=NULL, list.simulation=NULL) {
+  
+  if(!is.null(simulation)){
+    stopifnot(is.numeric(simulation))
+    stopifnot(method.to.run=="lmm")
+  }
   
   phenotypesSam <- phen.info$phenotypesSam
   phenotypesSamX <- phenotypesSam[, c(1, (lo.phe + 1))]
@@ -147,22 +157,104 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     message("Associate SNPs with CNV segments")
   segs.pvalue.gr <- .assoPrCNV(all.paths, all.segs.gr, phenotypesSamX, method.m.test, 
                                probes.cnv.gr, assign.probe, correct.inflation = correct.inflation)
+  
   }else if (method.to.run=="lmm"){
   ### Run LMM if model exists
   if(!is.null(model)){
+  
+  if(is.null(simulation) || simulation == 0){
   segs.pvalue.gr <- lmmCNV(all.paths=all.paths, all.segs.gr=all.segs.gr, phen.info=phen.info, 
                            method.m.test=method.m.test, model=model, probes.cnv.gr=probes.cnv.gr, 
                            assign.probe=assign.probe, correct.inflation=correct.inflation,
                            phenotypesSamX=phenotypesSamX, n.cor=n.cor, model.cnv.interactions=model.cnv.interactions,
                            run.lrr=run.lrr, verbose=verbose, snp.gds=snp.gds, use.grm=use.grm,
+                           use.pca=use.pca, norm.lrr=norm.lrr, max.lrr=max.lrr, min.lrr=min.lrr,
+                           lrr.to.use=lrr.to.use)
+  }else{
+  ## Simulation with random phenotypes ## use mean and sd of real phenotypes
+  segs.pvalue.gr.all <- GRangesList()  
+  
+  ### Load CNV genotypes
+  cnv.gds <- file.path(all.paths[1], "CNV.gds")
+  genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
+  
+  if(is.null(list.simulation)){
+  for(lop.sim in seq_len(simulation)){
+  if(lop.sim==1){
+  phen.name.in.model <- as.character(model[2])
+  pedigree.x <- phen.info$pedigree
+  pedigree.x.back <- pedigree.x
+  phen.values <- pedigree.x[,which(colnames(pedigree.x) == phen.name.in.model)]
+  sd.phen <- sd(phen.values, na.rm=TRUE)
+  mean.phen <- mean(phen.values, na.rm=TRUE)
+  num.na <- sum(is.na(phen.values))
+  known.phen <- length(phen.values)-num.na
+  na.to.bind <- rep(NA, num.na)}
+  
+  sim.phen <- rnorm(known.phen, mean=mean.phen, sd=sd.phen)
+  sim.phen <- c(sim.phen, na.to.bind)
+  sim.phen <- sample(sim.phen)
+  pedigree.x[,which(colnames(pedigree.x) == phen.name.in.model)] <- sim.phen
+  list.simulation[[lop.sim]] <- pedigree.x
+  }
+  }
+  
+  #}else{
+  #pedigree.x <- list.simulation[[lop.sim]]
+  #phen.info$pedigree <- pedigree.x ## Attach simulated phenotypes
+  #}
+  
+  
+  #segs.pvalue.gr.all[[lop.sim]] <- lmmCNV(all.paths=all.paths, all.segs.gr=all.segs.gr, phen.info=phen.info, 
+  #                           method.m.test=method.m.test, model=model, probes.cnv.gr=probes.cnv.gr, 
+  #                           assign.probe=assign.probe, correct.inflation=correct.inflation,
+  #                           phenotypesSamX=phenotypesSamX, n.cor=1, model.cnv.interactions=model.cnv.interactions,
+  #                           run.lrr=run.lrr, verbose=verbose, snp.gds=snp.gds, use.grm=use.grm,
+  #                           use.pca=use.pca, norm.lrr=norm.lrr, max.lrr, min.lrr,
+  #                           lrr.to.use=lrr.to.use, simulation=simulation, genofile=genofile)
+  
+  if (rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac") {
+    multicoreParam <- BiocParallel::MulticoreParam(workers = n.cor)
+    segs.pvalue.gr.all <- BiocParallel::bplapply(1:simulation, lmmCNV, BPPARAM = multicoreParam, 
+                           all.paths=all.paths, all.segs.gr=all.segs.gr, phen.info=phen.info, 
+                                                      method.m.test=method.m.test, model=model, probes.cnv.gr=probes.cnv.gr, 
+                                                      assign.probe=assign.probe, correct.inflation=correct.inflation,
+                                                      phenotypesSamX=phenotypesSamX, n.cor=1, model.cnv.interactions=model.cnv.interactions,
+                                                      run.lrr=run.lrr, verbose=verbose, snp.gds=snp.gds, use.grm=use.grm,
+                                                      use.pca=use.pca, norm.lrr=norm.lrr, max.lrr, min.lrr,
+                                                      lrr.to.use=lrr.to.use, simulation=simulation, genofile=genofile,
+                                                      list.simulation=list.simulation)
+  }
+  
+  if (rappdirs:::get_os() == "win") {
+    param <- BiocParallel::SnowParam(workers = 1, type = "SOCK")
+    segs.pvalue.gr.all <- BiocParallel::bplapply(1:simulation, lmmCNV, BPPARAM = multicoreParam, 
+                           all.paths=all.paths, all.segs.gr=all.segs.gr, phen.info=phen.info, 
+                           method.m.test=method.m.test, model=model, probes.cnv.gr=probes.cnv.gr, 
+                           assign.probe=assign.probe, correct.inflation=correct.inflation,
+                           phenotypesSamX=phenotypesSamX, n.cor=1, model.cnv.interactions=model.cnv.interactions,
+                           run.lrr=run.lrr, verbose=verbose, snp.gds=snp.gds, use.grm=use.grm,
                            use.pca=use.pca, norm.lrr=norm.lrr, max.lrr, min.lrr,
-                           lrr.to.use=lrr.to.use)}else{
-                             message("No model specified for the LMM run")
+                           lrr.to.use=lrr.to.use, simulation=simulation, genofile=genofile,
+                           list.simulation=list.simulation)
+    
+  }
+  
+  #if (verbose) 
+  #  message(paste("Simulation of phenotypes", lop.sim, "of", simulation))
+  
+  #}
+  SNPRelate::snpgdsClose(genofile)
+  }
+  
+  }else{
+  message("No model specified for the LMM run")
                            }
   }else{
     message("Only plink and lmm options available")
   }
-    
+  
+  if(is.null(simulation)){
   # Plot the QQ-plot of the analysis
   if (verbose) 
     message("Plot the QQ-plot of the analysis")
@@ -174,7 +266,6 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
   print(qqunifPlot(segs.pvalue.gr$MinPvalueAdjusted, 
                     auto.key = list(corner = c(0.95, 0.05))))
   invisible(dev.off())
-  
   
   # Reconvert the chrs to original names if applicable
   if (!is.null(chr.code.name)) {
@@ -197,6 +288,34 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
   
   segs.pvalue.gr <- segs.pvalue.gr[order(segs.pvalue.gr$MinPvalue)]
   return(segs.pvalue.gr)
+  
+  }else{
+    for(lop.segs in seq_len(length(segs.pvalue.gr.all))){
+    segs.pvalue.gr <- segs.pvalue.gr.all[[lop.segs]]
+    # Reconvert the chrs to original names if applicable
+    if (!is.null(chr.code.name)) {
+      cnv.gds <- file.path(all.paths[1], "CNV.gds")
+      genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
+      chr.code.name <- gdsfmt::index.gdsn(genofile, "Chr.names")
+      chr.code.name <- gdsfmt::read.gdsn(chr.code.name)
+      
+      segs.pvalue <- data.frame(segs.pvalue.gr)
+      segs.pvalue <- segs.pvalue[, !(names(segs.pvalue) %in% "strand")]
+      
+      for (lopN in seq_len(nrow(chr.code.name))) 
+        segs.pvalue$seqnames <- gsub(chr.code.name[lopN, 1], 
+                                     chr.code.name[lopN, 2], 
+                                     segs.pvalue$seqnames)
+      
+      segs.pvalue.gr <- GenomicRanges::makeGRangesFromDataFrame(segs.pvalue, keep.extra.columns = TRUE)
+      SNPRelate::snpgdsClose(genofile)
+    }
+    
+    segs.pvalue.gr <- segs.pvalue.gr[order(segs.pvalue.gr$MinPvalue)]  
+    segs.pvalue.gr.all[[lop.segs]] <- segs.pvalue.gr
+    }
+    return(segs.pvalue.gr.all)
+  }
 }
 
 
@@ -312,6 +431,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc, map.loc = NULL, folder = N
     ## Import the probe map from external folder
     cnvs <- read.table(file.path(all.paths[1], "CNVOut.txt"), sep = "", header = F)  ### CNV table 
     CNVs <- .checkConvertCNVs(cnvs, all.paths, dup.samples, n.cor)
+    message(paste0("Number of CNVs", nrow(CNVs)))
     
     CGr <- GenomicRanges::makeGRangesFromDataFrame(CNVs)
     
@@ -415,6 +535,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
   cnv.table <- file.path(all.paths[1], "CNVOut.txt")
   cnvs <- data.table::fread(cnv.table, sep = "\t", header = FALSE)
   CNVs <- .checkConvertCNVs(cnvs, all.paths, dup.samples, n.cor)
+  message(paste0("Number of CNVs", nrow(CNVs)))
   
   # Check if the chromosomes are numeric
   chr.names <- CNVs$chr
@@ -425,7 +546,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
   CNVsGr <- GenomicRanges::makeGRangesFromDataFrame(CNVs, keep.extra.columns = TRUE)
   # Subset CNVs in phenotyped samples
   CNVsGr <- CNVsGr[CNVsGr$V5 %in% samplesPhen]
-  
+    
   # Import SNP map to data-frame
   map.file <- file.path(all.paths[1], "MapPenn.txt")
   probes <- data.table::fread(map.file, header = TRUE, sep = "\t")
@@ -441,6 +562,7 @@ prodGdsCnv <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 1
   probesCNV <- unique(unlist(probesCNV))
   probes.cnv.gr <- probesGr[probesGr$Name %in% probesCNV]
   
+  # Estimate the frequency per probe
   counts <- GenomicRanges::countOverlaps(probes.cnv.gr, CNVsGr)
   probes.cnv.gr$freq <- unname(counts)
   
@@ -801,6 +923,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
       cnv.file <- paste0("CNVOutPop", npop, ".txt")
       cnvs <- read.table(file.path(pheno.path, cnv.file), sep = "", header = FALSE)
       CNVs <- .checkConvertCNVs(cnvs, all.paths, dup.samples, n.cor)
+      message(paste0("Number of CNVs", nrow(CNVs)))
       all.samples <- as.character(CNVs$V5)
       all.samples <- unique(all.samples)
       samplesPhen <- all.samples
@@ -830,6 +953,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
       
       cnvs <- read.table(file.path(pheno.path, cnv.file), sep = "", header = F)
       CNVs <- .checkConvertCNVs(cnvs, all.paths, dup.samples, n.cor)
+      message(paste0("Number of CNVs", nrow(CNVs)))
       all.samples <- as.character(CNVs$V5)
       all.samples <- unique(all.samples)
       
@@ -1037,6 +1161,15 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
     }       
   }
   
+  # Check for duplicated CNVs and exclude duplicated CNV entries
+  CNVs.nodup <- CNVs[!duplicated(CNVs),]
+  if(nrow(CNVs.nodup)!=nrow(CNVs)){
+    warning("CNV dataset has duplicated entries. 
+           A same CNV entry is present multiple times in at least one sample. 
+           Only unique entries will be maintained.") 
+  }
+  CNVs <- CNVs.nodup  
+  
   return(CNVs)
   
 }
@@ -1237,7 +1370,9 @@ testit <- function(x) {
   
   cnvs <- data.table::fread(file.path(all.paths[1], "CNVOut.txt"), sep = "\t", 
                             header = FALSE)  ### CNV table 
+  
   CNVs <- .checkConvertCNVs(cnvs, all.paths, dup.samples)
+  message(paste0("Number of CNVs", nrow(CNVs)))
   
   ####################### Check if the chromosomes are numeric
   
@@ -1685,13 +1820,15 @@ testit <- function(x) {
 
 .assoPrCNV <- function(all.paths, all.segs.gr, phenotypesSamX, method.m.test, 
                        probes.cnv.gr, assign.probe = "min.pvalue", correct.inflation,
-                       association.method="plink", all.pvalues=NULL) {
+                       association.method="plink", all.pvalues=NULL, simulation=NULL, 
+                       genofile=NULL) {
   
   segs.pvalue.gr <- unlist(all.segs.gr)
   segs.pvalue.gr$SegName <- seq_along(segs.pvalue.gr)
   
+  if(is.null(simulation)){
   cnv.gds <- file.path(all.paths[1], "CNV.gds")
-  genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
+  genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)}
   
   if(association.method=="plink"){
   gvar.name <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "phenotype"))
@@ -1855,8 +1992,9 @@ testit <- function(x) {
   segs.pvalue.gr$MinPvalueAdjusted <- round(segs.pvalue.gr$MinPvalueAdjusted, 5)
   
   ## Write the probe-pvalues
+  if(is.null(simulation)){
   gdsfmt::add.gdsn(genofile, name = "probe.pvalues", val= values(resultspGr)$VALUE, replace = TRUE)
-  SNPRelate::snpgdsClose(genofile)
+  SNPRelate::snpgdsClose(genofile)}
   
   return(segs.pvalue.gr)
   
@@ -1993,11 +2131,75 @@ return(pedigree)
 
 # HELPER - Linear mixed model for GWAS - considering pedigree
 
-lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model, 
+lmmCNV <- function(lo, all.paths, all.segs.gr, phen.info, method.m.test, model, 
                    probes.cnv.gr, assign.probe, correct.inflation, phenotypesSamX,
                    n.cor, verbose=FALSE, model.cnv.interactions="+ CNVx", run.lrr=FALSE, 
                    snp.gds=NULL, use.grm=NULL, use.pca=NULL, norm.lrr=TRUE, max.lrr, min.lrr,
-                   lrr.to.use="standard"){
+                   lrr.to.use="standard", simulation=NULL, genofile=NULL,
+                   list.simulation=NULL){
+  
+  if(!is.null(simulation) && is.null(genofile)){
+    stop("In simulation gds needs to be provided as genofile parameter")
+  }
+  
+  if(!is.null(simulation) && is.null(list.simulation)){
+    stop("Simulation should provide a list.simulation")
+  }
+  
+  #if(is.null(genofile)){
+  #  genofile.back <- NULL
+  #}else{
+  #  genofile.back <-"other"
+  #}
+  
+  if(is.null(simulation)){
+    
+  ### Map of the CNV probes
+  cnv.gds <- file.path(all.paths[1], "CNV.gds")
+  genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
+    
+  ## Take phenotype directly form gds  
+  phen.gds <- read.gdsn(index.gdsn(genofile, "phenotype")) #TEST
+  
+  ### Extract pedigree from the phen.info object
+  ped <- as.data.frame(phen.info$pedigree)
+  #ped <- ped[match(phen.gds$samplesPhen, ped$sample.id),]
+  ped <- merge(ped, phen.gds, by.x="sample.id", by.y="samplesPhen", 
+               all.x=FALSE, all.y=TRUE, suffixes = c("",".y"))
+  
+  ped <- ped[match(ped$sample.id, phen.gds$samplesPhen), ]
+  ped <- ped[!duplicated(ped),]
+  ped <- pedigree::add.Inds(ped)   
+  ped$sire <- factor(ped$sire)
+  ped$dam <- factor(ped$dam)
+  
+  
+  }else{
+   # lop.sim <- lo
+  #  if(is.null(list.simulation)){
+  #    #if(lop.sim==1){
+   #     phen.name.in.model <- as.character(model[2])
+  #      pedigree.x <- phen.info$pedigree
+   #     pedigree.x.back <- pedigree.x
+   #     phen.values <- pedigree.x[,which(colnames(pedigree.x) == phen.name.in.model)]
+  #      sd.phen <- sd(phen.values, na.rm=TRUE)
+  #      mean.phen <- mean(phen.values, na.rm=TRUE)
+  #      num.na <- sum(is.na(phen.values))
+   #     known.phen <- length(phen.values)-num.na
+   #     na.to.bind <- rep(NA, num.na)
+        #}
+  #    sim.phen <- rnorm(known.phen, mean=mean.phen, sd=sd.phen)
+   #   sim.phen <- c(sim.phen, na.to.bind)
+  #    sim.phen <- sample(sim.phen)
+  #    pedigree.x[,which(colnames(pedigree.x) == phen.name.in.model)] <- sim.phen
+   # }else{
+  #    pedigree.x <- list.simulation[[lop.sim]]
+  #  }
+  #  phen.info$pedigree <- pedigree.x ## Attach simulated phenotypes
+  #if(FALSE){
+  lop.sim <- lo
+  pedigree.x <- list.simulation[[lop.sim]]
+  phen.info$pedigree <- pedigree.x ## Attach simulated phenotypes
   
   ### Extract pedigree from the phen.info object
   ped <- as.data.frame(phen.info$pedigree)
@@ -2005,10 +2207,12 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
   ped <- pedigree::add.Inds(ped)   
   ped$sire <- factor(ped$sire)
   ped$dam <- factor(ped$dam)
-  
-  ### Map of the CNV probes
-  cnv.gds <- file.path(all.paths[1], "CNV.gds")
-  genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
+  #}
+      
+  if (verbose) 
+      message(paste("Simulation of phenotypes", lop.sim, "of", simulation))
+    
+  }
   
   if(!is.null(snp.gds)){
     snp.gds <- file.path(all.paths[1], "SNP.gds")
@@ -2016,7 +2220,7 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
 }
 
   if(is.null(use.grm)){
-    p1 <-    new("pedigree",
+    p1 <- new("pedigree",
                  sire = as.integer(ped$sire),
                  dam = as.integer(ped$dam),
                  label = as.character(ped$sample.id))
@@ -2040,7 +2244,7 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
     
     if(is.null(gdsfmt::index.gdsn(genofile, "GRM", silent=TRUE))){
     ## HELPER - GRM  
-      cnvGRM <- function(genofile){
+    cnvGRM <- function(genofile){
         ### change nodes to perform the PCA analysis
         genoBack <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "genotype")))  
         CNVgeno <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotypeSNPlike")))  
@@ -2048,6 +2252,8 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
         n <- gdsfmt::add.gdsn(genofile, "genotype", CNVgeno, replace=TRUE)
         gdsfmt::read.gdsn(n)
         cor.matrix <- SNPRelate::snpgdsGRM(genofile, autosome.only=FALSE)
+                                           #useMatrix=TRUE,
+                                           #with.id=TRUE)
         add.gdsn(genofile, "GRM", cor.matrix, replace=TRUE)
         n <- gdsfmt::add.gdsn(genofile, "genotype", genoBack, replace=TRUE)
         gdsfmt::read.gdsn(n)
@@ -2095,6 +2301,7 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
   cnv.geno.cn <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype")))  
   rownames(cnv.geno.cn) <- paste0("CNV", seq_len(nrow(cnv.geno.cn))) ## Put 'CNV' colnames
   cnv.geno <- rbind(cnv.geno, cnv.geno.cn)
+  
   }else{
   cnv.geno <- (g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"))) 
   rownames(cnv.geno) <- paste0("CNV", seq_len(nrow(cnv.geno))) ## Put 'CNV' colnames
@@ -2106,14 +2313,16 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
   cnv.geno <- t(cnv.geno)
   cnv.geno <- as.data.frame(cnv.geno)
   cnv.geno$sample.id <- rownames(cnv.geno)
-  cnv.geno <- merge(ped, cnv.geno, by="sample.id")
+  #cnv.geno <- merge(ped, cnv.geno, by="sample.id", sort=TRUE)
+  cnv.geno <- merge(cnv.geno, ped, by="sample.id", sort=TRUE) ## TEST
   
   ### Attach the PCA results
   if("CNV.based" %in% use.pca){
     if(!is.null(gdsfmt::index.gdsn(genofile, "PCA", silent=TRUE))){
       PCA <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "PCA"))
       ### merge with CNV genotypes
-      cnv.geno <- merge(cnv.geno, PCA, by="sample.id", sort=FALSE, all.x=TRUE, all.y=FALSE)
+      #cnv.geno <- merge(cnv.geno, PCA, by="sample.id", sort=FALSE, all.x=TRUE, all.y=FALSE)
+      cnv.geno <- merge(cnv.geno, PCA, by="sample.id", sort=TRUE, all.x=TRUE, all.y=FALSE)
     }else{
       stop("To create a CNV.based PCA analysis one needs to run with use.pca=NULL at least one time")
     }
@@ -2125,7 +2334,8 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
     PCA <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile.snp, "PCA"))
   }
     ### merge with CNV genotypes
-    cnv.geno <- merge(cnv.geno, PCA, by="sample.id", sort=FALSE, all.x=TRUE, all.y=FALSE)
+    #cnv.geno <- merge(cnv.geno, PCA, by="sample.id", sort=FALSE, all.x=TRUE, all.y=FALSE)
+    cnv.geno <- merge(cnv.geno, PCA, by="sample.id", sort=TRUE, all.x=TRUE, all.y=FALSE)
   }
   
   if(!is.null(snp.gds)){
@@ -2134,6 +2344,14 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
   ### Fit the model
   if (verbose)
   message("Fit the model - LMM")
+  #rownames(cnv.geno) <- cnv.geno$sample.id ## TEST 
+  #colnames(cnv.geno)[1] <- "ID" 
+  #cnv.geno <- cnv.geno[match(rownames(A), cnv.geno$ID), ]
+  ##TEST
+  #if(TRUE){
+    #rownames(A) <- as.char
+  #}
+  ## check the warning # https://github.com/variani/lme4qtl/issues/20
   mod <- lme4qtl::relmatLmer(model, cnv.geno, relmat = list(sample.id = A))
   m1 <- mod 
   
@@ -2174,35 +2392,48 @@ lmmCNV <- function(all.paths, all.segs.gr, phen.info, method.m.test, model,
   message("Assign probes to CNV segments - LMM")
   
   ### Associate the p-values with the segments
-  SNPRelate::snpgdsClose(genofile)
+  if(is.null(simulation)){
+  SNPRelate::snpgdsClose(genofile)}
 
+  if(is.null(simulation)){
+   genofile <- NULL 
+  }
+  
   segs.pvalue.gr <- .assoPrCNV(all.paths=all.paths, all.segs.gr=all.segs.gr, phenotypesSamX=phenotypesSamX,
                                method.m.test=method.m.test, probes.cnv.gr=probes.cnv.gr, assign.probe=assign.probe, 
                                correct.inflation=correct.inflation, association.method="p.values", 
-                               all.pvalues=all.pvalues)
+                               all.pvalues=all.pvalues, simulation=simulation, genofile=genofile)
   
   
    ### Run a CNV based PCA 
+  if(is.null(simulation)){
   cnv.gds <- file.path(all.paths[1], "CNV.gds")
   genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
   ### Add association test to the GDS
-  gdsfmt::add.gdsn(genofile, name = "CNV.seg.pvalue", val = as.data.frame(segs.pvalue.gr), replace = TRUE)
+  gdsfmt::add.gdsn(genofile, name = "CNV.seg.pvalue", val = as.data.frame(segs.pvalue.gr), replace = TRUE)}
   if(!is.null(gdsfmt::index.gdsn(genofile, "CNVgenotypeSNPlike", silent=TRUE))){
   if(is.null(gdsfmt::index.gdsn(genofile, "PCA", silent=TRUE))){
-    SNPRelate::snpgdsClose(genofile)
+    if(is.null(simulation)){
+    SNPRelate::snpgdsClose(genofile)}
     PCAcnv(all.paths, segs.pvalue.gr, use.seg=FALSE)
   }else{
-    SNPRelate::snpgdsClose(genofile)
+    if(is.null(simulation)){
+    SNPRelate::snpgdsClose(genofile)}
   }
   }else{
-    SNPRelate::snpgdsClose(genofile)
+    if(is.null(simulation)){
+    SNPRelate::snpgdsClose(genofile)}
   }
   #SNPRelate::snpgdsClose(genofile)
   
+  if(!is.null(simulation)){
+    segs.pvalue.gr$simulation.list.lo <- lo
+  }
+    
+    
   return(segs.pvalue.gr)
   
 }
-
 
 # HELPER - Normalize LRR values 
 
@@ -2424,3 +2655,38 @@ for (se in seq_along(segs.pvalue.gr)) {
   
 }
 
+#' Produce list simulation to be used in the cnvGWAS()
+#' 
+#' @param simulation Numeric or NULL. If numeric, simulated phenotypes will be used. The number
+#' will define the number of permutation (i.e. if simualtion = 1000, the analysis will be performed
+#' 1000 times with random phenotypes). The random phenotypes have the same standard deviation and mean
+#' of the real phenotype defined in the model. 
+#' @param model Linear mixed model to fit (without the CNV). Use \code{\link{formula}}
+#' @param phen.info Returned by \code{\link{setupCnvGWAS}}
+#' @export
+
+produceRandomPheno <- function(simulation, model, phen.info){
+  list.simulation <- vector("list", simulation)
+  for(lop.sim in seq_len(simulation)){
+    if(lop.sim==1){
+        phen.name.in.model <- as.character(model[2])
+        pedigree.x <- phen.info$pedigree
+        pedigree.x.back <- pedigree.x
+        phen.values <- pedigree.x[,which(colnames(pedigree.x) == phen.name.in.model)]
+        sd.phen <- sd(phen.values, na.rm=TRUE)
+        mean.phen <- mean(phen.values, na.rm=TRUE)
+        num.na <- sum(is.na(phen.values))
+        known.phen <- length(phen.values)-num.na
+        na.to.bind <- rep(NA, num.na)}
+      
+      sim.phen <- rnorm(known.phen, mean=mean.phen, sd=sd.phen)
+      sim.phen <- c(sim.phen, na.to.bind)
+      sim.phen <- sample(sim.phen)
+      pedigree.x[,which(colnames(pedigree.x) == phen.name.in.model)] <- sim.phen
+   
+      list.simulation[[lop.sim]] <- pedigree.x
+    }
+  return(list.simulation)
+}
+
+  

@@ -5,6 +5,68 @@
 # Code: GRAPCNVGWAS001
 ##################
 
+#' Violin plot to show the quantitative phenotype distribution for each CNV genotype 
+#' 
+#' @param all.paths phen.info$all.paths  
+#' @param snp.name SNP name. "Name" returned by \code{\link{cnvGWAS}}  
+#' @author Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
+#' @examples 
+#' # Write the pdf plot in disk
+#'  all.paths <- phen.info$all.paths
+#'  snp.name <- "AX-76818525"
+#'  violinAllele(all.paths, snp.name)
+#'  
+#' @export
+
+violinAllele <- function(all.paths, snp.name, lo.phe=1, plot.pdf=TRUE){
+  
+  ### Open gds
+  cnv.gds <- file.path(all.paths[1], "CNV.gds")
+  genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
+  
+  ### Get the allele
+  snp.ids <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id"))
+  snp.number <- which(snp.ids==snp.name)
+  
+  ## Get the genotypes
+  col.gen <- length(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id")))
+  g <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"), start=c(snp.number,1), count=c(1, col.gen))
+  
+  phen <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "phenotype"))
+  SNPRelate::snpgdsClose(genofile)
+  
+  phen$gen <- g
+  
+  phen[,lo.phe+1] <- gsub(-9, NA, phen[,lo.phe+1])
+  
+  vio.df <- phen[,c(lo.phe+1, ncol(phen))]
+  phen.name <- colnames(phen)[lo.phe+1]
+  colnames(vio.df) <- c(phen.name, "state")
+  vio.df$state <- as.vector(as.character(vio.df$state)) 
+  vio.df[, which(colnames(vio.df)==phen.name)] <- as.numeric(vio.df[, which(colnames(vio.df)==phen.name)])
+  
+  ## Plot the violin 
+  p <- ggplot2::ggplot(vio.df, ggplot2::aes_string(x="state", y=phen.name)) + 
+    ggplot2::geom_violin(trim=FALSE)
+  p <- p + ggplot2::geom_jitter(shape=16, position=ggplot2::position_jitter(0.2))
+  
+  if(plot.pdf){
+    pdf.file <- file.path(all.paths[3], paste0(phen.name, "-violin-", snp.name,".pdf"))
+    pdf(pdf.file)
+    print(p)
+    invisible(dev.off())
+  }else{
+    return(p)
+  }
+  
+}
+
+if(FALSE){
+  all.paths <- phen.info$all.paths
+  snp.name <- "AX-76597039"
+  CNVRanger::violinAllele(all.paths, snp.name)
+}
+
 #' Manhattan Plot
 #' 
 #' Manhattan plot for p-values of a CNV-GWAS
@@ -45,6 +107,7 @@
 #'
 #' @export
 #'  
+
 plotManhattan <- function(all.paths, regions, chr.size.order = NULL, plot.pdf = TRUE) {
     
     ## Produce chromosome limits
@@ -106,7 +169,7 @@ plotManhattan <- function(all.paths, regions, chr.size.order = NULL, plot.pdf = 
 #' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @examples 
 #' 
-#' folder.package <- system.file('extdata', package = 'cnvAnalyzeR')
+#' folder.package <- system.file('extdata', package = 'CNVRanger')
 #'
 #' phen.info <- setupCnvGWAS(name="Example", phen.loc=file.path(folder.package, "Pheno.txt"), ## GEBV values
 #'                          cnv.out.loc <- file.path(folder.package, "CNVOut.txt"), ## CNV calls            
@@ -133,7 +196,12 @@ plotManhattan <- function(all.paths, regions, chr.size.order = NULL, plot.pdf = 
 #' @export
 
 plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=NULL, 
-                               grob=FALSE){
+                               grob=FALSE, highlight=NULL, ylim.man=2){
+  
+  ## Check if overlapped genes exist
+  if(is.null(values(regions)$Overlapped.genes)){
+    values(regions)$Overlapped.genes <- rep(NA, length(regions))
+  }
   
   ## Produce chromosome limits
   chr.size.order.start <- chr.size.order
@@ -148,7 +216,7 @@ plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=
   ## Simulate dots to color
   all.p.all <- list()
   for(chrx in seq_len(nrow(chr.size.order))){
-    lseq <- function(from=1, to=100000, length.out=6) {
+    lseq <- function(from=1, to=400000, length.out=6) {
       # logarithmic spaced sequence
       # blatantly stolen from library("emdbook"), because need only this
       exp(seq(log10(from), log10(to), length.out = length.out))
@@ -174,7 +242,7 @@ plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=
     phen.name <- unique(phen.name)
     
     if(grob==FALSE){
-      pdf(file.path(all.paths[3], paste0(phen.name,"-Manhattan.pdf")))}
+    pdf(file.path(all.paths[3], paste0(phen.name,"-Manhattan.pdf")))}
     gwasResults <- cbind("CHR"=as.character(seqnames(regions)), "BP"=start(regions),
                          "SNP"= values(regions)$SegName, 
                          "P"= values(regions)$MinPvalueAdjusted,
@@ -200,17 +268,23 @@ plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=
     backgroundDots <- rbind(gwasResults, backgroundDots)
     backgroundDots <- dplyr::arrange(backgroundDots, CHR, BP)
     
-    qqman.mod(backgroundDots, col = scales::alpha(c("black", "grey30"), 0.006),
-    #qqman::manhattan(backgroundDots, col = scales::alpha(c("black", "grey30"), 0.006),
+    #qqman.mod(backgroundDots, col = scales::alpha(c("black", "grey30"), 0.006),
+    qqman.mod(backgroundDots, col = scales::alpha(c("coral", "azure3"), 0.006),
                      chr="CHR", bp="BP", snp="SNP", p="P",
                      chrlabs=chr.size.order$chr, suggestiveline =-log10(0.10),
-                     genomewideline = -log10(0.05), ylim = c(0, 3));par(new=TRUE)
+                     genomewideline = -log10(0.05), ylim = c(0, ylim.man));par(new=TRUE)
     
+    ### Show only highligh segments
+    highlight <- gwasResults[which(gwasResults$SNP %in% highlight),]$Overlapped.genes
+    #na.omit(highlight)
+    highlight <- highlight[highlight != ""] 
     gwasResults$SNP <- gwasResults$Overlapped.genes
-    qqman.mod(gwasResults, col = c("blue4", "orange3"), chr="CHR", bp="BP", snp="SNP", p="P",
-    #qqman::manhattan(gwasResults, col = c("blue4", "orange3"), chr="CHR", bp="BP", snp="SNP", p="P",
+    
+    #qqman.mod(gwasResults, col = c("blue4", "orange3"), chr="CHR", bp="BP", snp="SNP", p="P",
+    qqman.mod(gwasResults, col = c("blue4"), chr="CHR", bp="BP", snp="SNP", p="P",
                      chrlabs=chr.size.order$chr, suggestiveline =-log10(0.10),
-                     genomewideline = -log10(0.05), annotatePval = 0.1, ylim = c(0, 3))
+                     genomewideline = -log10(0.05), annotatePval = 0.1, ylim = c(0, ylim.man),
+    highlight=highlight)
     
     pl <- recordPlot()
     
@@ -258,11 +332,11 @@ plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=
     
     #qqman::manhattan(gwasResults,col = scales::alpha(c("blue4", "orange3"), 0.01));par(new=TRUE)
     qqman::manhattan(backgroundDots, col = scales::alpha(c("blue4", "orange3"), 0.006),
-                     chr="CHR", bp="BP", snp="SNP", p="P", logp=FALSE, ylab = "Vst");par(new=TRUE)
+                     chr="CHR", bp="BP", snp="SNP", p="P", logp=FALSE, ylab = "Vst", highlight=highlight);par(new=TRUE)
     
     qqman::manhattan(gwasResults, col = c("blue4", "orange3"),
                      chr="CHR", bp="BP", snp="SNP", p="P", logp=FALSE, 
-                     ylab = "Vst")
+                     ylab = "Vst", highlight=highlight)
     
     #pl <- recordPlot()
     if(grob){
@@ -411,9 +485,9 @@ qqunifPlot <- function(pvalues, should.thin = TRUE, thin.obs.places = 2, thin.ex
 
 ## HELPER - Function adapted from qqman package
 qqman.mod <- function (x, chr = "CHR", bp = "BP", p = "P", snp = "SNP", col = c("gray10", 
-                                                                   "gray60"), chrlabs = NULL, suggestiveline = -log10(1e-05), 
+          "gray60"), chrlabs = NULL, suggestiveline = -log10(1e-05), 
           genomewideline = -log10(5e-08), highlight = NULL, logp = TRUE, 
-          annotatePval = NULL, annotateTop = TRUE, ...) 
+          annotatePval = NULL, annotateTop = TRUE, color.highlight="red", ...) 
 {
   CHR = BP = P = index = NULL
   if (!(chr %in% names(x))) 
@@ -437,8 +511,7 @@ qqman.mod <- function (x, chr = "CHR", bp = "BP", p = "P", snp = "SNP", col = c(
   d <- d[order(d$CHR, d$BP), ]
   if (logp) {
     d$logp <- -log10(d$P)
-  }
-  else {
+  }else{
     d$logp <- d$P
   }
   d$pos = NA
@@ -478,7 +551,8 @@ qqman.mod <- function (x, chr = "CHR", bp = "BP", p = "P", snp = "SNP", col = c(
   xmin = floor(max(d$pos) * -0.03)
   def_args <- list(xaxt = "n", bty = "n", xaxs = "i", yaxs = "i", 
                    las = 1, pch = 20, xlim = c(xmin, xmax), ylim = c(0, 
-                                                                     ceiling(max(d$logp))), xlab = xlabel, ylab = expression(-log[10](italic(p))))
+                  #ceiling(max(d$logp))), xlab = xlabel, ylab = expression(-log[10](italic(p))))
+                  ceiling(max(d$logp))), xlab = xlabel, ylab = expression(-log[10](italic(q))))
   dotargs <- list(...)
   do.call("plot", c(NA, dotargs, def_args[!names(def_args) %in% 
                                             names(dotargs)]))
@@ -521,7 +595,8 @@ qqman.mod <- function (x, chr = "CHR", bp = "BP", p = "P", snp = "SNP", col = c(
     if (any(!(highlight %in% d$SNP))) 
       warning("You're trying to highlight SNPs that don't exist in your results.")
     d.highlight = d[which(d$SNP %in% highlight), ]
-    with(d.highlight, points(pos, logp, col = "green3", pch = 20, 
+    #with(d.highlight, points(pos, logp, col = color.highlight, pch = 20, 
+    with(d.highlight, points(pos, logp, col = color.highlight, pch = 19, 
                              ...))
   }
   if (!is.null(annotatePval)) {
@@ -541,10 +616,10 @@ qqman.mod <- function (x, chr = "CHR", bp = "BP", p = "P", snp = "SNP", col = c(
         chrSNPs <- topHits[topHits$CHR == i, ]
         topSNPs <- rbind(topSNPs, chrSNPs[1, ])
       }
-      calibrate::textxy(topSNPs$pos, -log10(topSNPs$P), offset = 0.625, 
+      calibrate::textxy(topSNPs$pos, -log10(topSNPs$P), offset = 0.5, 
              #labs = topSNPs$SNP, cex = 0.8, ...)
              #labs = topHits$Overlapped.genes, cex = 1.3, ...)
-             labs = topSNPs$SNP, cex = 1, font=2, ...)
+             labs = topSNPs$SNP, cex = 0.9, font=2, ...)
     }
   }
   par(xpd = FALSE)

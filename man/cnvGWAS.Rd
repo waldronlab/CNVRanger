@@ -6,11 +6,15 @@
 \usage{
 cnvGWAS(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01,
   snp.matrix = FALSE, method.m.test = "fdr", lo.phe = 1,
-  chr.code.name = NULL, genotype.nodes = "CNVGenotype",
-  coding.translate = "all", path.files = NULL, list.of.files = NULL,
-  produce.gds = TRUE, run.lrr = FALSE, assign.probe = "min.pvalue",
-  correct.inflation = FALSE, both.up.down = FALSE, model = NULL,
-  method.to.run = "plink", verbose = FALSE)
+  chr.code.name = NULL, genotype.nodes = c("CNVGenotype",
+  "CNVgenotypeSNPlike"), coding.translate = "all", path.files = NULL,
+  list.of.files = NULL, produce.gds = TRUE, run.lrr = FALSE,
+  assign.probe = "min.pvalue", correct.inflation = FALSE,
+  both.up.down = FALSE, model = NULL, method.to.run = "plink",
+  model.cnv.interactions = "CNVx", verbose = FALSE, snp.gds = NULL,
+  use.grm = NULL, use.pca = NULL, norm.lrr = TRUE, max.lrr = 0.9,
+  min.lrr = 0.1, lrr.to.use = "standard", simulation = NULL,
+  list.simulation = NULL)
 }
 \arguments{
 \item{phen.info}{Returned by \code{\link{setupCnvGWAS}}}
@@ -60,10 +64,34 @@ Use with argument \code{method.m.test} to generate strict p-values.}
 \item{both.up.down}{Check for CNV genotype similarity in both directions. 
 Default is FALSE (i.e. only downstream)}
 
+\item{model}{Linear mixed model to fit (without the CNV). Use \code{\link{formula}}}
+
+\item{method.to.run}{GWAS method. Linear regression with PLINK is \sQuote{plink} and 
+linear mixed model is \sQuote{lmm}}
+
+\item{model.cnv.interactions}{'CNV' or 'LRR' effect to be compared with the fitted model without CNV effect
+(using ANOVA)}
+
 \item{verbose}{Show progress in the analysis}
+
+\item{use.grm}{Genomic relationship matrix which is "SNP.based", "CNV.based" or 
+NULL to use pedigree instead (if available).}
+
+\item{use.pca}{If PCA analysis should be used from external SNP.gds or automatically created
+within the CNV.gds. Options are "SNP.based", "CNV.based" or 
+NULL to use pedigree instead (if available).}
+
+\item{lrr.to.use}{Use a median of LRR across de probes overlapping the CNV segment instead individual
+LRR probe values}
+
+\item{simulation}{Numeric or NULL. If numeric, simulated phenotypes will be used. The number
+will define the number of permutation (i.e. if simualtion = 1000, the analysis will be performed
+1000 times with random phenotypes). The random phenotypes have the same standard deviation and mean
+of the real phenotype defined in the model. This option is only available if \sQuote{method.to.run}
+is 'lmm', otherwise NULL should be set.}
 }
 \value{
-The CNV segments and the representative probes and their respective p-value
+CNV segments, representative probes and their respective p-values
 }
 \description{
 Wraps all the necessary functions to run a CNV-GWAS using the output of 
