@@ -1022,7 +1022,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
 # analyzed. From (i) PennCNV, (ii) SNP-chip general format or (iii) sequencing
 # general format
 
-.checkConvertCNVs <- function(cnvs, all.paths, dup.samples=NULL, n.cor = 1) {
+.checkConvertCNVs <- function(cnvs, all.paths=NULL, dup.samples=NULL, n.cor = 1) {
   
   the.names <- as.character(as.matrix(cnvs[1, ]))
   stand.names <- c("chr", "start", "end", "sample.id", "state")
@@ -1150,7 +1150,7 @@ importLRR_BAF <- function(all.paths, path.files, list.of.files, verbose=TRUE)
     CNVs <- cnvs
   } else stop("Unexpected CNV input format - is it tab delimited?")
   
-  ### Check for duplicated samples and adjusted the CNV file for it
+  ### Check for duplicated samples and adjust the CNV file for it
   if(!is.null(dup.samples)){
     for(lo.dup in seq_along(dup.samples)){
       dup.samplesX <- dup.samples[lo.dup]

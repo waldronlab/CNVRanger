@@ -2,35 +2,109 @@
 % Please edit documentation in R/population_ranges.R
 \name{populationRanges}
 \alias{populationRanges}
-\title{Summarizing genomic ranges across a population}
+\title{Summarizing CNV ranges across a population}
 \usage{
-populationRanges(grl, density = 0.1)
+populationRanges(
+  grl,
+  mode = c("density", "RO"),
+  density = 0.1,
+  ro.thresh = 0.5,
+  multi.assign = FALSE,
+  verbose = FALSE,
+  min.size = 2,
+  classify.ranges = TRUE,
+  type.thresh = 0.1,
+  est.recur = FALSE
+)
 }
 \arguments{
 \item{grl}{A \code{\linkS4class{GRangesList}}.}
 
+\item{mode}{Character. Should population ranges be computed based on regional
+density ("density") or reciprocal overlap ("RO"). See Details.}
+
 \item{density}{Numeric. Defaults to 0.1.}
+
+\item{ro.thresh}{Numeric. Threshold for reciprocal overlap required for merging
+two overlapping regions. Defaults to 0.5.}
+
+\item{multi.assign}{Logical. Allow regions to be assigned to several region clusters?
+Defaults to \code{FALSE}.}
+
+\item{verbose}{Logical. Report progress messages? Defaults to \code{FALSE}.}
+
+\item{min.size}{Numeric. Minimum size of a summarized region to be included. 
+Defaults to 2 bp.}
+
+\item{classify.ranges}{Logical. Should CNV frequency (number of samples 
+overlapping the region) and CNV type (gain, loss, or both) be annotated?
+Defaults to \code{TRUE}.}
+
+\item{type.thresh}{Numeric. Required minimum relative frequency of each CNV 
+type (gain / loss) to be taken into account when assigning CNV type to a region.
+Defaults to 0.1. That means for a region overlapped by individual gain and 
+loss calls that both types must be present in >10% of the corresponding samples
+in order to be typed as 'both'. If gain or loss calls are present below the 
+threshold they are ignored.}
+
+\item{est.recur}{Logical. Should recurrence of regions be assessed via a 
+permutation test? Defaults to \code{FALSE}. See Details.}
 }
 \value{
 A \code{\linkS4class{GRanges}} object containing the summarized
-genomic ranges.
+CNV ranges.
 }
 \description{
-CNVRuler procedure that trims region margins based on regional density
-}
-\details{
-In CNV analysis, it is often of interest to summarize invidual calls across 
+In CNV analysis, it is often of interest to summarize individual calls across 
 the population, (i.e. to define CNV regions), for subsequent association 
 analysis with e.g. phenotype data.
+}
+\details{
+\itemize{
+\item CNVRuler procedure that trims region margins based on regional density
 
-In the simplest case, this just merges overlapping individual calls into 
-summarized regions.
-However, this typically inflates CNVR size and trimming low-density areas
-(usually <10\% of the total contributing individual calls within a summarized
-region) is advisable.
+Trims low-density areas (usually <10\% of the total contributing individual 
+calls within a summarized region).
 
 An illustration of the concept can be found here: 
 https://www.ncbi.nlm.nih.gov/pubmed/22539667 (Figure 1)
+
+\item Reciprocal overlap (RO) approach (e.g. Conrad et al., Nature, 2010)
+
+Reciprocal overlap of 0.51 between two genomic regions A and B:
+
+requires that B overlaps at least 51\% of A, 
+  *and* that A also overlaps at least 51\% of B
+
+Approach:
+
+At the top level of the hierarchy, all contiguous bases overlapping at least 
+1bp of individual calls are merged into one region. 
+Within each region, we further define reciprocally overlapping regions with 
+the following algorithm:
+
+\itemize{
+\item Calculate reciprocal overlap (RO) between all remaining calls.
+\item Identify pair of calls with greatest RO. If RO > threshold, merge and 
+      create a new CNV. If not, exit.
+\item Continue adding unclustered calls to the region, in order of best overlap. 
+      In order to add a call, the new call must have > threshold to all calls 
+      within the region to be added. When no additional calls may be added, 
+      move to next step.
+\item If calls remain, return to 1. Otherwise exit.
+}
+
+\item  GISTIC procedure (Beroukhim et al., PNAS, 2007) to identify recurrent 
+CNV regions
+
+GISTIC scores each CNV region with a G-score that is proportional to the total 
+magnitude of CNV calls in each CNV region.
+In addition, by permuting the locations in each sample, GISTIC determines 
+the frequency with which a given score would be attained if the events were 
+due to chance and therefore randomly distributed.
+A significance threshold can then be used to determine scores / regions that 
+are unlikely to occur by chance alone.  
+}
 }
 \examples{
 
@@ -44,24 +118,33 @@ grl <- GRangesList(
 )
 
 # default as chosen in the original CNVRuler procedure
-populationRanges(grl, density=0.1)
+populationRanges(grl, density=0.1, classify.ranges=FALSE)
 
 # density = 0 merges all overlapping regions, 
 # equivalent to: reduce(unlist(grl))
-populationRanges(grl, density=0) 
+populationRanges(grl, density=0, classify.ranges=FALSE) 
 
 # density = 1 disjoins all overlapping regions, 
 # equivalent to: disjoin(unlist(grl))
-populationRanges(grl, density=1)
+populationRanges(grl, density=1, classify.ranges=FALSE)
+
+# RO procedure
+populationRanges(grl, mode="RO", ro.thresh=0.5, classify.ranges=FALSE)
 
 }
 \references{
-Kim JH et al. (2012) CNVRuler: a copy number variation-based case-control
+Kim et al. (2012) CNVRuler: a copy number variation-based case-control
 association analysis tool. Bioinformatics, 28(13):1790-2.
+
+Conrad et al. (2010) Origins and functional impact of copy number variation 
+in the human genome. Nature, 464(7289):704-12.
+
+Beroukhim et al. (2007) Assessing the significance of chromosomal aberrations
+in cancer: methodology and application to glioma. PNAS, 104(50):20007-12.
 }
 \seealso{
 \code{\link{findOverlaps}}
 }
 \author{
-Martin Morgan
+Ludwig Geistlinger, Martin Morgan
 }

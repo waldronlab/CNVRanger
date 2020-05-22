@@ -210,6 +210,7 @@ plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=
   }
   
   ## Produce chromosome limits
+  colnames(chr.size.order) <- c("chrs", "sizes")
   chr.size.order.start <- as.data.frame(chr.size.order$chrs)
   chr.size.order.start$sizes <- 1
   colnames(chr.size.order.start) <- colnames(chr.size.order)
