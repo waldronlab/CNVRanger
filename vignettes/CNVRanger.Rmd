@@ -605,7 +605,7 @@ the analysis (i) genes with very low read count across samples, and (ii) CNV
 regions with fewer than `min.samples` samples in a group deviating from 2n.
 
 ```{r cnvEQTL}
-res <- cnvEQTL(cnvrs, grl, rse, window="1Mbp", verbose=TRUE)
+res <- cnvEQTL(cnvrs, grl, rse, window = "1Mbp", verbose = TRUE)
 res
 ```
 
