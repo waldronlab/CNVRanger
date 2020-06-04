@@ -57,7 +57,8 @@
 #' by which each CNV region is extended up- and downstream. This determines which
 #' genes are tested for each CNV region. Character notation is supported for
 #' convenience such as "100kbp" (same as 100000) or "1Mbp" (same as 1000000).
-#' Defaults to \code{"1Mbp"}.
+#' Defaults to \code{"1Mbp"}. Can also be set to \code{NULL} to test against all
+#' genes included in the analysis.
 #' @param multi.calls A function. Determines how to summarize the
 #' CN state in a CNV region when there are multiple (potentially conflicting)
 #' calls for one sample in that region. Defaults to \code{.largest}, which
@@ -176,16 +177,26 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
                 GenomicRanges::GRanges(rownames(cnv.states)), type="equal")
 
     # determine genes to test for each CNV region
-    ecnvrs <- .extendRegions(cnvrs, window=window)
-    olaps <- GenomicRanges::findOverlaps(rowRanges(rcounts), ecnvrs)
-    cgenes <- split(S4Vectors::queryHits(olaps), S4Vectors::subjectHits(olaps))
+    if(!is.null(window))
+    {
+        ecnvrs <- .extendRegions(cnvrs, window = window)
+        olaps <- GenomicRanges::findOverlaps(rowRanges(rcounts), ecnvrs)
+        cgenes <- split(S4Vectors::queryHits(olaps), S4Vectors::subjectHits(olaps))
+
+        ind <- as.integer(names(cgenes))
+        cnv.states <- cnv.states[ind,]
+        cnvrs <- cnvrs[ind]
+    }
+    else
+    {
+        grid <- seq_len(nrow(rcounts))
+        cgenes <- lapply(seq_len(length(cnvrs)), function(i) grid)
+    }
 
     nr.cnvrs <- length(cgenes)
     if(verbose) message(paste("Analyzing", nr.cnvrs,
                                 "regions with >=1 gene in the given window"))
-    ind <- as.integer(names(cgenes))
-    cnv.states <- cnv.states[ind,]
-    cnvrs <- cnvrs[ind]
+    
 
     #TODO: BiocParallel
     de.method <- match.arg(de.method)
@@ -201,7 +212,7 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
         })
     lens <- rep(cnvr.grid, lengths(cgenes))
     res <- do.call(plyr::rbind.fill, res)
-    padj <- stats::p.adjust(res[,"PValue"], method=padj.method)
+    padj <- stats::p.adjust(res[,"PValue"], method = padj.method)
     res <- data.frame(res, AdjPValue = padj)
     res <- .formatResult(res, rcounts, lens)
     names(res) <- rownames(cnv.states)
@@ -428,7 +439,7 @@ plotEQTL <- function(cnvr, genes, genome, cn="CN1")
 {
     if(filter.by.expr)
     {
-        keep <- edgeR::filterByExpr(rcounts)
+        keep <- suppressMessages(edgeR::filterByExpr(rcounts))
         rcounts <- rcounts[keep,]
     }
     y <- edgeR::DGEList(counts=rcounts)

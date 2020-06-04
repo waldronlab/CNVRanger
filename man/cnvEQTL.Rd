@@ -38,7 +38,8 @@ with `cnvrs`, `calls`, and `rcounts` arguments corresponding to assay names.}
 by which each CNV region is extended up- and downstream. This determines which
 genes are tested for each CNV region. Character notation is supported for
 convenience such as "100kbp" (same as 100000) or "1Mbp" (same as 1000000).
-Defaults to \code{"1Mbp"}.}
+Defaults to \code{"1Mbp"}. Can also be set to \code{NULL} to test against all
+genes included in the analysis.}
 
 \item{multi.calls}{A function. Determines how to summarize the
 CN state in a CNV region when there are multiple (potentially conflicting)
