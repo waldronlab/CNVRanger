@@ -2,11 +2,8 @@
 title: "Summarization and quantitative trait analysis of CNV ranges"
 author:
   - name: Vinicius Henrique da Silva
-    affiliation:
-    - Animal Breeding and Genomics, Wageningen University & Research, Wageningen, The Netherlands
-    - Animal Breeding and Genetics, Swedish University of Agricultural Sciences, Uppsala, Sweden
-    - Netherlands Institute of Ecology (NIOO-KNAW), Wageningen, The Netherlands
-    email: vinicius.dasilva@wur.nl
+    affiliation: School of Agriculture, University of São Paulo
+    email: viniciushs@usp.br
   - name: Ludwig Geistlinger
     affiliation: School of Public Health, City University of New York
     email: ludwig.geistlinger@sph.cuny.edu
@@ -605,7 +602,7 @@ the analysis (i) genes with very low read count across samples, and (ii) CNV
 regions with fewer than `min.samples` samples in a group deviating from 2n.
 
 ```{r cnvEQTL}
-res <- cnvEQTL(cnvrs, grl, rse, window="1Mbp", verbose=TRUE)
+res <- cnvEQTL(cnvrs, grl, rse, window = "1Mbp", verbose = TRUE)
 res
 ```
 
