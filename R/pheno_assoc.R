@@ -1544,6 +1544,7 @@ testit <- function(x) {
     
     segs.pvalue.gr$MinPvalueAdjusted <- stats::p.adjust(segs.pvalue.gr$MinPvalue, 
         method = method.m.test, n = length(segs.pvalue.gr))
+    segs.pvalue.gr$MinPvalueAdjusted <- round(segs.pvalue.gr$MinPvalueAdjusted, 5) # Avoid 0 p-values
     segs.pvalue.gr$Phenotype <- names(phenotypesSamX)[[2]]
     SNPRelate::snpgdsClose(genofile)
     
