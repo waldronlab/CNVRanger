@@ -2,7 +2,7 @@
 title: "Summarization and quantitative trait analysis of CNV ranges"
 author:
   - name: Vinicius Henrique da Silva
-    affiliation: School of Agriculture, University of São Paulo
+    affiliation: Luiz de Queiroz College of Agriculture, University of São Paulo
     email: viniciushs@usp.br
   - name: Ludwig Geistlinger
     affiliation: School of Public Health, City University of New York
