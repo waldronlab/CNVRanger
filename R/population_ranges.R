@@ -137,7 +137,7 @@ populationRanges <- function(grl, mode=c("density", "RO"),
     if(mode == "density") pranges <- .densityPopRanges(grl, density)
     else pranges <- .roPopRanges(grl, ro.thresh, multi.assign, verbose)
 
-    pranges <- pranges[GenomicRanges::width(pranges) >= min.size]
+    pranges <- pranges[BiocGenerics::width(pranges) >= min.size]
     if(classify.ranges) pranges <- .classifyRegs(pranges, unlist(grl), type.thresh)
     if(est.recur) pranges <- .estimateRecurrence(pranges, grl)
     return(pranges)
@@ -571,8 +571,8 @@ cnvOncoPrint <- function(calls, features, multi.calls=.largest,
     x <- calls[S4Vectors::queryHits(hits)]
     y <- calls[S4Vectors::subjectHits(hits)]
     pint <- GenomicRanges::pintersect(x, y)
-    rovlp1 <- GenomicRanges::width(pint) / GenomicRanges::width(x)
-    rovlp2 <- GenomicRanges::width(pint) / GenomicRanges::width(y)
+    rovlp1 <- BiocGenerics::width(pint) / BiocGenerics::width(x)
+    rovlp2 <- BiocGenerics::width(pint) / BiocGenerics::width(y)
 
     # keep only hits with ro > threshold
     ind <- rovlp1 > ro.thresh & rovlp2 > ro.thresh

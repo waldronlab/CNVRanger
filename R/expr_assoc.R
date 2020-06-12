@@ -423,7 +423,7 @@ plotEQTL <- function(cnvr, genes, genome, cn="CN1")
 
 .largest <- function(scores, ranges, qranges)
 {
-    ind <- IRanges::which.max(GenomicRanges::width(ranges))
+    ind <- BiocGenerics::which.max(BiocGenerics::width(ranges))
     vapply(seq_along(scores), function(i) scores[[i]][ind[i]], scores[[1]][1])
 }
 
