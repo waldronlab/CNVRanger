@@ -9,7 +9,7 @@
 #' 
 #' @param all.paths phen.info$all.paths  
 #' @param snp.name SNP name. "Name" returned by \code{\link{cnvGWAS}}  
-#' @author Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
+#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @examples 
 #' # Write the pdf plot in disk
 #'  all.paths <- phen.info$all.paths
@@ -18,7 +18,7 @@
 #'  
 #' @export
 
-violinAllele <- function(all.paths, snp.name, lo.phe=1, plot.pdf=TRUE){
+violinAllele <- function(all.paths, snp.name, lo.phe=1, ylab=NULL, plot.pdf=TRUE){
   
   ### Open gds
   cnv.gds <- file.path(all.paths[1], "CNV.gds")
@@ -45,10 +45,42 @@ violinAllele <- function(all.paths, snp.name, lo.phe=1, plot.pdf=TRUE){
   vio.df$state <- as.vector(as.character(vio.df$state)) 
   vio.df[, which(colnames(vio.df)==phen.name)] <- as.numeric(vio.df[, which(colnames(vio.df)==phen.name)])
   
+  ## Avoid nonexistent states 
+  vio.df$state <- as.character(vio.df$state)
+  ## Delete NA´s - why are they there?
+  vio.df <- na.omit(vio.df)
+  ## Call n 
+  vio.df$state <- paste0(vio.df$state, "n")
+  
+  #print(vio.df$state)
+  #print(class(vio.df$state))
+  #print(table(vio.df$state))
+  #print(head(vio.df))
+  
+if(is.null(ylab)){
+  ylab <- colnames(vio.df)[1]}
+  
+  ## Define colors of states
+  states.in.plot <- as.character(names(table(vio.df$state)))
+  states.in.plot[which(states.in.plot=="0n")] <- "dodgerblue3"
+  states.in.plot[which(states.in.plot=="1n")] <- "darkolivegreen3"
+  states.in.plot[which(states.in.plot=="2n")] <- "white"
+  states.in.plot[which(states.in.plot=="3n")] <- "coral"
+  #print(states.in.plot)
+  
   ## Plot the violin 
-  p <- ggplot2::ggplot(vio.df, ggplot2::aes_string(x="state", y=phen.name)) + 
+  p <- ggplot2::ggplot(vio.df, ggplot2::aes_string(x="state", y=phen.name, fill="state")) + 
     ggplot2::geom_violin(trim=FALSE)
-  p <- p + ggplot2::geom_jitter(shape=16, position=ggplot2::position_jitter(0.2))
+  p <- p + ggplot2::geom_jitter(shape=16, position=ggplot2::position_jitter(0.2), color = "gray48") +
+    ggplot2::stat_summary(fun=median, geom="point", size=2.5, color="black") +
+    ggplot2:: stat_summary(fun=median, colour="grey", geom="line", ggplot2::aes(group = 1)) +
+    ggplot2::xlab("") + ggplot2::ylab(ylab) +
+    ggplot2::theme_classic() +
+    ggplot2::theme(axis.title.y = ggplot2::element_text(margin = ggplot2::margin(t = 0, r = 20, b = 0, l = 0))) +
+    ggplot2::theme(legend.title=ggplot2::element_blank())
+
+   p <- p + ggplot2::scale_fill_manual(values=states.in.plot)
+  #p <- p + ggplot2::scale_color_manual(values=states.in.plot)
   
   if(plot.pdf){
     pdf.file <- file.path(all.paths[3], paste0(phen.name, "-violin-", snp.name,".pdf"))
@@ -76,7 +108,7 @@ if(FALSE){
 #' @param chr.size.order \code{\link{data.frame}} with two columns: (i) 'chr': chromosome names (character),
 #' and (ii) 'size': length of the chromosomes in bp (integer)
 #' @param plot.pdf Logical plot a to pdf file
-#' @author Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
+#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
 #' @examples 
 #' 
 #' # Load phenotype-CNV information
