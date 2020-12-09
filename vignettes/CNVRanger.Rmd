@@ -5,7 +5,7 @@ author:
     affiliation: Luiz de Queiroz College of Agriculture, University of São Paulo
     email: viniciushs@usp.br
   - name: Ludwig Geistlinger
-    affiliation: School of Public Health, City University of New York
+    affiliation: Center for Computational Biomedicine, Harvard Medical School 
     email: ludwig_geistlinger@hms.harvard.edu
 package: CNVRanger
 abstract: >
