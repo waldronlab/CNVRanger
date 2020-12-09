@@ -6,7 +6,7 @@ author:
     email: viniciushs@usp.br
   - name: Ludwig Geistlinger
     affiliation: School of Public Health, City University of New York
-    email: ludwig.geistlinger@sph.cuny.edu
+    email: ludwig_geistlinger@hms.harvard.edu
 package: CNVRanger
 abstract: >
     The _CNVRanger_ package implements a comprehensive tool suite for the analysis 
