@@ -140,7 +140,8 @@ if(FALSE){
 #' @export
 #'  
 
-plotManhattan <- function(all.paths, regions, chr.size.order = NULL, plot.pdf = TRUE) {
+plotManhattan <- function(all.paths, regions, chr.size.order = NULL, 
+                          plot.pdf = TRUE) {
     
     ## Produce chromosome limits
     chr.size.order.start <- chr.size.order
