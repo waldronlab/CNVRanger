@@ -211,7 +211,6 @@ plotManhattan <- function(all.paths, regions, chr.size.order = NULL,
 #' Function to write a Manhattan plot with the p-values from a CNV-GWAS run or Vst values. 
 #' 
 #' @param regions GRanges from CNV-GWAS run or Vst values to produce the manhattan plot
-#' @param type.regions 'p-value' or/and 'vst'
 #' @param chr.size.order Data-frame with two columns: (i) 'chr' have the chromosome names as character
 #' and (ii) 'size' with the length of the chromosome in basepairs
 #' @param grob Produce a grob object
@@ -244,9 +243,10 @@ plotManhattan <- function(all.paths, regions, chr.size.order = NULL,
 #' 
 #' @export
 
-plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=NULL, 
+plotManhattanColor <- function(all.paths, regions, chr.size.order=NULL, 
                               highlight=NULL, write.pdf=FALSE, ylim.man=NULL, cex.lab=1.8, 
-                              cex.axis=1.3, keep.y.lab=TRUE, keep.x.lab=TRUE){
+                              cex.axis=1.3, keep.y.lab=TRUE, keep.x.lab=TRUE,
+                              result.col.name="MinPvalueAdjusted"){
   
   grob <- !write.pdf
   
@@ -293,22 +293,22 @@ plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=
   backgroundDots <- subset(backgroundDots, select = c(CHR, BP, SNP, P))
   backgroundDots <- as.data.frame(backgroundDots)
   backgroundDots$Overlapped.genes <- NA #blank column
-  
-  if("p-value" %in% type.regions){
+
     chr.all$P <- 1 
     phen.name <- values(regions)$Phenotype
     phen.name <- unique(phen.name)
+    
+    p.defined <- 
+      
     
     if(grob==FALSE){
     pdf(file.path(all.paths[3], paste0(phen.name,"-Manhattan.pdf")))}
     gwasResults <- cbind("CHR"=as.character(seqnames(regions)), "BP"=start(regions),
                          "SNP"= values(regions)$SegName, 
-                         "P"= values(regions)$MinPvalueAdjusted,
+                         "P"= p.defined,
                          "Overlapped.genes"= values(regions)$Overlapped.genes)
     
     gwasResults <- as.data.frame(gwasResults, stringsAsFactors = FALSE)
-    #chr.all <- chr.all[,-3]
-    #chr.all <- chr.all[,colnames(chr.all)%in%"chr.numeric"]
     chr.all <- subset(chr.all, select = c(CHR, BP, SNP, P))
     chr.all$Overlapped.genes <- NA #blank column
     gwasResults <- rbind(gwasResults, chr.all)
@@ -326,7 +326,6 @@ plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=
     backgroundDots <- rbind(gwasResults, backgroundDots)
     backgroundDots <- dplyr::arrange(backgroundDots, CHR, BP)
     
-    #qqman.mod(backgroundDots, col = scales::alpha(c("black", "grey30"), 0.006),
     qqman.mod(backgroundDots, col = scales::alpha(c("coral", "azure3"), 0.006),
                      chr="CHR", bp="BP", snp="SNP", p="P",
                      chrlabs=chr.size.order$chr, suggestiveline =-log10(0.10),
@@ -336,11 +335,9 @@ plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=
     
     ### Show only highligh segments
     highlight <- gwasResults[which(gwasResults$SNP %in% highlight),]$Overlapped.genes
-    #na.omit(highlight)
     highlight <- highlight[highlight != ""] 
     gwasResults$SNP <- gwasResults$Overlapped.genes
     
-    #qqman.mod(gwasResults, col = c("blue4", "orange3"), chr="CHR", bp="BP", snp="SNP", p="P",
     qqman.mod(gwasResults, col = c("blue4"), chr="CHR", bp="BP", snp="SNP", p="P",
                      chrlabs=chr.size.order$chr, suggestiveline =-log10(0.10),
                      genomewideline = -log10(0.05), annotatePval = 0.1, ylim = c(0, ylim.man),
@@ -350,75 +347,12 @@ plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=
     pl <- recordPlot()
     
     if(grob){
-    #  grab_grob <- function(){
-    #    gridGraphics::grid.echo()
-    ##    grid::grid.grab()
-    #  }
-    #  dev.control("enable")
-    #  pl <- grab_grob()
-      
       pdf(file.path(all.paths[3], paste0(phen.name,"-Manhattan.pdf")))
       pl
     }
     
     dev.off()
     
-  }
-  else if("vst" %in% type.regions){
-    chr.all$P <- 0 
-    
-    populations <- unique(values(regions)$Populations)
-    
-    gwasResults <- cbind("CHR"=as.character(seqnames(regions)), 
-                         "BP"=start(regions),
-                         "SNP"= values(regions)$NameProbe, 
-                         "P"= values(regions)$vst.result)
-    
-    gwasResults <- as.data.frame(gwasResults, stringsAsFactors = FALSE)
-    gwasResults <- rbind(gwasResults, chr.all)
-    
-    ### turn chr to numeric
-    for(cn in seq_len(nrow(chr.size.order))){
-      gwasResults$CHR <- gsub(paste0("\\<",chr.size.order[cn,1], "\\>"),
-                              chr.size.order[cn,3], gwasResults$CHR)
-    }
-    
-    gwasResults$CHR <- as.numeric(gwasResults$CHR)
-    gwasResults$BP <- as.numeric(gwasResults$BP)
-    gwasResults$P <- as.numeric(gwasResults$P)
-    gwasResults <- dplyr::arrange(gwasResults, CHR, BP)
-    
-    if(grob == FALSE){
-      pdf(file.path(all.paths[3], paste0(populations, "-VSTManhattan.pdf"))) }
-    
-    #qqman::manhattan(gwasResults,col = scales::alpha(c("blue4", "orange3"), 0.01));par(new=TRUE)
-    qqman::manhattan(backgroundDots, col = scales::alpha(c("blue4", "orange3"), 0.006),
-                     chr="CHR", bp="BP", snp="SNP", p="P", logp=FALSE, ylab = "Vst", highlight=highlight);par(new=TRUE)
-    
-    qqman::manhattan(gwasResults, col = c("blue4", "orange3"),
-                     chr="CHR", bp="BP", snp="SNP", p="P", logp=FALSE, 
-                     ylab = "Vst", highlight=highlight)
-    
-    #pl <- recordPlot()
-    if(grob){
-      grab_grob <- function(){
-        gridGraphics::grid.echo()
-        grid::grid.grab()
-      }
-      dev.control("enable")
-      pl <- grab_grob()
-      
-      pdf(file.path(all.paths[3], paste0(populations, "-VSTManhattan.pdf")))  
-      pl
-    }
-    
-    dev.off()
-    
-    
-  }else{
-    stop("Unknown type.regions argument")
-  }
-  
   if(grob){
     return(pl)}
 }
