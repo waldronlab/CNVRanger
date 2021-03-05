@@ -18,7 +18,8 @@
 #'  
 #' @export
 
-violinAllele <- function(all.paths, snp.name, lo.phe=1, ylab=NULL, plot.pdf=TRUE){
+violinAllele <- function(all.paths, snp.name, lo.phe=1, ylab=NULL, size.font=15,
+                         legend=TRUE, size.axis.font = 15, title=NULL, plot.pdf=TRUE){
   
   ### Open gds
   cnv.gds <- file.path(all.paths[1], "CNV.gds")
@@ -76,12 +77,27 @@ if(is.null(ylab)){
     ggplot2:: stat_summary(fun=median, colour="grey", geom="line", ggplot2::aes(group = 1)) +
     ggplot2::xlab("") + ggplot2::ylab(ylab) +
     ggplot2::theme_classic() +
-    ggplot2::theme(axis.title.y = ggplot2::element_text(margin = ggplot2::margin(t = 0, r = 20, b = 0, l = 0))) +
+    ggplot2::theme(axis.title.y = ggplot2::element_text(margin = ggplot2::margin(t = 0, r = 20, b = 0, l = 0),
+                                                        size=size.font) ,
+                   axis.text.y =  ggplot2::element_text(size = size.axis.font),
+                   axis.text.x =  ggplot2::element_text(size = size.axis.font)) +
     ggplot2::theme(legend.title=ggplot2::element_blank())
 
    p <- p + ggplot2::scale_fill_manual(values=states.in.plot)
-  #p <- p + ggplot2::scale_color_manual(values=states.in.plot)
-  
+   #text = element_text(size=20)
+   
+   #axis.text.y = element_text(face="bold", color="#993333", 
+  #                            size=14, angle=45))
+   
+   if(!legend){
+   p <- p + ggplot2::theme(legend.position = "none")
+   }
+   
+   if(!is.null(title)){
+    p <- p + ggplot2::ggtitle(title) + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+    }
+   
+     
   if(plot.pdf){
     pdf.file <- file.path(all.paths[3], paste0(phen.name, "-violin-", snp.name,".pdf"))
     pdf(pdf.file)
@@ -229,13 +245,16 @@ plotManhattan <- function(all.paths, regions, chr.size.order = NULL,
 #' @export
 
 plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=NULL, 
-                              highlight=NULL, write.pdf=FALSE){
+                              highlight=NULL, write.pdf=FALSE, ylim.man=NULL, cex.lab=1.8, 
+                              cex.axis=1.3, keep.y.lab=TRUE, keep.x.lab=TRUE){
   
   grob <- !write.pdf
   
   min.qvalue <- min(regions$MinPvalueAdjusted)
   minqvalue.log <- max(-log10(min.qvalue))
+  if(is.null(ylim.man)){
   ylim.man = minqvalue.log*1.10
+  }
   
   ## Check if overlapped genes exist
   if(is.null(values(regions)$Overlapped.genes)){
@@ -311,7 +330,9 @@ plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=
     qqman.mod(backgroundDots, col = scales::alpha(c("coral", "azure3"), 0.006),
                      chr="CHR", bp="BP", snp="SNP", p="P",
                      chrlabs=chr.size.order$chr, suggestiveline =-log10(0.10),
-                     genomewideline = -log10(0.05), ylim = c(0, ylim.man));par(new=TRUE)
+                     genomewideline = -log10(0.05), ylim = c(0, ylim.man), 
+              cex.axis=cex.axis,
+              cex.lab=cex.lab, keep.x.lab=keep.x.lab, keep.y.lab=keep.y.lab);par(new=TRUE)
     
     ### Show only highligh segments
     highlight <- gwasResults[which(gwasResults$SNP %in% highlight),]$Overlapped.genes
@@ -323,7 +344,8 @@ plotManhattanColor <- function(all.paths, regions, type.regions, chr.size.order=
     qqman.mod(gwasResults, col = c("blue4"), chr="CHR", bp="BP", snp="SNP", p="P",
                      chrlabs=chr.size.order$chr, suggestiveline =-log10(0.10),
                      genomewideline = -log10(0.05), annotatePval = 0.1, ylim = c(0, ylim.man),
-    highlight=highlight)
+    highlight=highlight, cex.axis=cex.axis,
+    cex.lab=cex.lab, keep.x.lab=keep.x.lab, keep.y.lab=keep.y.lab)
     
     pl <- recordPlot()
     
@@ -526,7 +548,8 @@ qqunifPlot <- function(pvalues, should.thin = TRUE, thin.obs.places = 2, thin.ex
 qqman.mod <- function (x, chr = "CHR", bp = "BP", p = "P", snp = "SNP", col = c("gray10", 
           "gray60"), chrlabs = NULL, suggestiveline = -log10(1e-05), 
           genomewideline = -log10(5e-08), highlight = NULL, logp = TRUE, 
-          annotatePval = NULL, annotateTop = TRUE, color.highlight="red", ...) 
+          annotatePval = NULL, annotateTop = TRUE, color.highlight="red", cex.axis,
+          cex.lab, keep.x.lab, keep.y.lab, ...) 
 {
   CHR = BP = P = index = NULL
   if (!(chr %in% names(x))) 
@@ -564,7 +587,11 @@ qqman.mod <- function (x, chr = "CHR", bp = "BP", p = "P", snp = "SNP", col = c(
   if (nchr == 1) {
     d$pos = d$BP
     ticks = floor(length(d$pos))/2 + 1
+    if(keep.x.lab){
     xlabel = paste("Chromosome", unique(d$CHR), "position")
+    }else{
+    xlabel = paste("", unique(d$CHR), "position")
+    }
     labs = ticks
   }
   else {
@@ -583,16 +610,33 @@ qqman.mod <- function (x, chr = "CHR", bp = "BP", p = "P", snp = "SNP", col = c(
       ticks = c(ticks, (min(d[d$index == i, ]$pos) + max(d[d$index == 
                                                              i, ]$pos))/2 + 1)
     }
+    
+    if(keep.x.lab){
     xlabel = "Chromosome"
+    }else{
+      xlabel = ""
+    }
     labs <- unique(d$CHR)
   }
   xmax = ceiling(max(d$pos) * 1.03)
   xmin = floor(max(d$pos) * -0.03)
+  
+  if(keep.y.lab){
+  ylab <- expression(-log[10](italic(q)))
+  }else{
+    ylab <- ""  
+  }
+  
   def_args <- list(xaxt = "n", bty = "n", xaxs = "i", yaxs = "i", 
-                   las = 1, pch = 20, xlim = c(xmin, xmax), ylim = c(0, 
+                   las = 1, pch = 20, xlim = c(xmin, xmax), 
+                   cex.axis=cex.axis, cex.lab=cex.lab,
+                   #cex=1.2,  
+                   #cex.main=1.2,
+                   ylim = c(0, 
                   #ceiling(max(d$logp))), xlab = xlabel, ylab = expression(-log[10](italic(p))))
-                  ceiling(max(d$logp))), xlab = xlabel, ylab = expression(-log[10](italic(q))))
+                  ceiling(max(d$logp))), xlab = xlabel, ylab = ylab)
   dotargs <- list(...)
+  par(mar = c(5, 5, 5, 5)) # Set the margin on all sides to 6
   do.call("plot", c(NA, dotargs, def_args[!names(def_args) %in% 
                                             names(dotargs)]))
   if (!is.null(chrlabs)) {
@@ -609,10 +653,10 @@ qqman.mod <- function (x, chr = "CHR", bp = "BP", p = "P", snp = "SNP", col = c(
     }
   }
   if (nchr == 1) {
-    axis(1, ...)
+    axis(1, cex=cex.axis, cex.axis=cex.axis, ...)
   }
   else {
-    axis(1, at = ticks, labels = labs, ...)
+    axis(1, at = ticks, labels = labs, cex=cex.axis, cex.axis=cex.axis, ...)
   }
   col = rep(col, max(d$CHR))
   if (nchr == 1) {

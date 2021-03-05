@@ -10,7 +10,12 @@ plotManhattanColor(
   type.regions,
   chr.size.order = NULL,
   highlight = NULL,
-  write.pdf = FALSE
+  write.pdf = FALSE,
+  ylim.man = NULL,
+  cex.lab = 1.8,
+  cex.axis = 1.3,
+  keep.y.lab = TRUE,
+  keep.x.lab = TRUE
 )
 }
 \arguments{

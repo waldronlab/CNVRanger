@@ -4,7 +4,17 @@
 \alias{violinAllele}
 \title{Violin plot to show the quantitative phenotype distribution for each CNV genotype}
 \usage{
-violinAllele(all.paths, snp.name, lo.phe = 1, ylab = NULL, plot.pdf = TRUE)
+violinAllele(
+  all.paths,
+  snp.name,
+  lo.phe = 1,
+  ylab = NULL,
+  size.font = 15,
+  legend = TRUE,
+  size.axis.font = 15,
+  title = NULL,
+  plot.pdf = TRUE
+)
 }
 \arguments{
 \item{all.paths}{phen.info$all.paths}
