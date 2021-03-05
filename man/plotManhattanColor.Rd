@@ -7,7 +7,6 @@
 plotManhattanColor(
   all.paths,
   regions,
-  type.regions,
   chr.size.order = NULL,
   highlight = NULL,
   write.pdf = FALSE,
@@ -15,13 +14,13 @@ plotManhattanColor(
   cex.lab = 1.8,
   cex.axis = 1.3,
   keep.y.lab = TRUE,
-  keep.x.lab = TRUE
+  keep.x.lab = TRUE,
+  result.col.name = "MinPvalueAdjusted",
+  result.metric = "q"
 )
 }
 \arguments{
 \item{regions}{GRanges from CNV-GWAS run or Vst values to produce the manhattan plot}
-
-\item{type.regions}{'p-value' or/and 'vst'}
 
 \item{chr.size.order}{Data-frame with two columns: (i) 'chr' have the chromosome names as character
 and (ii) 'size' with the length of the chromosome in basepairs}

@@ -246,7 +246,7 @@ plotManhattan <- function(all.paths, regions, chr.size.order = NULL,
 plotManhattanColor <- function(all.paths, regions, chr.size.order=NULL, 
                               highlight=NULL, write.pdf=FALSE, ylim.man=NULL, cex.lab=1.8, 
                               cex.axis=1.3, keep.y.lab=TRUE, keep.x.lab=TRUE,
-                              result.col.name="MinPvalueAdjusted"){
+                              result.col.name="MinPvalueAdjusted", result.metric="q"){
   
   grob <- !write.pdf
   
@@ -298,15 +298,15 @@ plotManhattanColor <- function(all.paths, regions, chr.size.order=NULL,
     phen.name <- values(regions)$Phenotype
     phen.name <- unique(phen.name)
     
-    p.defined <- 
-      
+    p.defined <- eval(parse(text=paste0("values(regions)$", result.col.name)))
     
     if(grob==FALSE){
     pdf(file.path(all.paths[3], paste0(phen.name,"-Manhattan.pdf")))}
     gwasResults <- cbind("CHR"=as.character(seqnames(regions)), "BP"=start(regions),
                          "SNP"= values(regions)$SegName, 
                          "P"= p.defined,
-                         "Overlapped.genes"= values(regions)$Overlapped.genes)
+                         "Overlapped.genes"= values(regions)$Overlapped.genes,
+                         "Phen"=values(regions)$Phenotype)
     
     gwasResults <- as.data.frame(gwasResults, stringsAsFactors = FALSE)
     chr.all <- subset(chr.all, select = c(CHR, BP, SNP, P))
@@ -331,7 +331,8 @@ plotManhattanColor <- function(all.paths, regions, chr.size.order=NULL,
                      chrlabs=chr.size.order$chr, suggestiveline =-log10(0.10),
                      genomewideline = -log10(0.05), ylim = c(0, ylim.man), 
               cex.axis=cex.axis,
-              cex.lab=cex.lab, keep.x.lab=keep.x.lab, keep.y.lab=keep.y.lab);par(new=TRUE)
+              cex.lab=cex.lab, keep.x.lab=keep.x.lab, keep.y.lab=keep.y.lab,
+              result.metric=result.metric);par(new=TRUE)
     
     ### Show only highligh segments
     highlight <- gwasResults[which(gwasResults$SNP %in% highlight),]$Overlapped.genes
@@ -342,7 +343,7 @@ plotManhattanColor <- function(all.paths, regions, chr.size.order=NULL,
                      chrlabs=chr.size.order$chr, suggestiveline =-log10(0.10),
                      genomewideline = -log10(0.05), annotatePval = 0.1, ylim = c(0, ylim.man),
     highlight=highlight, cex.axis=cex.axis,
-    cex.lab=cex.lab, keep.x.lab=keep.x.lab, keep.y.lab=keep.y.lab)
+    cex.lab=cex.lab, keep.x.lab=keep.x.lab, keep.y.lab=keep.y.lab,result.metric=result.metric)
     
     pl <- recordPlot()
     
@@ -483,7 +484,7 @@ qqman.mod <- function (x, chr = "CHR", bp = "BP", p = "P", snp = "SNP", col = c(
           "gray60"), chrlabs = NULL, suggestiveline = -log10(1e-05), 
           genomewideline = -log10(5e-08), highlight = NULL, logp = TRUE, 
           annotatePval = NULL, annotateTop = TRUE, color.highlight="red", cex.axis,
-          cex.lab, keep.x.lab, keep.y.lab, ...) 
+          cex.lab, keep.x.lab, keep.y.lab, result.metric, ...) 
 {
   CHR = BP = P = index = NULL
   if (!(chr %in% names(x))) 
@@ -556,7 +557,8 @@ qqman.mod <- function (x, chr = "CHR", bp = "BP", p = "P", snp = "SNP", col = c(
   xmin = floor(max(d$pos) * -0.03)
   
   if(keep.y.lab){
-  ylab <- expression(-log[10](italic(q)))
+  ylab <- expression(-log[10](italic(result.metricW)))
+  ylab <- parse(text = gsub("result.metricW", result.metric, ylab, fixed = TRUE))
   }else{
     ylab <- ""  
   }
@@ -568,7 +570,8 @@ qqman.mod <- function (x, chr = "CHR", bp = "BP", p = "P", snp = "SNP", col = c(
                    #cex.main=1.2,
                    ylim = c(0, 
                   #ceiling(max(d$logp))), xlab = xlabel, ylab = expression(-log[10](italic(p))))
-                  ceiling(max(d$logp))), xlab = xlabel, ylab = ylab)
+                  ceiling(max(d$logp))), xlab = xlabel, ylab = ylab,
+                  main=unique(x$Phen))
   dotargs <- list(...)
   par(mar = c(5, 5, 5, 5)) # Set the margin on all sides to 6
   do.call("plot", c(NA, dotargs, def_args[!names(def_args) %in% 
