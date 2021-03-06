@@ -293,6 +293,7 @@ plotManhattanColor <- function(all.paths, regions, chr.size.order=NULL,
   backgroundDots <- subset(backgroundDots, select = c(CHR, BP, SNP, P))
   backgroundDots <- as.data.frame(backgroundDots)
   backgroundDots$Overlapped.genes <- NA #blank column
+  backgroundDots$Phen <- NA #blank column
 
     chr.all$P <- 1 
     phen.name <- values(regions)$Phenotype
@@ -311,6 +312,7 @@ plotManhattanColor <- function(all.paths, regions, chr.size.order=NULL,
     gwasResults <- as.data.frame(gwasResults, stringsAsFactors = FALSE)
     chr.all <- subset(chr.all, select = c(CHR, BP, SNP, P))
     chr.all$Overlapped.genes <- NA #blank column
+    chr.all$Phen <- NA #blank column
     gwasResults <- rbind(gwasResults, chr.all)
     
     ### turn chr to numeric
@@ -486,6 +488,7 @@ qqman.mod <- function (x, chr = "CHR", bp = "BP", p = "P", snp = "SNP", col = c(
           annotatePval = NULL, annotateTop = TRUE, color.highlight="red", cex.axis,
           cex.lab, keep.x.lab, keep.y.lab, result.metric, ...) 
 {
+  
   CHR = BP = P = index = NULL
   if (!(chr %in% names(x))) 
     stop(paste("Column", chr, "not found!"))
