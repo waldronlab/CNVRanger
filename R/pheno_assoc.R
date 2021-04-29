@@ -2175,28 +2175,7 @@ lmmCNV <- function(lo, all.paths, all.segs.gr, phen.info, method.m.test, model,
   
   
   }else{
-   # lop.sim <- lo
-  #  if(is.null(list.simulation)){
-  #    #if(lop.sim==1){
-   #     phen.name.in.model <- as.character(model[2])
-  #      pedigree.x <- phen.info$pedigree
-   #     pedigree.x.back <- pedigree.x
-   #     phen.values <- pedigree.x[,which(colnames(pedigree.x) == phen.name.in.model)]
-  #      sd.phen <- sd(phen.values, na.rm=TRUE)
-  #      mean.phen <- mean(phen.values, na.rm=TRUE)
-  #      num.na <- sum(is.na(phen.values))
-   #     known.phen <- length(phen.values)-num.na
-   #     na.to.bind <- rep(NA, num.na)
-        #}
-  #    sim.phen <- rnorm(known.phen, mean=mean.phen, sd=sd.phen)
-   #   sim.phen <- c(sim.phen, na.to.bind)
-  #    sim.phen <- sample(sim.phen)
-  #    pedigree.x[,which(colnames(pedigree.x) == phen.name.in.model)] <- sim.phen
-   # }else{
-  #    pedigree.x <- list.simulation[[lop.sim]]
-  #  }
-  #  phen.info$pedigree <- pedigree.x ## Attach simulated phenotypes
-  #if(FALSE){
+  
   lop.sim <- lo
   pedigree.x <- list.simulation[[lop.sim]]
   phen.info$pedigree <- pedigree.x ## Attach simulated phenotypes
