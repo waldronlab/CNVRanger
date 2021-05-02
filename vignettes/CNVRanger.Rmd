@@ -1,6 +1,7 @@
 ---
 title: "Summarization and quantitative trait analysis of CNV ranges"
 author:
+  
   - name: Vinicius Henrique da Silva
     affiliation: Luiz de Queiroz College of Agriculture, University of São Paulo
     email: viniciushs@usp.br
@@ -72,9 +73,8 @@ that identifies recurrent CNV regions
 for overlap analysis of CNVs with functional genomic regions, 
 **(D)** implements RNA-seq expression Quantitative Trait Loci (eQTL) analysis 
 for CNVs by interfacing with `r Biocpkg("edgeR")`, and 
-**(E)** interfaces with
-[PLINK](http://zzz.bwh.harvard.edu/plink) for traditional
-genome-wide association studies (GWAS) between CNVs and quantitative phenotypes.
+**(E)** performs linear regression for
+genome-wide association studies (GWAS) that intend to link CNVs and quantitative phenotypes.
 
 The key parts of the functionality implemented in `r Biocpkg("CNVRanger")` were 
 developed, described, and applied in several previous studies:
@@ -761,9 +761,7 @@ the start and end position of each call as the corresponding probes.
 
 As previously described [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711),
 we construct CNV segments from probes representing common CN polymorphisms
-(allele frequency >1\%), and carry out a GWAS as implemented in 
-[PLINK](http://zzz.bwh.harvard.edu/plink/gvar.shtml)
-using a standard linear regression of phenotype on allele dosage.
+(allele frequency >1\%), and carry out a GWAS using a standard linear regression of phenotype on allele dosage with the `lm` function.
 
 For CNV segments composed of multiple probes, the segment _p_-value is chosen 
 from the probe _p_-values, using either the probe with minimum _p_-value or the 
@@ -806,37 +804,32 @@ potential for breeding time.
 
 ## Setting up a CNV-GWAS
 
-For compatibility with [PLINK](http://zzz.bwh.harvard.edu/plink/gvar.shtml)'s 
-[fam file format](http://www.cog-genomics.org/plink/1.9/formats#fam),
-we read phenotype information from a tab-delimited file, containing exactly four 
-columns: sample ID, family ID, sex, and the quantitative phenotype (here: breeding time, BT). 
+We read phenotype information from a tab-delimited file, containing exactly four 
+columns: sample ID, family ID, sex, and the quantitative phenotype (here: breeding time, BT) because we use the PLINK input format for compatibility.
 
 ```{r phenoData}
 phen.loc <- file.path(data.dir, "Pheno.txt")
-phen.df <- read.delim(phen.loc, as.is=TRUE)
-head(phen.df)
+colData <- read.delim(phen.loc, as.is=TRUE)
+head(colData)
 ```
 
-Although family ID and sex are listed as columns, this info is not considered in 
-the current implementation and can be set to `NA`. 
+Although `fam` and `sex` are listed as columns, this info is not considered in the current implementation and can be set to `NA`.   
 
 As described in [Section 4.3](#representation-as-a-raggedexperiment), we 
 combine the CNV calls with the phenotype information in a `RaggedExperiment` for
 coordinated representation and analysis.
 
-
 ```{r importPhen}
-re <- RaggedExperiment::RaggedExperiment(cnv.calls, colData=phen.df)
+mcols(cnv.calls) <- colData
+re <- RaggedExperiment::RaggedExperiment(cnv.calls)
 re
 ```
 
 If probe information is available and has been annotated to the CNV calls, as we
 did above, the probe IDs and corresponding genomic positions should be provided 
 in a separate file.  
-For compatibility with [PLINK](http://zzz.bwh.harvard.edu/plink/gvar.shtml)'s 
-[map file format](http://www.cog-genomics.org/plink/1.9/formats#map), this is 
-expected to be a tab-delimited file containing exactly three columns: probe ID,
-chromosome, and the position in bp.
+
+Map file is expected to be a tab-delimited file containing exactly three columns: probe ID,chromosome, and the position in bp. Map file is optional. If no map file is provided a pseudomap will be automatically generated. 
 
 ```{r map}
 map.loc <- file.path(data.dir, "MapPenn.txt")
@@ -905,10 +898,7 @@ An example of detailed up-down CNV genotype concordance that is used for the
 construction of CNV segments is given in S12 Table in 
 [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711). 
 
-As `PLINK` returns a _p_-value for each probe, only one of the _p_-values of the
-probes contained in a CNV segment is chosen as the segment _p_-value. 
-
-This is similar to a common approach used in differential expression (DE) analysis of 
+Only one of the _p_-values of the probes contained in a CNV segment is chosen as the segment _p_-value.  This is similar to a common approach used in differential expression (DE) analysis of 
 microarray gene expression data, where typically the most significant DE probe
 is chosen in case of multiple probes mapping to the same gene. 
 
@@ -917,9 +907,7 @@ with lowest _p_-value (`assign.probe="min.pvalue"`, default) or the one with hig
 CNV frequency (`assign.probe="high.freq"`). 
 
 Multiple testing correction based on the number of CNV segments tested is carried
-out using the FDR approach (default). 
-Results can then be displayed as for regular GWAS via a Manhattan plot 
-(which can optionally be exported to a pdf file). 
+out using the FDR approach (default). Results can then be displayed as for regular GWAS via a Manhattan plot (which can optionally be exported to a pdf file). 
 
 ```{r manh}
 ## Define the chromosome order in the plot

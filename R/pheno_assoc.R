@@ -1,8 +1,8 @@
 ################## 
 # Author: Vinicius Henrique da Silva 
 # Script description: Functions related to CNV-GWAS
-# Date: July 20, 2018 
-# Code: CNVASSOPACK002
+# Date: May 01, 2020 
+# Code: CNVASSOPACK003
 ################## 
 
 #' Run the CNV-GWAS 
@@ -12,8 +12,7 @@
 #'  
 #' (i) Produces the GDS file containing the genotype information  (if produce.gds == TRUE),
 #' (ii) Produces the requested inputs for a PLINK analysis, 
-#' (iii) run a CNV-GWAS analysis using linear model implemented in PLINK 
-#' (http://zzz.bwh.harvard.edu/plink/gvar.shtml), and 
+#' (iii) run a CNV-GWAS analysis using a linear model (i.e. \code{\link{lm} function), and 
 #' (iv) export a QQ-plot displaying the adjusted p-values. 
 #' In this release only the p-value for the copy number is available  (i.e. 'P(CNP)'). 
 #'   
@@ -101,36 +100,20 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
         probes.cnv.gr <- .prodProbes(phen.info, lo.phe, freq.cn)
     }
     
-    # Produce PLINK map 
-    if (verbose) 
-        message("Produce PLINK map")
-    .prodPLINKmap(all.paths)
-    
-    # Produce gvar to use as PLINK input
-    if (verbose) 
-        message("Produce gvar to use as PLINK input")
-    .prodPLINKgvar(all.paths, n.cor, snp.matrix, run.lrr)
-    
-    # Produce fam (phenotype) to use as PLINK input
-    if (verbose) 
-        message("Produce fam (phenotype) to use as PLINK input")
-    .prodPLINKfam(all.paths)
-    
-    # Run PLINK
-    if (verbose) 
-        message("Run PLINK")
-    suppressMessages(.runPLINK(all.paths))
-    
     # Produce CNV segments
     if (verbose) 
         message("Produce CNV segments")
     all.segs.gr <- .prodCNVseg(all.paths, probes.cnv.gr, min.sim, both.up.down)
     
+    # Infer the CN association p-value in each SNP position
+    resultsp <- .lmCNV(all.paths, n.cor)
+    
     # Associate SNPs with CNV segments
     if (verbose) 
         message("Associate SNPs with CNV segments")
     segs.pvalue.gr <- .assoPrCNV(all.paths, all.segs.gr, phenotypesSamX, method.m.test, 
-        probes.cnv.gr, assign.probe, correct.inflation = correct.inflation)
+        probes.cnv.gr, assign.probe, correct.inflation = correct.inflation,
+        resultsp = resultsp)
     
     # Plot the QQ-plot of the analysis
     if (verbose) 
@@ -300,15 +283,6 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc,
     }
     
     phen.info <- .loadPhen(pheno.file, all.paths, pops.names = pops.names, n.cor)
-    plink.dir <- dir(all.paths["PLINK"], pattern = "plink-1*")
-    
-    if (!length(plink.dir)) {
-        got.plink <- .getPLINK(all.paths["PLINK"])
-        if (!got.plink) stop("PLINK setup failed")
-        plink.dir <- dir(all.paths["PLINK"], pattern = "plink-1*")
-    }
-    plink.bin <- file.path(all.paths["PLINK"], plink.dir, "plink")
-    all.paths["PLINK"] <- dirname(plink.bin)
     
     phen.info$all.paths <- all.paths
     phen.info$phenotypesSam$samplesPhen <- as.character(phen.info$phenotypesSam$samplesPhen)
@@ -479,11 +453,11 @@ generateGDS <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 
     phenotypesSamX <- phenotypesSamX[match(all.samples, phenotypesSamX$samplesPhen),]  
     gdsfmt::add.gdsn(genofile, name = "phenotype", val = phenotypesSamX, replace = TRUE)
     FamID <- FamID[match(all.samples, FamID$samplesPhen), ]
-    gdsfmt::add.gdsn(genofile, name = "FamID", val = as.character(FamID[, 2]), replace = TRUE, 
-        storage = "string")
+    suppressWarnings(gdsfmt::add.gdsn(genofile, name = "FamID", val = as.character(FamID[, 2]), replace = TRUE, 
+        storage = "string"))
     FamID <- SexIds[match(all.samples, SexIds$samplesPhen), ]
-    gdsfmt::add.gdsn(genofile, name = "Sex", val = as.character(SexIds[, 2]), replace = TRUE, 
-        storage = "string")
+    suppressWarnings(gdsfmt::add.gdsn(genofile, name = "Sex", val = as.character(SexIds[, 2]), replace = TRUE, 
+        storage = "string"))
     
     # Include chr names if needed
     if (!is.null(chr.code.name))
@@ -666,7 +640,7 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
     if (!file.exists(proj.dir)) dir.create(proj.dir)
     
     # subdirs
-    dir.names <- c("Inputs", "PLINK", "Results")
+    dir.names <- c("Inputs", "Results")
     dirs <- dir.names
     all.paths <- file.path(proj.dir, dirs)
     for (d in all.paths) if (!file.exists(d)) dir.create(d)
@@ -675,39 +649,6 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
     return(all.paths)
 }
 
-# HELPER - Download and test PLINK 1.07 @param all.paths Object returned from
-# \code{CreateFolderTree} function with the working folder tree @param version
-# PLINK version. Only 1.07 implemented @return boolean. Success (TRUE) or fail
-# (FALSE) in running PLINK
-.getPLINK <- function(plink.path, version = "1.07") 
-{
-    plink.url <- "http://zzz.bwh.harvard.edu/plink/dist/plink-"
-    plink.url <- paste0(plink.url, version, "-")
-    plink.file <- file.path(plink.path, "PLINK.zip")
-    
-    # get os-specific binary
-    os <- rappdirs:::get_os()
-    os <- switch(os, unix = "x86_64", mac = "mac-intel", win = "dos", os)
-    plink.url <- paste0(plink.url, os, ".zip")
-    
-    # download & unzip
-    download.file(plink.url, plink.file)
-    unzip(plink.file, exdir = plink.path)
-    
-    # remove zip
-    file.remove(plink.file)
-    
-    # path to plink binary
-    plink.file <- dir(plink.path, pattern = "plink*")
-    plink.path <- file.path(plink.path, plink.file, "plink")
-    Sys.chmod(plink.path, mode = "755")
-    
-    suppressWarnings(res <- system2(plink.path, args = "--noweb", stdout = TRUE, 
-        stderr = FALSE))
-    
-    res <- any(grepl(version, res))
-    return(res)
-}
 
 # HELPER - Load phenotypes for each of the samples to be analyzed @param file.nam
 # Name of the file to be imported @param pheno.path First item of the list
@@ -755,7 +696,7 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
             pheno.na <- pheno.na[!(pheno.na$sample.id %in% all$sample.id), ]
             
             all <- plyr::rbind.fill(all, pheno.na)
-            all[is.na(all)] <- -9
+            #all[is.na(all)] <- -9
             
             ### Produce phen.info objects
             samplesPhen <- unique(all$sample.id)  ## Greb sample names
@@ -785,7 +726,7 @@ importLrrBaf <- function(all.paths, path.files, list.of.files, gds.file=NULL, ve
     phenotypesSam <- as.data.frame(phenotypesSam)
     ind <- colnames(phenotypesSam) == phenotypes
     phenotypesSam[, ind] <- suppressWarnings(as.numeric(as.character(phenotypesSam[,ind])))
-    phenotypesSam[is.na(phenotypesSam)] <- -9
+    #phenotypesSam[is.na(phenotypesSam)] <- -9
     FamID <- data.table::rbindlist(FamID.all)
     FamID <- as.data.frame(FamID)
     SexIds <- data.table::rbindlist(SexIds.all)
@@ -1148,7 +1089,6 @@ testit <- function(x) {
     CNVg <- LRRg
     Dose1 <- rep(0, length(CNVg))
     
-    
     if (!snp.matrix) {
         df <- as.data.frame(cbind(as.character(fam.id[[lo]]), sam.gen[[lo]], snps, 
             A, CNVg, B, Dose1))
@@ -1162,22 +1102,6 @@ testit <- function(x) {
     return(df)
 }
 
-# HELPER - Produce PLINK probe map in disk
-.prodPLINKmap <- function(all.paths) 
-{
-    cnv.gds <- file.path(all.paths["Inputs"], "CNV.gds")
-    genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE)
-    Pmap <- data.frame(
-            gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome")), 
-            gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id")), 
-            0, gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.position")))
-    
-    colnames(Pmap) <- c("Chr", "NAME", "GD", "Position")
-    map.file <- file.path(all.paths["PLINK"], "mydata.map")
-    write.table(Pmap, map.file, sep = "\t", row.names = FALSE, quote = FALSE)
-    SNPRelate::snpgdsClose(genofile)
-}
-
 # HELPER - Produce the PLINK .gvar file in disk
 .prodPLINKgvar <- function(all.paths, n.cor, snp.matrix, run.lrr = FALSE) 
 {
@@ -1185,7 +1109,7 @@ testit <- function(x) {
     genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
     sam.gen <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id"))
     snps <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id"))
-    fam.id <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "FamID"))
+    fam.id <- suppressWarnings(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "FamID")))
     
     ## Produce gvar file in parallel processing Identify the SO
     os <- rappdirs:::get_os()
@@ -1203,57 +1127,6 @@ testit <- function(x) {
     
     gvar.file <- file.path(all.paths["PLINK"], "mydata.gvar")
     write.table(gentype.all1, gvar.file, sep = "\t", row.names = FALSE, quote = FALSE)
-    SNPRelate::snpgdsClose(genofile)
-}
-
-
-# HELPER - Produce the PLINK fam file in disk
-.prodPLINKfam <- function(all.paths) 
-{
-    cnv.gds <- file.path(all.paths["Inputs"], "CNV.gds")
-    genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
-    SamGen <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id"))
-    SNPs <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id"))
-    FAMID <- as.character(gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "FamID")))
-    Sex <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "Sex"))
-    Phen <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "phenotype"))
-    
-    famdf <- data.frame(FAMID, SamGen, SamGen, "NC", Sex, as.numeric(Phen[, 2]))
-    colnames(famdf) <- c("FAID", "IID", "PID", "MID", "Sex", "Phenotype")
-    
-    fam.file <- file.path(all.paths["PLINK"], "mydata.fam")
-    write.table(famdf, fam.file, sep = "\t", row.names = FALSE, quote = FALSE)
-    SNPRelate::snpgdsClose(genofile)
-}
-
-# HELPER - Run PLINK
-.runPLINK <- function(all.paths) 
-{
-    os <- rappdirs:::get_os()
-    if (os %in% c("win", "unix")) {
-        plinkPath <- file.path(all.paths["PLINK"], "plink")
-        plinkPath <- gsub("\\\\", "/", plinkPath)
-        system(paste(plinkPath, "--gfile", file.path(all.paths["PLINK"], "mydata"), paste("--out", 
-            file.path(all.paths["PLINK"], "plink")), "--noweb"), wait = TRUE, intern = TRUE)
-    }
-    else if (os == "mac") {
-        plink.path <- file.path(all.paths["PLINK"], "plink")
-        mydata <- file.path(all.paths["PLINK"], "mydata")
-        mydata <- paste0("'", mydata, "'")
-        plink <- file.path(all.paths["PLINK"], "plink")
-        plink <- paste0("'", plink, "'")
-        args <- c("--gfile", mydata, "--out", plink, "--noweb", "--allow-no-sex")
-        system2(plink.path, args = args)
-    }
-    
-    cnv.gds <- file.path(all.paths["Inputs"], "CNV.gds")
-    genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = FALSE)
-    sumphen <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "phenotype"))
-    sumphen <- paste0("plink.gvar.summary.", names(sumphen)[[2]])
-   
-    from <- file.path(all.paths["PLINK"], "plink.gvar.summary")
-    to <- file.path(all.paths["PLINK"], sumphen)
-    file.rename(from, to)
     SNPRelate::snpgdsClose(genofile)
 }
 
@@ -1424,10 +1297,11 @@ testit <- function(x) {
     
 }
 
-
 # HELPER - Associate probes with CNV segments and draw p-values
 .assoPrCNV <- function(all.paths, all.segs.gr, phenotypesSamX, method.m.test, 
-    probes.cnv.gr, assign.probe = "min.pvalue", correct.inflation) {
+    probes.cnv.gr, assign.probe = "min.pvalue", correct.inflation, resultsp) {
+    
+    on.exit({list2env(mget(ls()), globalenv())})   ## DEBUG Bring the objects produced by a R function to the main working environment      
     
     segs.pvalue.gr <- unlist(all.segs.gr)
     segs.pvalue.gr$SegName <- seq_along(segs.pvalue.gr)
@@ -1437,38 +1311,30 @@ testit <- function(x) {
     
     gvar.name <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "phenotype"))
     gvar.name <- names(gvar.name)[[2]]
-    sum.file <- paste0("plink.gvar.summary.", gvar.name)
-    results <- read.table(file.path(all.paths["PLINK"], sum.file), header = TRUE)
-    mydata.map <- read.table(file.path(all.paths["PLINK"], "mydata.map"), header = TRUE)
-    resultsp <- merge(results, mydata.map, by.x = "NAME", by.y = "NAME", all.x = TRUE, 
-        all.y = FALSE)
-    
-    # Choose the method
-    # TODO: change if SNPMatrix implemented
-    # allow to get other p-values
-    resultsp <- resultsp[grep("P\\(CNP\\)", resultsp$FIELD), ]
-    resultsp$VALUE <- as.numeric(as.character(resultsp$VALUE))
-    resultsp$VALUE <- round(resultsp$VALUE, digits = 5)
     
     #### Correct for genomic inflation
-    all.samples <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id"))
     if (correct.inflation) {
-        #### Calculating chi-square distribution based on original P-values
-        chisq.n <- qchisq(resultsp$VALUE, 1, lower.tail = FALSE)
-        ### Estimating genomic inflation factor
-        lambda <- estlambda(resultsp$VALUE, filter = FALSE)$estimate
-        ### correcting the qui-square distribution with lambda
-        chisq_corr = chisq.n/lambda
-        #### re-calculating corrected P values
-        resultsp$VALUE = pchisq(chisq_corr, 1, lower.tail = FALSE)
+      #### Calculating chi-square distribution based on original P-values
+      chisq.n <- qchisq(resultsp, 1, lower.tail = FALSE)
+      ### Estimating genomic inflation factor
+      lambda <- estlambda(resultsp, filter = FALSE)$estimate
+      ### correcting the qui-square distribution with lambda
+      chisq_corr = chisq.n/lambda
+      #### re-calculating corrected P values
+      resultsp = pchisq(chisq_corr, 1, lower.tail = FALSE)
     }
     
-    resultsp <- resultsp[order(resultsp$VALUE), ]
-    resultspGr <- GenomicRanges::makeGRangesFromDataFrame(resultsp, seqnames.field = "Chr", 
-        start.field = "Position", end.field = "Position", keep.extra.columns = TRUE)
+    # Construct GRanges for SNP probes and p-values 
+    snp.rs.id <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id"))
+    snp.position <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.position"))
+    snp.chromosome <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.chromosome"))
+    resultsp.df <- data.frame(snp.chromosome, snp.position, "NAME"=snp.rs.id, "VALUE"=resultsp)
+    colnames(resultsp.df)[4] <- "VALUE"
+    resultsp.df <- resultsp.df[order(resultsp.df$VALUE), ]
+    resultspGr <- GenomicRanges::makeGRangesFromDataFrame(resultsp.df, seqnames.field = "snp.chromosome", 
+        start.field = "position", end.field = "position", keep.extra.columns = TRUE)
     
     ######## Assign the lowest p-value to the CNV segment
-    
     values.all <- vector("list", length(segs.pvalue.gr))
     names.all <- vector("list", length(segs.pvalue.gr))
     freqs.all <- vector("list", length(segs.pvalue.gr))
@@ -1478,7 +1344,7 @@ testit <- function(x) {
             Prbx <- suppressWarnings(IRanges::subsetByOverlaps(resultspGr, segs.pvalue.gr[se]))
             if (length(Prbx)) {
                 values.all[[se]] <- min(Prbx$VALUE)
-                names.all[[se]] <- as.character(Prbx[Prbx$VALUE %in% values.all[[se]]]$NAME[[1]])
+                names.all[[se]] <- as.character(Prbx[Prbx$VALUE %in% values.all[[se]]]$NAME[[1]]) 
                 probe.sel <- Prbx[order(Prbx$VALUE)][1]
                 probe.sel <- suppressWarnings(IRanges::subsetByOverlaps(probes.cnv.gr, probe.sel))
                 freqs.all[[se]] <- as.character(probe.sel$freq[1])
@@ -1660,4 +1526,63 @@ estlambda <- function(data, plot = FALSE, proportion = 1, method = "regression",
     graphics::par(mar = oldmargins)
   }
   out
+}
+
+# TODO HELPER Linear regression CNV-phenotype
+.lmCNV <- function(all.paths, n.cor){
+  ## Load genofile 
+  cnv.gds <- file.path(all.paths["Inputs"], "CNV.gds")
+  genofile <- SNPRelate::snpgdsOpen(cnv.gds, allow.fork = TRUE, readonly = TRUE)
+  
+  # Get CNV genotype
+  cnv.geno <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "CNVgenotype"))
+  
+  sample.id <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "sample.id"))
+  snp.id <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.id"))
+  snp.rs.id <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "snp.rs.id"))
+  
+  colnames(cnv.geno) <- sample.id
+  rownames(cnv.geno) <- snp.id
+  
+  stopifnot(nrow(cnv.geno)==length(snp.id))
+                            
+  # Get phenotype
+  phenotype <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "phenotype"))
+
+  # Run with bioCparallel
+  if (rappdirs:::get_os() == "unix" | rappdirs:::get_os() == "mac") {
+    multicoreParam <- BiocParallel::MulticoreParam(workers = n.cor)
+    all.pvalues <- suppressMessages(BiocParallel::bplapply(1:length(snp.id), .fitGetPvalue,
+                                                           BPPARAM = multicoreParam, 
+                                                           cnv.geno=cnv.geno,
+                                                           phenotype=phenotype))
+  }
+  
+  if (rappdirs:::get_os() == "win") {
+    param <- BiocParallel::SnowParam(workers = n.cor, type = "SOCK")
+    all.pvalues <- suppressMessages(BiocParallel::bplapply(1:length(snp.id), .fitGetPvalue, 
+                                                           BPPARAM = param,
+                                                           cnv.geno=cnv.geno,
+                                                           phenotype=phenotype))
+  }
+  
+  resultsp <- unlist(all.pvalues)
+  SNPRelate::snpgdsClose(genofile)
+  
+  return(resultsp)
+  
+}
+
+
+ # HELPER get pvalue from linear regression CNV-phenotype
+.fitGetPvalue <- function(lo, cnv.geno, phenotype){
+
+cnv <-  cnv.geno[lo,]  
+stopifnot(all(colnames(cnv.geno)==phenotype$samplesPhen))
+phen <- phenotype[,2]  
+
+# Fuction to fit and extract p-value
+pvalue <- summary(lm(phen~cnv))$coefficients["cnv","Pr(>|t|)"]
+return(pvalue)
+  
 }

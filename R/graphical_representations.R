@@ -48,8 +48,7 @@
 plotManhattan <- function(all.paths, regions, chr.size.order, plot.pdf = FALSE) {
     
     ## Check inputs to avoid errors
-    stopifnot(length(all.paths)==3)
-    stopifnot(file.exists(all.paths[3]))
+    stopifnot(length(all.paths)==2)
     stopifnot(is(regions, "GRanges"))
     
     if(is(chr.size.order, "GRanges"))
