@@ -628,6 +628,7 @@ which can conveniently be accessed with the `r Biocpkg("curatedTCGAData")` packa
 library(curatedTCGAData)
 gbm <- curatedTCGAData::curatedTCGAData("GBM",
         assays=c("GISTIC_Peaks", "CNVSNP", "RNASeq2GeneNorm"),
+        version = "1.1.38",
         dry.run=FALSE)
 gbm
 ```

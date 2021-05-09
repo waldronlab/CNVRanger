@@ -79,7 +79,14 @@ Default is FALSE (i.e. only downstream)}
 The CNV segments and the representative probes and their respective p-value
 }
 \description{
-
+Wraps all the necessary functions to run a CNV-GWAS using the output of 
+\code{\link{setupCnvGWAS}} function.
+ 
+(i) Produces the GDS file containing the genotype information  (if produce.gds == TRUE),
+(ii) Produces the requested inputs for a PLINK analysis, 
+(iii) run a CNV-GWAS analysis using a linear model (i.e. \code{\link{lm}} function), and 
+(iv) export a QQ-plot displaying the adjusted p-values. 
+In this release only the p-value for the copy number is available  (i.e. 'P(CNP)').
 }
 \examples{
 
