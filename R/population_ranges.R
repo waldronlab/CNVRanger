@@ -452,8 +452,9 @@ cnvOncoPrint <- function(calls, features, multi.calls=.largest,
     type <- c(fract.amp, fract.del) > type.thresh
     type <- c("gain", "loss")[type]
     if(length(type) > 1) type <- "both"
+    if(length(type) == 0) type <- "normal"
     return(type)
-}   
+}
 
 ## (2) RO approach
 #
