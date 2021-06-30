@@ -2146,12 +2146,6 @@ lmmCNV <- function(lo, all.paths, all.segs.gr, phen.info, method.m.test, model,
     stop("Simulation should provide a list.simulation")
   }
   
-  #if(is.null(genofile)){
-  #  genofile.back <- NULL
-  #}else{
-  #  genofile.back <-"other"
-  #}
-  
   if(is.null(simulation)){
     
   ### Map of the CNV probes
@@ -2186,7 +2180,6 @@ lmmCNV <- function(lo, all.paths, all.segs.gr, phen.info, method.m.test, model,
   ped <- pedigree::add.Inds(ped)   
   ped$sire <- factor(ped$sire)
   ped$dam <- factor(ped$dam)
-  #}
       
   if (verbose) 
       message(paste("Simulation of phenotypes", lop.sim, "of", simulation))
@@ -2211,8 +2204,7 @@ lmmCNV <- function(lo, all.paths, all.segs.gr, phen.info, method.m.test, model,
     if(!is.null(gdsfmt::index.gdsn(genofile.snp, "GRM", silent=TRUE))){
       GRM <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile.snp, "GRM"))
     }
-    #A <- Matrix::Matrix(GRM)
-    #A <- GRM
+
     GRM.m <- GRM$grm
     colnames(GRM.m) <- GRM$sample.id
     rownames(GRM.m) <- GRM$sample.id
@@ -2292,7 +2284,6 @@ lmmCNV <- function(lo, all.paths, all.segs.gr, phen.info, method.m.test, model,
   cnv.geno <- t(cnv.geno)
   cnv.geno <- as.data.frame(cnv.geno)
   cnv.geno$sample.id <- rownames(cnv.geno)
-  #cnv.geno <- merge(ped, cnv.geno, by="sample.id", sort=TRUE)
   cnv.geno <- merge(cnv.geno, ped, by="sample.id", sort=TRUE) ## TEST
   
   ### Attach the PCA results
@@ -2300,7 +2291,6 @@ lmmCNV <- function(lo, all.paths, all.segs.gr, phen.info, method.m.test, model,
     if(!is.null(gdsfmt::index.gdsn(genofile, "PCA", silent=TRUE))){
       PCA <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile, "PCA"))
       ### merge with CNV genotypes
-      #cnv.geno <- merge(cnv.geno, PCA, by="sample.id", sort=FALSE, all.x=TRUE, all.y=FALSE)
       cnv.geno <- merge(cnv.geno, PCA, by="sample.id", sort=TRUE, all.x=TRUE, all.y=FALSE)
     }else{
       stop("To create a CNV.based PCA analysis one needs to run with use.pca=NULL at least one time")
@@ -2313,7 +2303,6 @@ lmmCNV <- function(lo, all.paths, all.segs.gr, phen.info, method.m.test, model,
     PCA <- gdsfmt::read.gdsn(gdsfmt::index.gdsn(genofile.snp, "PCA"))
   }
     ### merge with CNV genotypes
-    #cnv.geno <- merge(cnv.geno, PCA, by="sample.id", sort=FALSE, all.x=TRUE, all.y=FALSE)
     cnv.geno <- merge(cnv.geno, PCA, by="sample.id", sort=TRUE, all.x=TRUE, all.y=FALSE)
   }
   
@@ -2323,14 +2312,8 @@ lmmCNV <- function(lo, all.paths, all.segs.gr, phen.info, method.m.test, model,
   ### Fit the model
   if (verbose)
   message("Fit the model - LMM")
-  #rownames(cnv.geno) <- cnv.geno$sample.id ## TEST 
-  #colnames(cnv.geno)[1] <- "ID" 
-  #cnv.geno <- cnv.geno[match(rownames(A), cnv.geno$ID), ]
-  ##TEST
-  #if(TRUE){
-    #rownames(A) <- as.char
-  #}
-  ## check the warning # https://github.com/variani/lme4qtl/issues/20
+  
+  ## check the warnings # https://github.com/variani/lme4qtl/issues/20
   mod <- lme4qtl::relmatLmer(model, cnv.geno, relmat = list(sample.id = A))
   m1 <- mod 
   
