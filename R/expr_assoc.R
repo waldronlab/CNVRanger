@@ -283,7 +283,9 @@ plotEQTL <- function(cnvr, genes, genome, cn="CN1")
             col.title=colM, col.axis=colM, background.title=colB)
 
     GenomicRanges::strand(genes) <- "*"
-    fctrack <- Gviz::DataTrack(genes, data=genes$logFC.CN1, type="h",  
+    lcol <- paste("logFC", cn, sep = ".")
+    lcol <- S4Vectors::mcols(genes)[[lcol]]
+    fctrack <- Gviz::DataTrack(genes, data=lcol, type="h",  
                                 name="log2FC", cex.title=1, cex.axis=1,
                                 font.axis=2, col.title=colM, col.axis=colM, 
                                 background.title=colB)           
