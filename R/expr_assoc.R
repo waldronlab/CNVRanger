@@ -229,6 +229,9 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
 #' of the CNV region of interest.
 #' @param genome Character. A valid UCSC genome assembly ID such as 'hg19' or 'bosTau6'.
 #' @param cn Character. Copy number state of interest.
+#' @param cex A numerical value giving the amount by which gene names should be 
+#' magnified. Default is 0.8. Use smaller values to decrease font size.
+#' 
 #' @return None. Plots to a graphics device.
 #'
 #' @author Ludwig Geistlinger
@@ -252,7 +255,7 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
 #' plotEQTL(cnvr, genes, genome="hg19", cn="CN1")
 #'
 #' @export
-plotEQTL <- function(cnvr, genes, genome, cn="CN1")
+plotEQTL <- function(cnvr, genes, genome, cn = "CN1", cex = 0.8)
 {
     if (!requireNamespace("Gviz", quietly = TRUE))
         stop(paste("Required package \'Gviz\' not found.", 
@@ -271,14 +274,14 @@ plotEQTL <- function(cnvr, genes, genome, cn="CN1")
     pgenes <- subset(genes, strand=="+")
     plusTrack <- Gviz::AnnotationTrack(pgenes, name="", 
             #group=names(genes), just.group="right", 
-            cex=0.8, rotation.item=45,
+            cex=cex, rotation.item=45,
             id=names(pgenes), featureAnnotation="id", fontcolor.feature="darkblue",
             col.title=colM, col.axis=colM, background.title=colB)
     
     mgenes <- subset(genes, strand == "-")
     minusTrack <- Gviz::AnnotationTrack(mgenes, name="", 
             #group=names(genes), just.group="right", 
-            cex=0.8, rotation.item=45,
+            cex=cex, rotation.item=45,
             id=names(mgenes), featureAnnotation="id", fontcolor.feature="darkblue",
             col.title=colM, col.axis=colM, background.title=colB)
 

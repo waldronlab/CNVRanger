@@ -4,7 +4,7 @@
 \alias{plotEQTL}
 \title{Plot EQTL region}
 \usage{
-plotEQTL(cnvr, genes, genome, cn = "CN1")
+plotEQTL(cnvr, genes, genome, cn = "CN1", cex = 0.8)
 }
 \arguments{
 \item{cnvr}{A \code{\linkS4class{GRanges}} of length 1, containing the genomic
@@ -16,6 +16,9 @@ of the CNV region of interest.}
 \item{genome}{Character. A valid UCSC genome assembly ID such as 'hg19' or 'bosTau6'.}
 
 \item{cn}{Character. Copy number state of interest.}
+
+\item{cex}{A numerical value giving the amount by which gene names should be 
+magnified. Default is 0.8. Use smaller values to decrease font size.}
 }
 \value{
 None. Plots to a graphics device.
