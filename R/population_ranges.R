@@ -327,7 +327,7 @@ cnvOncoPrint <- function(calls, features, multi.calls=.largest,
 
     # summarize CNV calls in feature regions
     calls <- as(calls, "RaggedExperiment")
-    qassay <- RaggedExperiment::qreduceAssay(calls, features, 
+    qassay <- RaggedExperiment::qreduceAssay(calls, features, i = "state", 
                                     simplifyReduce=multi.calls, background=2)
 
     if("symbol" %in% colnames(mcols(features))) rownames(qassay) <- features$symbol
@@ -349,11 +349,11 @@ cnvOncoPrint <- function(calls, features, multi.calls=.largest,
     qassay <- qassay[,indc] 
 
     # recode genotypes
-    qassay[qassay == 2] <- " "
+    qassay[qassay >= 4] <- "GAIN2+"
+    qassay[qassay == "2"] <- " "
     qassay[qassay == "0"] <- "HOMDEL"
     qassay[qassay == "1"] <- "HETDEL"
     qassay[qassay == "3"] <- "GAIN1"
-    qassay[qassay == "4"] <- "GAIN2+"
 
 
     # assign colors to genotypes
@@ -390,12 +390,11 @@ cnvOncoPrint <- function(calls, features, multi.calls=.largest,
     mutfuns2 <- c(background = background, mutfuns)
    
     # plot
+    at <- c("HOMDEL", "HETDEL", "GAIN1", "GAIN2+")
+    labels <- c("2-copy loss", "1-copy loss", "1-copy gain", ">= 2-copy gain")
+    ind <- at %in% unique(as.vector(qassay))
     heatmap_legend_param <- list(title = "CNV type", 
-        at = c("HOMDEL", "HETDEL", "GAIN1", "GAIN2"), 
-        labels = c("2-copy loss", 
-                    "1-copy loss", 
-                    "1-copy gain",
-                    ">= 2-copy gain"))
+                                 at = at[ind], labels = labels[ind]) 
 
     suppressMessages(
         ComplexHeatmap::oncoPrint(
