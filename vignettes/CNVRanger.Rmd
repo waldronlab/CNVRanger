@@ -671,7 +671,7 @@ gbm <- MultiAssayExperiment::intersectColumns(gbm)
 TCGAutils::sampleTables(gbm)
 data(sampleTypes, package="TCGAutils")
 sampleTypes
-gbm <- TCGAutils::splitAssays(gbm, sampleCodes="01")
+gbm <- TCGAutils::TCGAsplitAssays(gbm, sampleCodes="01")
 gbm
 ```
 
