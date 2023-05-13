@@ -1,5 +1,5 @@
 Package: CNVRanger
-Version: 1.16.0
+Version: 1.16.1
 Title: Summarization and expression/phenotype association of CNV ranges
 Author: Ludwig Geistlinger [aut, cre], Vinicius Henrique da Silva [aut],
     Marcel Ramos [ctb], Levi Waldron [ctb]
@@ -42,7 +42,8 @@ Suggests:
     grid,
     knitr,
     regioneR,
-    rmarkdown 
+    rmarkdown,
+    statmod 
 Description: The CNVRanger package implements a comprehensive tool suite for CNV analysis.
     This includes functionality for summarizing individual CNV calls across a population,
     assessing overlap with functional genomic regions, and association analysis 
