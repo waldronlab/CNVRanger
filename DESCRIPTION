@@ -1,5 +1,5 @@
 Package: CNVRanger
-Version: 1.17.2
+Version: 1.17.3
 Title: Summarization and expression/phenotype association of CNV ranges
 Author: Ludwig Geistlinger [aut, cre], Vinicius Henrique da Silva [aut],
     Marcel Ramos [ctb], Levi Waldron [ctb]
@@ -42,6 +42,7 @@ Suggests:
     ensembldb,
     grid,
     knitr,
+    org.Hs.eg.db,
     regioneR,
     rmarkdown,
     statmod
