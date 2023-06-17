@@ -123,7 +123,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
     qq.plot.pdf <- paste0(uphen, "-LRR-", run.lrr, "QQ-PLOT.pdf")
     qq.plot.pdf <- file.path(all.paths["Results"], qq.plot.pdf)
     pdf(qq.plot.pdf)
-    print(.qqunifPlot(segs.pvalue.gr$MinPvalueAdjusted, 
+    print(.qqunifPlot(segs.pvalue.gr$MinPvalue, 
                         auto.key = list(corner = c(0.95, 0.05))))
     invisible(dev.off())
     
