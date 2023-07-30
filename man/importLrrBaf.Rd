@@ -70,5 +70,5 @@ SNPRelate::snpgdsClose(genofile)
 
 }
 \author{
-Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
+Vinicius Henrique da Silva
 }

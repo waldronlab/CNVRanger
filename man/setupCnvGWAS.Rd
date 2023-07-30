@@ -68,5 +68,5 @@ phen.info <- setupCnvGWAS('Example', phen.loc, cnv.out.loc, map.loc)
 
 }
 \author{
-Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
+Vinicius Henrique da Silva
 }

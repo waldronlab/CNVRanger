@@ -149,5 +149,5 @@ in defined genomic regions,
 binomial generalized linear models for RNA-seq read count data.
 }
 \author{
-Ludwig Geistlinger <Ludwig.Geistlinger@sph.cuny.edu>
+Ludwig Geistlinger
 }

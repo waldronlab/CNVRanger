@@ -17,7 +17,7 @@
 #' chromosome per range can be used instead (the chromosomes should be in the expected order).
 #' @param plot.pdf Logical plot a to pdf file
 #' @return Plots to graphics device.
-#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
+#' @author Vinicius Henrique da Silva
 #' @examples 
 #' 
 #' # Load phenotype-CNV information

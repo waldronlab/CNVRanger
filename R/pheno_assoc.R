@@ -48,7 +48,7 @@
 #' Default is FALSE (i.e. only downstream)
 #' @param verbose Show progress in the analysis
 #' @return The CNV segments and the representative probes and their respective p-value
-#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
+#' @author Vinicius Henrique da Silva
 #' @seealso \code{link{setupCnvGWAS}} to setup files needed for the CNV-GWAS.
 #' @references da Silva et al. (2016) Genome-wide detection of CNVs and their 
 #' association with meat tenderness in Nelore cattle. PLoS One, 11(6):e0157711.
@@ -183,7 +183,7 @@ cnvGWAS <- function(phen.info, n.cor = 1, min.sim = 0.95, freq.cn = 0.01, snp.ma
 #' @return List \sQuote{phen.info} with \sQuote{samplesPhen}, \sQuote{phenotypes}, 
 #' \sQuote{phenotypesdf}, \sQuote{phenotypesSam}, \sQuote{FamID}, \sQuote{SexIds}, 
 #' \sQuote{pops.names} (if more than one population) and \sQuote{all.paths}
-#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
+#' @author Vinicius Henrique da Silva
 #' @examples
 #' 
 #' data.dir <- system.file("extdata", package="CNVRanger")
@@ -323,7 +323,7 @@ setupCnvGWAS <- function(name, phen.loc, cnv.out.loc,
 #' @param n.cor Number of cores
 #' @return probes.cnv.gr Object with information about all probes to be used in 
 #' the downstream CNV-GWAS. Only numeric chromosomes
-#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
+#' @author Vinicius Henrique da Silva
 #' @examples
 #' 
 #' # Load phenotype-CNV information
@@ -493,7 +493,7 @@ generateGDS <- function(phen.info, freq.cn = 0.01, snp.matrix = FALSE, lo.phe = 
 #' will be ignored if \sQuote{gds.file} is not NULL
 #' @param verbose Print the samples while importing
 #' @return Writes to the specified GDS file by side effect.
-#' @author Vinicius Henrique da Silva <vinicius.dasilva@@wur.nl>
+#' @author Vinicius Henrique da Silva
 #' @examples
 #' 
 #' # Load phenotype-CNV information

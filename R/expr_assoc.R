@@ -80,7 +80,7 @@
 #' @param verbose Logical. Display progress messages? Defaults to \code{FALSE}.
 #' @return A \code{\linkS4class{DataFrame}} containing measures of association for 
 #' each CNV region and each gene tested in the genomic window around the CNV region.
-#' @author Ludwig Geistlinger <Ludwig.Geistlinger@@sph.cuny.edu>
+#' @author Ludwig Geistlinger
 #' @seealso \code{\link{findOverlaps}} to find overlaps between sets of genomic
 #' regions,
 #'

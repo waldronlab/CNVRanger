@@ -75,5 +75,5 @@ probes.cnv.gr <- generateGDS(phen.info, chr.code.name=chr.code.name)
 
 }
 \author{
-Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
+Vinicius Henrique da Silva
 }

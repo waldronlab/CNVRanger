@@ -118,5 +118,5 @@ association with meat tenderness in Nelore cattle. PLoS One, 11(6):e0157711.
 \code{link{setupCnvGWAS}} to setup files needed for the CNV-GWAS.
 }
 \author{
-Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
+Vinicius Henrique da Silva
 }

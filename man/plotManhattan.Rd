@@ -50,5 +50,5 @@ plotManhattan(all.paths, segs.pvalue.gr, chr.size.order)
 
 }
 \author{
-Vinicius Henrique da Silva <vinicius.dasilva@wur.nl>
+Vinicius Henrique da Silva
 }
