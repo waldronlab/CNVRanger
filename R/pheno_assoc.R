@@ -1574,15 +1574,22 @@ estlambda <- function(data, plot = FALSE, proportion = 1, method = "regression",
 }
 
 
- # HELPER get pvalue from linear regression CNV-phenotype
+# HELPER get pvalue from linear regression CNV-phenotype
 .fitGetPvalue <- function(lo, cnv.geno, phenotype){
-
-cnv <-  cnv.geno[lo,]  
-stopifnot(all(colnames(cnv.geno)==phenotype$samplesPhen))
-phen <- phenotype[,2]  
-
-# Fuction to fit and extract p-value
-pvalue <- summary(lm(phen~cnv))$coefficients["cnv","Pr(>|t|)"]
-return(pvalue)
   
+  cnv <-  as.numeric(cnv.geno[lo,])
+  stopifnot(all(colnames(cnv.geno)==phenotype$samplesPhen))
+  phen <- as.numeric(phenotype[,2])  
+  
+  if(.all_same(cnv)){
+    return(1)  
+  }else{
+    # Fuction to fit and extract p-value
+    pvalue <- summary(lm(phen~cnv))$coefficients["cnv","Pr(>|t|)"]
+    return(pvalue)}
+} 
+
+# HELPER same
+.all_same <- function(lst) {
+  return(length(unique(lst)) == 1)
 }
