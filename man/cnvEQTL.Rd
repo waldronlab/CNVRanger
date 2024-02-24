@@ -12,6 +12,7 @@ cnvEQTL(
   window = "1Mbp",
   multi.calls = .largest,
   min.samples = 10,
+  min.state.freq = 3,
   de.method = c("edgeR", "limma"),
   padj.method = "BH",
   filter.by.expr = TRUE,
@@ -50,6 +51,9 @@ region tested. A user-defined function that is passed on to
 
 \item{min.samples}{Integer. Minimum number of samples with at least one call
 overlapping the CNV region tested. Defaults to 10. See details.}
+
+\item{min.state.freq}{Integer. Minimun number of samples in each CNV state
+being tested. Defaults to 3.}
 
 \item{de.method}{Character. Differential expression method.
 Defaults to \code{"edgeR"}.}
@@ -131,7 +135,8 @@ library(SummarizedExperiment)
 rse <- SummarizedExperiment(assays=list(counts=y), rowRanges=granges(genes))
 
 # (4) perform the association analysis
-res <- cnvEQTL(cnvrs, calls, rse, min.samples=1, filter.by.expr=FALSE)
+res <- cnvEQTL(cnvrs, calls, rse, 
+               min.samples = 1, min.state.freq = 1, filter.by.expr = FALSE)
 
 }
 \references{

@@ -67,6 +67,8 @@
 #' \code{\link{qreduceAssay}} can also be provided for customized behavior.
 #' @param min.samples Integer. Minimum number of samples with at least one call
 #' overlapping the CNV region tested. Defaults to 10. See details.
+#' @param min.state.freq Integer. Minimun number of samples in each CNV state
+#' being tested. Defaults to 3.
 #' @param de.method Character. Differential expression method.
 #' Defaults to \code{"edgeR"}.
 #' @param padj.method Character. Method for adjusting p-values to multiple testing.
@@ -120,13 +122,14 @@
 #' rse <- SummarizedExperiment(assays=list(counts=y), rowRanges=granges(genes))
 #'
 #' # (4) perform the association analysis
-#' res <- cnvEQTL(cnvrs, calls, rse, min.samples=1, filter.by.expr=FALSE)
+#' res <- cnvEQTL(cnvrs, calls, rse, 
+#'                min.samples = 1, min.state.freq = 1, filter.by.expr = FALSE)
 #'
 #' @export
 cnvEQTL <- function(cnvrs, calls, rcounts, data,
-    window="1Mbp", multi.calls=.largest,
-    min.samples=10, de.method=c("edgeR", "limma"),
-    padj.method="BH", filter.by.expr=TRUE, verbose=FALSE)
+    window = "1Mbp", multi.calls = .largest,
+    min.samples = 10, min.state.freq = 3, de.method=c("edgeR", "limma"),
+    padj.method = "BH", filter.by.expr = TRUE, verbose = FALSE)
 {
     if (!missing(data)) {
         stopifnot(is(data, "MultiAssayExperiment"))
@@ -172,7 +175,7 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
     # determine states
     if(verbose) message("Summarizing per-sample CN state in each CNV region")
     cnv.states <- .getStates(cnvrs, calls, 
-        multi.calls, min.samples, verbose=verbose)
+        multi.calls, min.samples, min.state.freq, verbose = verbose)
     cnvrs <- IRanges::subsetByOverlaps(cnvrs,
                 GenomicRanges::GRanges(rownames(cnv.states)), type="equal")
 
@@ -205,10 +208,8 @@ cnvEQTL <- function(cnvrs, calls, rcounts, data,
         function(i)
         {
             if(verbose) message(paste(i, "of", nr.cnvrs))
-            r <- .testCnvExpr(y, cgenes[[i]], cnv.states[i,],
-                                min.state.freq=min.samples,
-                                de.method=de.method)
-            return(r)
+            .testCnvExpr(y, cgenes[[i]], cnv.states[i,], 
+                         min.state.freq = min.state.freq, de.method = de.method)
         })
     lens <- rep(cnvr.grid, lengths(cgenes))
     res <- do.call(plyr::rbind.fill, res)
@@ -304,7 +305,7 @@ plotEQTL <- function(cnvr, genes, genome, cn = "CN1", cex = 0.8)
 }
 
 # test a single cnv region
-.testCnvExpr <- function(y, cgenes, states, min.state.freq=10,
+.testCnvExpr <- function(y, cgenes, states, min.state.freq,
     de.method=c("limma", "edgeR"))
 {
     # form groups according to CNV states
@@ -400,7 +401,8 @@ plotEQTL <- function(cnvr, genes, genome, cn = "CN1", cex = 0.8)
     return(w)
 }
 
-.getStates <- function(cnvrs, calls, multi.calls=.largest, min.samples=10, verbose=FALSE)
+.getStates <- function(cnvrs, calls, multi.calls = .largest, 
+                       min.samples = 10, min.state.freq = 3, verbose=FALSE)
 {
     #TODO: additional pre-defined options for multi.calls
     stopifnot(is.function(multi.calls))
@@ -412,9 +414,21 @@ plotEQTL <- function(cnvr, genes, genome, cn = "CN1", cex = 0.8)
     tab <- apply(cnv.states, 1, table)
     .isTestable <- function(states)
     {
-        cond1 <- length(states) > 1
+        nr.states <- length(states)
+        cond1 <- nr.states > 1
         cond2 <- any(states[names(states) != "2"] >= min.samples)
-        cond1 && cond2
+        cond <- cond1 && cond2
+
+        too.less.samples <- states < min.state.freq
+        if(any(too.less.samples))
+        {
+            too.less.states <- names(states)[too.less.samples]
+            too.less.states <- as.integer(too.less.states)
+            nr.states <- nr.states - length(too.less.states)
+            cond3 <- nr.states > 1
+            cond <- cond && cond3
+        }
+        return(cond)
     }
     ind <- vapply(tab, .isTestable, logical(1))
     nr.excl <- sum(!ind)
