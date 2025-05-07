@@ -51,8 +51,7 @@ the starting point for analysis with the `r Biocpkg("CNVRanger")` package.
 The following figure provides an overview of the analysis capabilities of `CNVRanger`. 
 
 ```{r oview, echo=FALSE, fig.wide=TRUE}
-vign.dir <- system.file("vignettes", package = "CNVRanger")
-knitr::include_graphics(file.path(vign.dir, "CNVRanger.png"))
+knitr::include_graphics("../man/figures/CNVRanger.png")
 ```
 
 **(A)** The `r Biocpkg("CNVRanger")` package
@@ -146,8 +145,7 @@ without preceding package name.
 # Reading and accessing CNV data
 
 ```{r input, echo=FALSE, fig.wide=TRUE}
-vign.dir <- system.file("vignettes", package = "CNVRanger")
-knitr::include_graphics(file.path(vign.dir, "Input.png"))
+knitr::include_graphics("../man/figures/Input.png")
 ```
 
 The `r Biocpkg("CNVRanger")` package uses Bioconductor core data structures 
@@ -289,8 +287,7 @@ RaggedExperiment::colData(ra)
 # Summarizing individual CNV calls across a population
 
 ```{r summarization, echo=FALSE, out.width = "40%", out.extra='style="float:right; padding:10px"'}
-vign.dir <- system.file("vignettes", package = "CNVRanger")
-knitr::include_graphics(file.path(vign.dir, "Summarization.png"))
+knitr::include_graphics("../man/figures/Summarization.png")
 ```
 In CNV analysis, it is often of interest to summarize individual calls across
 the population, (i.e. to define CNV regions), for subsequent association
@@ -397,8 +394,7 @@ according to a significance threshold (an argument to the function, default: 0.0
 # Overlap analysis of CNVs with functional genomic regions
 
 ```{r overlap, echo=FALSE, out.width = "40%", out.extra='style="float:right; padding:10px"'}
-vign.dir <- system.file("vignettes", package = "CNVRanger")
-knitr::include_graphics(file.path(vign.dir, "Overlap.png"))
+knitr::include_graphics("../man/figures/Overlap.png")
 ```
 Once individual CNV calls have been summarized across the population, it is 
 typically of interest whether the resulting CNV regions overlap with functional 
@@ -531,8 +527,7 @@ such as total genomic size in bp.
 
 # CNV-expression association analysis
 ```{r expression, echo=FALSE, out.width = "40%", out.extra='style="float:right; padding:10px"'}
-vign.dir <- system.file("vignettes", package = "CNVRanger")
-knitr::include_graphics(file.path(vign.dir, "Expression.png"))
+knitr::include_graphics("../man/figures/Expression.png")
 ```
 Studies of expression quantitative trait loci (eQTLs) aim at the discovery of 
 genetic variants that explain variation in gene expression levels 
@@ -750,8 +745,7 @@ This is consistent with previous observations in mouse
 # CNV-phenotype association analysis
 
 ```{r phenotype, echo=FALSE, out.width = "40%", out.extra='style="float:right; padding:10px"'}
-vign.dir <- system.file("vignettes", package = "CNVRanger")
-knitr::include_graphics(file.path(vign.dir, "Phenotype.png"))
+knitr::include_graphics("../man/figures/Phenotype.png")
 ```
 Specifically developed for CNV calls inferred from SNP-chip data, 
 `r Biocpkg("CNVRanger")` allows to carry out a probe-level genome-wide association 
@@ -885,7 +879,7 @@ The CNV-GWAS uses the concept of CNV segments to define more fine-grained CNV lo
 within CNV regions.
 
 ```{r, echo=FALSE, fig.cap="Definition of CNV segments. The figure shows construction of a CNV segment from 4 individual CNV calls in a CNV region based on pairwise copy number concordance between adjacent probes.", out.width = '100%'}
-knitr::include_graphics(file.path(vign.dir, "CNVsegments.png"))
+knitr::include_graphics("../man/figures/CNVsegments.png")
 ```
 
 This procedure was originally proposed in our previous work in Nelore cattle 
