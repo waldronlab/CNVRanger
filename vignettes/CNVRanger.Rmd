@@ -19,6 +19,7 @@ output:
 vignette: >
   % \VignetteIndexEntry{Summarization and quantitative trait analysis of CNV ranges}
   % \VignetteEngine{knitr::rmarkdown}
+bibliography: ../inst/REFERENCES.bib
 ---
 
 Report issues on
@@ -61,13 +62,13 @@ imports CNV calls from a simple file format into
 across a population: 
 _(i)_ the [CNVRuler](http://www.ircgp.com/CNVRuler) procedure
 that trims region margins based on regional density
-[Kim et al., 2012](https://doi.org/10.1093/bioinformatics/bts239), 
+[@Kim2012-kx], 
 _(ii)_ the reciprocal overlap procedure that requires sufficient mutual overlap 
 between calls 
-[Conrad et al., 2010](https://doi.org/10.1038/nature08516), and 
+[@Conrad2010-lz], and 
 _(iii)_ the [GISTIC](http://www.broadinstitute.org/cancer/cga/gistic) procedure 
 that identifies recurrent CNV regions
-[Beroukhim et al., 2007](https://doi.org/10.1073/pnas.0710052104).
+[@Beroukhim2007-ea].
 **(C)** `CNVRanger` builds on `r Biocpkg("regioneR")` 
 for overlap analysis of CNVs with functional genomic regions, 
 **(D)** implements RNA-seq expression Quantitative Trait Loci (eQTL) analysis 
@@ -80,23 +81,23 @@ developed, described, and applied in several previous studies:
 
 - Genome-wide detection of CNVs and their association with meat tenderness in 
     Nelore cattle
-    [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)
+    [@Silva2016-rc]
 
 - Widespread modulation of gene expression by copy number variation in skeletal 
     muscle
-    [Geistlinger et al., 2018](https://doi.org/10.1038/s41598-018-19782-4)
+    [@Geistlinger2018-vg]
 
 - CNVs are associated with genomic architecture in a songbird 
-    [da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)
+    [@da-Silva2018-bb]
 
 # Applicability and Scope
  
 As described in the above publications, `r Biocpkg("CNVRanger")` has been 
 developed and extensively tested for SNP-based CNV calls as obtained with
-[PennCNV](https://doi.org/10.1101/gr.6861907).
+[PennCNV](@Wang2007-ik).
 We also tested `CNVRanger` for sequencing-based CNV calls as obtained with
-[CNVnator](https://doi.org/10.1101/gr.114876.110) (a read-depth approach) or
-[LUMPY](https://doi.org/10.1186/gb-2014-15-6-r84) (an approach that combines 
+[CNVnator](@Abyzov2011-xs) (a read-depth approach) or
+[LUMPY](@Layer2014-yy) (an approach that combines 
 evidence from split-reads and discordant read-pairs).
 
 In general, `r Biocpkg("CNVRanger")` can be applied to CNV calls associated with
@@ -116,8 +117,8 @@ input format of `r Biocpkg("CNVRanger")`. See Section 4.1
 for details.
 
 `r Biocpkg("CNVRanger")` is designed to work with CNV calls from one tool at a 
-time. See [EnsembleCNV](https://doi.org/10.1093/nar/gkz068) and
-[FusorSV](https://doi.org/10.1186/s13059-018-1404-6)
+time. See [EnsembleCNV](@Zhang2019-no) and
+[FusorSV](@Becker2018-dh)
 for combining CNV calls from multiple SNP-based callers or multiple 
 sequencing-based callers, respectively.
 
@@ -167,7 +168,7 @@ for each call.
 For demonstration, we consider CNV calls as obtained with 
 [PennCNV](http://penncnv.openbioinformatics.org) from SNP-chip data in a 
 Brazilian cattle breed 
-([da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)).
+(@Silva2016-rc).
 
 Here, we use a data subset and only consider CNV calls on chromosome 1 and 2,
 for which there are roughly 3000 CNV calls as obtained for 711 samples. 
@@ -305,10 +306,10 @@ CNVRanger).
 For instance, protocols for read-depth CNV calling typically exclude calls 
 overlapping defined repetitive and low-complexity regions including the UCSC 
 list of segmental duplications 
-[Trost et al., 2018](https://doi.org/10.1016/j.ajhg.2017.12.007),
-[Zhou et al., 2018](https://doi.org/10.1136/jmedgenet-2018-105272).
+[@Trost2018-zk],
+[@Zhou2018-hd].
 We also note that 
-[CNVnator](https://doi.org/10.1101/gr.114876.110), a very popular read-depth 
+[CNVnator](@Abyzov2011-xs), a very popular read-depth 
 CNV caller, implements the $q0$-filter to explicitely flag and, if desired, 
 exclude calls that are likely to stem from such regions.  
 If systematically over-represented in the input CNV calls, summarization procedures
@@ -321,7 +322,7 @@ Here, we use the approach from [CNVRuler](http://www.ircgp.com/CNVRuler)
 to summarize CNV calls to CNV regions (see 
 [Figure 1](https://academic.oup.com/view-large/figure/83392426/bts239f1.jpeg)
 in 
-[Kim et al., 2012](https://doi.org/10.1093/bioinformatics/bts239)
+[@Kim2012-kx]
 for an illustration of the approach). 
 This trims low-density areas as defined by the `density` argument, 
 which is set here to <10\% of the number of calls within a summarized region.
@@ -339,7 +340,7 @@ respectively.
 
 We also provide an implementation of the _Reciprocal Overlap (RO)_ procedure that 
 requires calls to sufficiently overlap with one another as e.g. used by 
-[Conrad et al., 2010](https://doi.org/10.1038/nature08516).
+[@Conrad2010-lz].
 This merges calls with an RO above a threshold as given by the `ro.thresh` argument.
 For example, an RO of 0.51 between two genomic regions _A_ and _B_ requires that 
 _B_ overlaps at least 51\% of _A_, *and* that _A_ also overlaps at least 51\% of _B_.
@@ -359,7 +360,7 @@ those regions of the genome that are aberrant more often than would be expected
 by chance, with greater weight given to high amplitude events 
 (high-level copy-number gains or homozygous deletions) that are less likely to 
 represent random aberrations 
-([Beroukhim et al., 2007](https://doi.org/10.1073/pnas.0710052104)).
+(@Beroukhim2007-ea).
 
 By setting `est.recur=TRUE`, we deploy a `GISTIC`-like significance estimation 
 
@@ -513,7 +514,7 @@ regions across permutations was `r round(mean(res[[1]]$permuted), digits=1)`
 $\pm$ `r round(sd(res[[1]]$permuted), digits=1)`.
 
 This finding is consistent with our observations across the whole genome
-([da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)) 
+(@Silva2016-rc) 
 and findings from the 1000 Genomes Poject 
 ([Sudmant et al., 2015](https://www.nature.com/articles/nature15394)).
 
@@ -551,7 +552,7 @@ significant expression differences relative to 2n.
 We demonstrate the functionality by loading RNA-seq read count data from 
 skeletal muscle samples for 183 Nelore cattle steers, which we analyzed for 
 CNV-expression effects as previously described 
-([Geistlinger et al., 2018](https://doi.org/10.1038/s41598-018-19782-4)).
+(@Geistlinger2018-vg).
 
 ```{r rseqdata}
 rseq.file <- file.path(data.dir, "counts_cleaned.txt")
@@ -694,7 +695,7 @@ round( (2^lr) * 2)
 Note that this is not the ideal way to calculate absolute integer copy numbers.
 Especially in cancer, differences in tumor purity, tumor ploidy, and subclonality
 can substantially interfere with the assumption of a pure homogeneous sample.
-See [ABSOLUTE](https://doi.org/10.1038/nbt.2203) and the `r Biocpkg("PureCN")` 
+See [ABSOLUTE](@Carter2012-hm) and the `r Biocpkg("PureCN")` 
 package for accurately taking such tumor characteristics into account.
 
 However, without additional information we transform the log ratios into
@@ -739,8 +740,8 @@ Note that a significant expression change is not only observed for genes locatin
 within the CNV region (dosage effect, here: PARK7), but also genes locating in 
 close proximity of the CNV region (neighborhood effect, here: CAMTA1 and RERE).
 This is consistent with previous observations in mouse 
-[Cahan et al., 2009](https://doi.org/10.1038/ng.350) and our observations in cattle 
-[Geistlinger et al., 2018](https://doi.org/10.1038/s41598-018-19782-4).
+[@Cahan2009-ke] and our observations in cattle 
+[@Geistlinger2018-vg].
 
 # CNV-phenotype association analysis
 
@@ -753,7 +754,7 @@ study (GWAS) with quantitative phenotypes.
 CNV calls from other sources such as sequencing data are also supported by using 
 the start and end position of each call as the corresponding probes.
 
-As previously described [da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711),
+As previously described [@Silva2016-rc],
 we construct CNV segments from probes representing common CN polymorphisms
 (allele frequency >1\%), and carry out a GWAS using a standard linear regression of phenotype on allele dosage with the `lm` function.
 
@@ -762,7 +763,7 @@ from the probe _p_-values, using either the probe with minimum _p_-value or the
 probe with maximum CNV frequency.
 
 For demonstration, we use CNV data of a wild population of songbirds 
-([da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)).
+(@da-Silva2018-bb).
 
 ```{r readCallsGWAS}
 cnv.loc <- file.path(data.dir, "CNVOut.txt") 
@@ -883,14 +884,14 @@ knitr::include_graphics("../man/figures/CNVsegments.png")
 ```
 
 This procedure was originally proposed in our previous work in Nelore cattle 
-([da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711)) and 
+(@Silva2016-rc) and 
 defines CNV segments based on CNV genotype similarity of subsequent SNP probes. 
 
 The default is `min.sim=0.95`, which will continuously add probe positions to a 
 given CNV segment until the pairwise genotype similarity drops below 95%. 
 An example of detailed up-down CNV genotype concordance that is used for the 
 construction of CNV segments is given in S12 Table in 
-[da Silva et al., 2016](https://doi.org/10.1371/journal.pone.0157711). 
+[@Silva2016-rc]. 
 
 Only one of the _p_-values of the probes contained in a CNV segment is chosen as the segment _p_-value.  This is similar to a common approach used in differential expression (DE) analysis of 
 microarray gene expression data, where typically the most significant DE probe
@@ -956,7 +957,7 @@ infer CNVs from SNP-chip intensities (log R ratios, LRRs) and allele frequencies
 (B allelel frequencies, BAFs).
 As an auxiliary analysis, it can be interesting to carry out the GWAS based on the 
 LRR relative signal intensities itself 
-([da Silva et al., 2018](https://doi.org/10.1186/s12864-018-4577-1)). 
+(@da-Silva2018-bb). 
 
 To perform the GWAS using LRR values, import the LRR/BAF values and set `run.lrr=TRUE` 
 in the `cnvGWAS` function:
@@ -985,4 +986,4 @@ segs.pvalue.gr <- cnvGWAS(phen.info, chr.code.name=chr.code.name, produce.gds=FA
 sessionInfo()
 ```
 
-
+# References
