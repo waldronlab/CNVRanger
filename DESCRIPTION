@@ -1,5 +1,5 @@
 Package: CNVRanger
-Version: 1.25.2
+Version: 1.25.3
 Title: Summarization and expression/phenotype association of CNV ranges
 Authors@R: c(
     person("Ludwig", "Geistlinger", email = "ludwig.geistlinger@gmail.com",
