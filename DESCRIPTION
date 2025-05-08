@@ -1,5 +1,5 @@
 Package: CNVRanger
-Version: 1.25.3
+Version: 1.25.4
 Title: Summarization and expression/phenotype association of CNV ranges
 Authors@R: c(
     person("Ludwig", "Geistlinger", email = "ludwig.geistlinger@gmail.com",
@@ -70,4 +70,4 @@ biocViews:
     RNASeq,
     SNP 
 RoxygenNote: 7.2.3
-Date: 2025-05-07
+Date: 2025-05-08
