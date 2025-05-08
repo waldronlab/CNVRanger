@@ -94,10 +94,10 @@ developed, described, and applied in several previous studies:
  
 As described in the above publications, `r Biocpkg("CNVRanger")` has been 
 developed and extensively tested for SNP-based CNV calls as obtained with
-[PennCNV](@Wang2007-ik).
+PennCNV [@Wang2007-ik].
 We also tested `CNVRanger` for sequencing-based CNV calls as obtained with
-[CNVnator](@Abyzov2011-xs) (a read-depth approach) or
-[LUMPY](@Layer2014-yy) (an approach that combines 
+CNVnator [@Abyzov2011-xs] (a read-depth approach) or
+LUMPY [@Layer2014-yy] (an approach that combines 
 evidence from split-reads and discordant read-pairs).
 
 In general, `r Biocpkg("CNVRanger")` can be applied to CNV calls associated with
@@ -117,8 +117,8 @@ input format of `r Biocpkg("CNVRanger")`. See Section 4.1
 for details.
 
 `r Biocpkg("CNVRanger")` is designed to work with CNV calls from one tool at a 
-time. See [EnsembleCNV](@Zhang2019-no) and
-[FusorSV](@Becker2018-dh)
+time. See EnsembleCNV [@Zhang2019-no] and
+FusorSV [@Becker2018-dh]
 for combining CNV calls from multiple SNP-based callers or multiple 
 sequencing-based callers, respectively.
 
@@ -168,7 +168,7 @@ for each call.
 For demonstration, we consider CNV calls as obtained with 
 [PennCNV](http://penncnv.openbioinformatics.org) from SNP-chip data in a 
 Brazilian cattle breed 
-(@Silva2016-rc).
+[@Silva2016-rc].
 
 Here, we use a data subset and only consider CNV calls on chromosome 1 and 2,
 for which there are roughly 3000 CNV calls as obtained for 711 samples. 
@@ -309,7 +309,7 @@ list of segmental duplications
 [@Trost2018-zk],
 [@Zhou2018-hd].
 We also note that 
-[CNVnator](@Abyzov2011-xs), a very popular read-depth 
+CNVnator [@Abyzov2011-xs], a very popular read-depth 
 CNV caller, implements the $q0$-filter to explicitely flag and, if desired, 
 exclude calls that are likely to stem from such regions.  
 If systematically over-represented in the input CNV calls, summarization procedures
@@ -360,7 +360,7 @@ those regions of the genome that are aberrant more often than would be expected
 by chance, with greater weight given to high amplitude events 
 (high-level copy-number gains or homozygous deletions) that are less likely to 
 represent random aberrations 
-(@Beroukhim2007-ea).
+[@Beroukhim2007-ea].
 
 By setting `est.recur=TRUE`, we deploy a `GISTIC`-like significance estimation 
 
@@ -514,9 +514,9 @@ regions across permutations was `r round(mean(res[[1]]$permuted), digits=1)`
 $\pm$ `r round(sd(res[[1]]$permuted), digits=1)`.
 
 This finding is consistent with our observations across the whole genome
-(@Silva2016-rc) 
-and findings from the 1000 Genomes Poject 
-([Sudmant et al., 2015](https://www.nature.com/articles/nature15394)).
+[@Silva2016-rc]
+and findings from the 1000 Genomes Project 
+[@Sudmant2015-pf].
 
 ```{r vizPermTest}
 plot(res)
@@ -532,7 +532,7 @@ knitr::include_graphics("../man/figures/Expression.png")
 ```
 Studies of expression quantitative trait loci (eQTLs) aim at the discovery of 
 genetic variants that explain variation in gene expression levels 
-([Nica and Dermitzakis, 2013](https://www.ncbi.nlm.nih.gov/pubmed/23650636)).
+[@Nica2013-dn].
 Mainly applied in the context of SNPs, the concept also naturally extends to the
 analysis of CNVs. 
 
@@ -552,7 +552,7 @@ significant expression differences relative to 2n.
 We demonstrate the functionality by loading RNA-seq read count data from 
 skeletal muscle samples for 183 Nelore cattle steers, which we analyzed for 
 CNV-expression effects as previously described 
-(@Geistlinger2018-vg).
+[@Geistlinger2018-vg].
 
 ```{r rseqdata}
 rseq.file <- file.path(data.dir, "counts_cleaned.txt")
@@ -695,7 +695,7 @@ round( (2^lr) * 2)
 Note that this is not the ideal way to calculate absolute integer copy numbers.
 Especially in cancer, differences in tumor purity, tumor ploidy, and subclonality
 can substantially interfere with the assumption of a pure homogeneous sample.
-See [ABSOLUTE](@Carter2012-hm) and the `r Biocpkg("PureCN")` 
+See ABSOLUTE [@Carter2012-hm] and the `r Biocpkg("PureCN")` 
 package for accurately taking such tumor characteristics into account.
 
 However, without additional information we transform the log ratios into
@@ -763,7 +763,7 @@ from the probe _p_-values, using either the probe with minimum _p_-value or the
 probe with maximum CNV frequency.
 
 For demonstration, we use CNV data of a wild population of songbirds 
-(@da-Silva2018-bb).
+[@da-Silva2018-bb].
 
 ```{r readCallsGWAS}
 cnv.loc <- file.path(data.dir, "CNVOut.txt") 
@@ -884,7 +884,7 @@ knitr::include_graphics("../man/figures/CNVsegments.png")
 ```
 
 This procedure was originally proposed in our previous work in Nelore cattle 
-(@Silva2016-rc) and 
+[@Silva2016-rc] and 
 defines CNV segments based on CNV genotype similarity of subsequent SNP probes. 
 
 The default is `min.sim=0.95`, which will continuously add probe positions to a 
@@ -957,7 +957,7 @@ infer CNVs from SNP-chip intensities (log R ratios, LRRs) and allele frequencies
 (B allelel frequencies, BAFs).
 As an auxiliary analysis, it can be interesting to carry out the GWAS based on the 
 LRR relative signal intensities itself 
-(@da-Silva2018-bb). 
+[@da-Silva2018-bb].
 
 To perform the GWAS using LRR values, import the LRR/BAF values and set `run.lrr=TRUE` 
 in the `cnvGWAS` function:
