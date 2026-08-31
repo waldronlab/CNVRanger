@@ -41,13 +41,18 @@
 #'
 #' \itemize{
 #' \item Calculate reciprocal overlap (RO) between all remaining calls.
-#' \item Identify pair of calls with greatest RO. If RO > threshold, merge and 
+#' \item Identify pair of calls with greatest RO. If RO >= threshold, merge and 
 #'       create a new CNV. If not, exit.
 #' \item Continue adding unclustered calls to the region, in order of best overlap. 
-#'       In order to add a call, the new call must have > threshold to all calls 
+#'       In order to add a call, the new call must have >= threshold to all calls 
 #'       within the region to be added. When no additional calls may be added, 
 #'       move to next step.
 #' \item If calls remain, return to 1. Otherwise exit.
+#' \item in an additional post-processing step, if there are in the end
+#' singleton regions that satisfy the RO threshold with the range of a clustered
+#' region, then the singleton regions are merged into the clustered region even
+#' if they do not strictly satisfy the RO threshold with each individual call in
+#' that region.  
 #' }
 #'
 #' \item  GISTIC procedure (Beroukhim et al., PNAS, 2007) to identify recurrent 
@@ -455,211 +460,169 @@ cnvOncoPrint <- function(calls, features, multi.calls=.largest,
 }   
 
 ## (2) RO approach
+# Reciprocal overlap (RO) summarization of CNV calls across a population
+#
+# top level: all calls overlapping by at least 1bp are merged into one initial
+# cluster; within each initial cluster, reciprocally overlapping calls are
+# clustered and each cluster is summarized by the range it spans
 #
 # @param grl GenomicRanges::GRangesList
 # @param ro.tresh numeric
 # @param multi.assign logical
 # @param verbose logical
 # @return GenomicRanges::GRanges
-.roPopRanges <- function(grl, 
-    ro.thresh=0.5, multi.assign=FALSE, verbose=FALSE)
+.roPopRanges <- function(grl, ro.thresh=0.5, multi.assign=FALSE, verbose=FALSE)
 {
-    gr <- unlist(grl)
-    S4Vectors::mcols(gr) <- NULL  
+    gr <- unlist(grl, use.names=FALSE)
+    S4Vectors::mcols(gr) <- NULL
 
-    # build initial clusters
     init.clusters <- GenomicRanges::reduce(gr)
-    
-    if(verbose) message(paste("TODO:", length(init.clusters)))
+    if(verbose) message(paste("Initial clusters:", length(init.clusters)))
 
-    # cluster within each initial cluster
+    # map each call to its initial cluster
     olaps <- GenomicRanges::findOverlaps(init.clusters, gr)
-    qh <- S4Vectors::queryHits(olaps)
-    sh <- S4Vectors::subjectHits(olaps)
-    cl.per.iclust <- lapply(seq_along(init.clusters), 
-        function(i)
-        {
-            if(verbose) message(i)
-            # get calls of cluster
-            ind <- sh[qh==i]
-            ccalls <- gr[ind]
-            if(length(ccalls) < 2) return(ccalls) 
-            clusters <- .clusterCalls(ccalls, ro.thresh, multi.assign)
-            if(is.list(clusters)) 
-                clusters <- IRanges::extractList(ccalls, clusters) 
-            clusters <- range(clusters)
-            if(is(clusters, "GRangesList")) clusters <- sort(unlist(clusters))  
-            return(clusters)
-    })
-    ro.ranges <- unname(unlist(GenomicRanges::GRangesList(cl.per.iclust)))
-    return(ro.ranges)
+    calls.per.iclust <- S4Vectors::splitAsList(S4Vectors::subjectHits(olaps),
+                                                S4Vectors::queryHits(olaps))
+
+    .summarize <- function(i)
+    {
+        if(verbose) message(i)
+        ccalls <- gr[calls.per.iclust[[i]]]
+        if(length(ccalls) < 2) return(ccalls)
+        clusters <- .clusterCalls(ccalls, ro.thresh, multi.assign)
+        regs <- IRanges::extractList(ccalls, clusters)
+        regs <- unlist(range(regs), use.names=FALSE)
+        .mergeRORegions(regs, ro.thresh, multi.assign)
+    }
+
+    ro.ranges <- lapply(seq_along(init.clusters), .summarize)
+    ro.ranges <- unlist(GenomicRanges::GRangesList(ro.ranges), use.names=FALSE)
+    return(sort(ro.ranges))
 }
 
+# a call that could not be assigned to any cluster can still reciprocally
+# overlap the *summarized* region of a cluster (the range spanned by its
+# calls), and two clusters can summarize to the very same region; such
+# redundant regions are merged, repeatedly, until the region set is stable
+#
+# @param regs GenomicRanges::GRanges
+# @param ro.thresh numeric
+# @param multi.assign logical
+# @return GenomicRanges::GRanges
+.mergeRORegions <- function(regs, ro.thresh=0.5, multi.assign=FALSE)
+{
+    # with multi.assign=TRUE regions are *meant* to overlap, so only
+    # regions that are completely redundant are collapsed
+    if(multi.assign) return(unique(regs))
 
-# the clustering itself then goes sequentially through the identified RO hits, 
-# touching each hit once, and checks whether this hit could be merged to 
-# already existing clusters
+    while(length(regs) > 1)
+    {
+        clusters <- .clusterCalls(regs, ro.thresh, multi.assign=FALSE)
+        if(length(clusters) == length(regs)) break
+        regs <- IRanges::extractList(regs, clusters)
+        regs <- unlist(range(regs), use.names=FALSE)
+    }
+    return(regs)
+}
+
+# clusters a set of calls so that all calls within a cluster pairwise satisfy
+# the RO threshold: clusters are seeded with the pair of calls having the
+# greatest RO, and are then greedily grown by the unclustered call having the
+# best overlap with the cluster; calls that reciprocally overlap no other call
+# form their own cluster
 #
 # @param calls GenomicRanges::GRanges
 # @param ro.thresh numeric
 # @param multi.assign logical
-# @return list of integer vectors
+# @return list of integer vectors, indexing into calls
 .clusterCalls <- function(calls, ro.thresh=0.5, multi.assign=FALSE)
 {
-    hits <- .getROHits(calls, ro.thresh)        
-    
-    # exit here if not 2 or more hits
-    if(length(hits) < 2) return(calls)       
-  
-    # worst case: there are as many clusters as hits
-    cid <- seq_along(hits)
-    qh <- S4Vectors::queryHits(hits)   
-    sh <- S4Vectors::subjectHits(hits)   
- 
-    # touch each hit once and check whether ... 
-    # ... it could be merged to a previous cluster
-    for(i in 2:length(hits))
-    {
-        # has this hit already been merged?
-        if(cid[i] != i) next 
-        curr.hit <- hits[i]
-       
-        # check each previous cluster
-        for(j in seq_len(i-1))
-        {
-            # has this hit already been merged?
-            if(cid[j] != j) next 
-            
-            # if not, check it
-            prev.cluster <- hits[cid == j]
-            mergeIndex <- .getMergeIndex(curr.hit, prev.cluster, hits)
-            
-            if(!is.null(mergeIndex))
-            {
-                if(length(mergeIndex) == 1) cid[i] <- j
-                else cid[mergeIndex] <- j
-                break 
-            }
-        }
-    }
-   
-    # compile hit clusters 
-    hit.clusters <- unname(S4Vectors::splitAsList(hits, cid))
+    n <- length(calls)
+    hits <- .getROHits(calls, ro.thresh)
+    qh <- hits$query
+    sh <- hits$subject
+    ro <- hits$RO
 
-    # extract call clusters
-    call.clusters <- lapply(hit.clusters, 
-        function(h) union(S4Vectors::queryHits(h), S4Vectors::subjectHits(h)))
-    
-    # can calls be assigned to more than one cluster?
-    if(!multi.assign) call.clusters <- .pruneMultiAssign(call.clusters)
-    
-    return(call.clusters)
+    # for each call: its RO partners and the corresponding RO (symmetric)
+    f <- factor(c(qh, sh), levels=seq_len(n))
+    adj <- unname(split(c(sh, qh), f))
+    adj.ro <- unname(split(c(ro, ro), f))
+
+    # RO of every call to call i, NA for calls below the RO threshold
+    .roTo <- function(i)
+    {
+        v <- rep.int(NA_real_, n)
+        v[adj[[i]]] <- adj.ro[[i]]
+        return(v)
+    }
+
+    unclustered <- rep.int(TRUE, n)
+    clusters <- list()
+
+    # hits are ordered by decreasing RO, ie. the first usable hit is always
+    # the remaining pair of calls with the greatest RO
+    for(h in seq_along(qh))
+    {
+        i <- qh[h]
+        j <- sh[h]
+        seeds <- unclustered[c(i,j)]
+        if(if(multi.assign) !any(seeds) else !all(seeds)) next
+
+        cluster <- c(i, j)
+        unclustered[cluster] <- FALSE
+
+        # a call can only be added if it satisfies the RO threshold with *all*
+        # cluster members, ie. its score is the minimum RO to any member
+        score <- pmin(.roTo(i), .roTo(j))
+        score[cluster] <- NA_real_
+
+        repeat
+        {
+            cand <- score
+            if(!multi.assign) cand[!unclustered] <- NA_real_
+            if(all(is.na(cand))) break
+
+            new <- which.max(cand)
+            cluster <- c(cluster, new)
+            unclustered[new] <- FALSE
+
+            score <- pmin(score, .roTo(new))
+            score[cluster] <- NA_real_
+        }
+        clusters <- c(clusters, list(sort(cluster)))
+    }
+
+    # calls that reciprocally overlap no other call form their own cluster
+    singletons <- which(unclustered)
+    clusters <- c(clusters, as.list(singletons))
+    return(clusters)
 }
 
-# given a set individual calls, returns overlaps (hits) between them 
-# that satisfy the RO threshold
+# pairwise reciprocal overlaps satisfying the RO threshold, greatest RO first
 #
 # @param calls GenomicRanges::GRanges
 # @param ro.thresh numeric
-# @return S4Vectors::Hits
+# @return S4Vectors::DataFrame with columns query, subject and RO
 .getROHits <- function(calls, ro.thresh=0.5)
 {
-    # calculate pairwise ro
     hits <- GenomicRanges::findOverlaps(calls, drop.self=TRUE, drop.redundant=TRUE)
-    
     x <- calls[S4Vectors::queryHits(hits)]
     y <- calls[S4Vectors::subjectHits(hits)]
-    pint <- GenomicRanges::pintersect(x, y)
-    rovlp1 <- BiocGenerics::width(pint) / BiocGenerics::width(x)
-    rovlp2 <- BiocGenerics::width(pint) / BiocGenerics::width(y)
 
-    # keep only hits with ro > threshold
-    ind <- rovlp1 > ro.thresh & rovlp2 > ro.thresh
-    hits <- hits[ind]
+    # reciprocal overlap: both calls must be covered to >= ro.thresh,
+    # ie. the RO of a pair is the smaller of the two overlap fractions
+    w <- BiocGenerics::width(GenomicRanges::pintersect(x, y))
+    ro <- pmin(w / BiocGenerics::width(x), w / BiocGenerics::width(y))
 
-    # exit here if not 2 or more hits
-    if(length(hits) < 2) return(hits)       
+    # a Hits object cannot be reordered by RO (it is sorted by query),
+    # so the pairs are kept as parallel columns instead
+    ind <- ro >= ro.thresh
+    ro <- ro[ind]
+    ord <- order(ro, decreasing=TRUE)
 
-    rovlp1 <- rovlp1[ind]
-    rovlp2 <- rovlp2[ind]
-    
-    # order hits by RO 
-    pmins <- pmin(rovlp1, rovlp2)
-    ind <- order(pmins, decreasing=TRUE)
-    
-    qh <- S4Vectors::queryHits(hits)
-    sh <- S4Vectors::subjectHits(hits)       
-    hits <- S4Vectors::Hits(qh[ind], sh[ind], 
-                S4Vectors::queryLength(hits), S4Vectors::subjectLength(hits))
-    S4Vectors::mcols(hits)$RO1 <- rovlp1[ind]
-    S4Vectors::mcols(hits)$RO2 <- rovlp2[ind]
-
-    return(hits)
-}
-
-# decides whether a given hit can be merged to an already existing cluster
-# mergeability requires that all cluster members satisfy the pairwise RO 
-# threshold
-#
-# @param hit S4Vectors::Hits
-# @param cluster S4Vectors::Hits
-# @param hits S4Vectors::Hits
-# @return integer vector
-.getMergeIndex <- function(hit, cluster, hits)
-{
-    # (1) check whether query / S4Vectors::subject of hit is part of cluster
-    curr.qh <- S4Vectors::queryHits(hit)
-    curr.sh <- S4Vectors::subjectHits(hit)
-       
-    prev.qh <- S4Vectors::queryHits(cluster)
-    prev.sh <- S4Vectors::subjectHits(cluster)
-    prev.members <- union(prev.qh, prev.sh)
-    is.part <- c(curr.qh, curr.sh) %in% prev.members
-
-    # (2) can it be merged?    
-    mergeIndex <- NULL
-
-    # (2a) query *and* subject of hit are part of cluster
-    if(all(is.part)) mergeIndex <- 1
-    
-    # (2b) query *or* subject of hit are part of cluster
-    else if(any(is.part))
-    {
-        # check whether the call which is not part of the cluster
-        # has sufficient RO with all others in the cluster 
-        npart <- c(curr.qh, curr.sh)[!is.part]
-        len <- length(prev.members)
-        req.hits <- S4Vectors::Hits(   rep.int(npart, len), 
-                            prev.members, 
-                            S4Vectors::queryLength(hits), 
-                            S4Vectors::subjectLength(hits))        
-        is.gr <- S4Vectors::queryHits(req.hits) > S4Vectors::subjectHits(req.hits) 
-        req.hits[is.gr] <- t(req.hits[is.gr])
-        mergeIndex <- match(req.hits, hits)        
-        if(any(is.na(mergeIndex))) mergeIndex <- NULL
-    }
-    return(mergeIndex)
-}
-
-# as the outlined procedure can assign a call to multiple clusters 
-# (in the most basic case a call A that has sufficient RO with a call B and 
-# a call C, but B and C do not have sufficient RO), this allows to optionally 
-# strip away such multi-assignments
-#
-# @param clusters list of integer vectors
-# @return list of integer vectors 
-.pruneMultiAssign <- function(clusters)
-{
-    cid <- seq_along(clusters)
-    times <- lengths(clusters)
-    cid <- rep.int(cid, times)
-    ind <- unlist(clusters)
-    ndup <- !duplicated(ind)
-    ind <- ind[ndup]
-    cid <- cid[ndup]
-       
-    pruned.clusters <- split(ind, cid)
-    return(pruned.clusters)
+    S4Vectors::DataFrame(query = S4Vectors::queryHits(hits)[ind][ord],
+                            subject = S4Vectors::subjectHits(hits)[ind][ord],
+                            RO = ro[ord])
 }
 
 .estimateRecurrence <- function(regs, calls, mode=c("approx", "perm"),
