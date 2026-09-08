@@ -14,20 +14,30 @@ import(GenomeInfoDb)
 import(GenomicRanges)
 import(RaggedExperiment)
 import(S4Vectors)
-importFrom(IRanges,extractList)
-importFrom(IRanges,subsetByOverlaps)
-importFrom(grDevices,dev.off)
-importFrom(grDevices,extendrange)
-importFrom(grDevices,pdf)
-importFrom(methods,as)
-importFrom(methods,is)
-importFrom(stats,ecdf)
-importFrom(stats,lm)
-importFrom(stats,median)
-importFrom(stats,pchisq)
-importFrom(stats,qbeta)
-importFrom(stats,qchisq)
-importFrom(utils,download.file)
-importFrom(utils,read.table)
-importFrom(utils,unzip)
-importFrom(utils,write.table)
+importFrom(IRanges,
+  extractList,
+  subsetByOverlaps
+)
+importFrom(grDevices,
+  dev.off,
+  extendrange,
+  pdf
+)
+importFrom(methods,
+  as,
+  is
+)
+importFrom(stats,
+  ecdf,
+  lm,
+  median,
+  pchisq,
+  qbeta,
+  qchisq
+)
+importFrom(utils,
+  download.file,
+  read.table,
+  unzip,
+  write.table
+)

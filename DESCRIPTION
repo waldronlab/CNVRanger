@@ -1,5 +1,5 @@
 Package: CNVRanger
-Version: 1.29.2
+Version: 1.29.3
 Title: Summarization and expression/phenotype association of CNV ranges
 Authors@R: c(
     person("Ludwig", "Geistlinger", email = "ludwig.geistlinger@gmail.com",
@@ -69,5 +69,5 @@ biocViews:
     Microarray, 
     RNASeq,
     SNP 
-RoxygenNote: 7.2.3
 Date: 2025-05-08
+Config/roxygen2/version: 8.1.0
