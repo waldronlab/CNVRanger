@@ -85,13 +85,18 @@ the following algorithm:
 
 \itemize{
 \item Calculate reciprocal overlap (RO) between all remaining calls.
-\item Identify pair of calls with greatest RO. If RO > threshold, merge and 
+\item Identify pair of calls with greatest RO. If RO >= threshold, merge and 
       create a new CNV. If not, exit.
 \item Continue adding unclustered calls to the region, in order of best overlap. 
-      In order to add a call, the new call must have > threshold to all calls 
+      In order to add a call, the new call must have >= threshold to all calls 
       within the region to be added. When no additional calls may be added, 
       move to next step.
 \item If calls remain, return to 1. Otherwise exit.
+\item in an additional post-processing step, if there are in the end
+singleton regions that satisfy the RO threshold with the range of a clustered
+region, then the singleton regions are merged into the clustered region even
+if they do not strictly satisfy the RO threshold with each individual call in
+that region.  
 }
 
 \item  GISTIC procedure (Beroukhim et al., PNAS, 2007) to identify recurrent 
