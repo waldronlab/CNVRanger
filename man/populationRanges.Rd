@@ -18,7 +18,7 @@ populationRanges(
 )
 }
 \arguments{
-\item{grl}{A \code{\linkS4class{GRangesList}}.}
+\item{grl}{A \code{\linkS4class[GenomicRanges]{GRangesList}}.}
 
 \item{mode}{Character. Should population ranges be computed based on regional
 density ("density") or reciprocal overlap ("RO"). See Details.}
@@ -51,7 +51,7 @@ threshold they are ignored.}
 permutation test? Defaults to \code{FALSE}. See Details.}
 }
 \value{
-A \code{\linkS4class{GRanges}} object containing the summarized
+A \code{\linkS4class[GenomicRanges]{GRanges}} object containing the summarized
 CNV ranges.
 }
 \description{
@@ -148,7 +148,7 @@ Beroukhim et al. (2007) Assessing the significance of chromosomal aberrations
 in cancer: methodology and application to glioma. PNAS, 104(50):20007-12.
 }
 \seealso{
-\code{\link{findOverlaps}}
+\code{\link[GenomicRanges]{findOverlaps}}
 }
 \author{
 Ludwig Geistlinger, Martin Morgan

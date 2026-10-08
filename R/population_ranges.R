@@ -327,28 +327,32 @@ cnvOncoPrint <- function(calls, features, multi.calls=.largest,
         stop(paste("Required package \'ComplexHeatmap\' not found.", 
                     "Use \'BiocManager::install(\"ComplexHeatmap\") to install it."))
 
+    if("symbol" %in% names(mcols(features))) syms <- features$symbol
+    else if(!is.null(names(features))) syms <- names(features)
+    else stop("Feature names not found. Please provide a ",
+              "meta-column 'symbol' or set the names of the 'features' object.")
+
+    ind <- syms != "" & !duplicated(syms)
+    features <- features[ind]
+    syms <- syms[ind]     
+
     # summarize CNV calls in feature regions
     calls <- as(calls, "RaggedExperiment")
     qassay <- RaggedExperiment::qreduceAssay(calls, features, i = "state", 
                                     simplifyReduce=multi.calls, background=2)
-
-    if("symbol" %in% colnames(mcols(features))) rownames(qassay) <- features$symbol
-    else rownames(qassay) <- names(features)
-
-    qassay <- qassay[rownames(qassay) != "",]
-    qassay <- qassay[!duplicated(rownames(qassay)),]
+    rownames(qassay) <- syms
     
     # select most frequently altered features
     indr <- order(rowSums(qassay != 2), decreasing=TRUE)
     has.top.features <- top.features > 0 && top.features < nrow(qassay)
     if(has.top.features) indr <- indr[seq_len(top.features)]
-    qassay <- qassay[indr,] 
+    qassay <- qassay[indr,,drop=FALSE] 
     
     # select most frequently altered samples
     indc <- order(colSums(qassay != 2), decreasing=TRUE)
     has.top.samples <- top.samples > 0 && top.samples < ncol(qassay)
     if(has.top.samples) indc <- indc[seq_len(top.samples)]
-    qassay <- qassay[,indc] 
+    qassay <- qassay[,indc,drop=FALSE] 
 
     # recode genotypes
     qassay[qassay >= 4] <- "GAIN2+"
@@ -356,7 +360,6 @@ cnvOncoPrint <- function(calls, features, multi.calls=.largest,
     qassay[qassay == "0"] <- "HOMDEL"
     qassay[qassay == "1"] <- "HETDEL"
     qassay[qassay == "3"] <- "GAIN1"
-
 
     # assign colors to genotypes
     cb.red <- "#D55E00"

@@ -7,7 +7,7 @@
 plotRecurrentRegions(regs, genome, chr, pthresh = 0.05, ...)
 }
 \arguments{
-\item{regs}{A \code{\linkS4class{GRanges}}. Typically the result of 
+\item{regs}{A \code{\linkS4class[GenomicRanges]{GRanges}}. Typically the result of 
 \code{\link{populationRanges}} with \code{est.recur=TRUE}.}
 
 \item{genome}{Character. A valid UCSC genome assembly ID such as 'hg19' or 'bosTau6'.}
